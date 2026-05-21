@@ -99,3 +99,103 @@ def test_schema_coverage():
     assert not unknown, (
         f"Fixture has top-level keys not in schema_model.SCHEMA_SUMMARY: {sorted(unknown)}"
     )
+
+
+def _strictify(node):
+    """Return a deep copy of a JSON Schema with extra-property restrictions injected.
+
+    For every node that defines `properties`, add `additionalProperties: false` so the
+    validator rejects unknown keys. For nodes that compose via `oneOf`/`anyOf`/`allOf`,
+    use `unevaluatedProperties: false` instead — that keyword cooperates with composition
+    by considering properties contributed by sub-schemas as "evaluated."
+
+    A node may opt out of strictification by setting `x-iw-allow-extra-keys: true`; this
+    is the escape hatch for objects intentionally left open to platform extensions.
+    """
+    if isinstance(node, list):
+        return [_strictify(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+
+    out = {k: _strictify(v) for k, v in node.items()}
+
+    if out.get("x-iw-allow-extra-keys"):
+        return out
+
+    has_properties = "properties" in out
+    has_composition = any(k in out for k in ("oneOf", "anyOf", "allOf"))
+
+    if has_properties and has_composition:
+        out.setdefault("unevaluatedProperties", False)
+    elif has_properties:
+        out.setdefault("additionalProperties", False)
+
+    return out
+
+
+def test_strictify_helper_catches_unknown_keys():
+    """Sanity check: _strictify must actually inject additionalProperties:false.
+
+    Without this guard, test_fixture_schema_coverage_nested could be permanently
+    green for the wrong reason — passing because _strictify failed to restrict,
+    rather than because the fixture is genuinely covered.
+    """
+    import jsonschema
+
+    from iw_architect.validator import _get_schema
+
+    strict = _strictify(_get_schema())
+
+    # Construct a minimal world with one NPC carrying an unknown field.
+    minimal = {
+        "schemaVersion": 2.1,
+        "title": "Test",
+        "NPCs": [
+            {"id": "NPC000001", "name": "Test", "positionInList": 0, "moodColor": "blue"},
+        ],
+    }
+    errors = [
+        e
+        for e in jsonschema.Draft202012Validator(strict).iter_errors(minimal)
+        if e.validator in ("additionalProperties", "unevaluatedProperties")
+    ]
+
+    assert any("moodColor" in e.message for e in errors), (
+        "_strictify did not inject additionalProperties:false where expected — "
+        "test_fixture_schema_coverage_nested would be a false-green."
+    )
+
+
+def test_fixture_schema_coverage_nested(fixture_world):
+    """Brief §6.2: every key at every depth in the fixture must be modeled in the schema.
+
+    Uses jsonschema validation against a strictified copy of the schema. Any
+    `additionalProperties`/`unevaluatedProperties` violation surfaces as a coverage gap —
+    a fixture path the schema does not describe.
+
+    The runtime validator does NOT use the strictified schema; per brief §3 rule 3
+    (pass-through preservation) the runtime tolerates unknown fields. This test enforces
+    completeness at build time only.
+    """
+    import jsonschema
+
+    from iw_architect.validator import _get_schema
+
+    strict_schema = _strictify(_get_schema())
+    validator = jsonschema.Draft202012Validator(strict_schema)
+
+    coverage_errors = [
+        e
+        for e in validator.iter_errors(fixture_world)
+        if e.validator in ("additionalProperties", "unevaluatedProperties")
+    ]
+
+    paths = sorted(
+        {f"{'.'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}" for e in coverage_errors}
+    )
+
+    assert not paths, (
+        "Fixture has nested paths the JSON Schema does not model. "
+        "Either add them to the schema or mark the parent with "
+        "x-iw-allow-extra-keys: true.\n" + "\n".join(f"  - {p}" for p in paths)
+    )

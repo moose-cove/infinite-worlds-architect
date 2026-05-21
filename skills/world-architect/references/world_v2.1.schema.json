@@ -461,7 +461,10 @@
         "type": { "type": "string" },
         "operator": { "type": "string", "enum": ["and", "or"] },
         "inequality": { "type": "string" },
-        "trackedItemID": { "type": "string" }
+        "trackedItemID": { "type": "string" },
+        "data": {
+          "description": "Polymorphic payload whose shape depends on `type`. See x-iw-condition-types."
+        }
       },
       "required": ["id", "category"],
       "x-iw-condition-types": {
@@ -507,7 +510,10 @@
       "properties": {
         "id": { "type": "string" },
         "type": { "type": "string" },
-        "trackedItemID": { "type": "string" }
+        "trackedItemID": { "type": "string" },
+        "data": {
+          "description": "Polymorphic payload whose shape depends on `type`. See x-iw-effect-types."
+        }
       },
       "required": ["id", "type"],
       "x-iw-effect-types": {
