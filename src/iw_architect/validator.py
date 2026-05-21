@@ -15,7 +15,8 @@ import jsonschema
 
 from iw_architect import KNOWN_SCHEMA_VERSION
 
-_SCHEMA_PATH = Path(__file__).parent / "world_schema.json"
+_PLUGIN_ROOT = Path(__file__).parent.parent.parent  # src/iw_architect/ → src/ → repo root
+_SCHEMA_PATH = _PLUGIN_ROOT / "skills" / "world-architect" / "references" / "world_v2.1.schema.json"
 _SCHEMA: dict | None = None
 
 _KNOWN_EFFECT_TYPES = {
@@ -175,9 +176,7 @@ def _check_cross_field_invariants(world: dict, errors: list[str], warnings: list
             )
 
 
-def _check_logic_conditions(
-    world: dict, errors: list[str], warnings: list[str]
-) -> None:
+def _check_logic_conditions(world: dict, errors: list[str], warnings: list[str]) -> None:
     def _check_conditions(conditions: list[dict], trigger_name: str, advanced: bool) -> None:
         for cond in conditions:
             if cond.get("category") == "logic" and not advanced:
@@ -213,53 +212,50 @@ def _check_cross_references(world: dict, errors: list[str], warnings: list[str])
     ids = _collect_ids(world)
     valid_skill_ids = _skill_ids(world)
 
+    def _check_cond_refs(conditions: list[dict], tname: str) -> None:
+        for cond in conditions:
+            cat = cond.get("category")
+            ctype = cond.get("type")
+
+            if cat == "condition":
+                data = cond.get("data")
+                if ctype == "triggerOnCharacter" and isinstance(data, list):
+                    for cid in data:
+                        if cid not in ids["character"]:
+                            errors.append(
+                                f"Trigger '{tname}': triggerOnCharacter references "
+                                f"unknown characterId '{cid}'"
+                            )
+                elif ctype == "triggerOnTrackedItem" and isinstance(data, dict):
+                    ref = data.get("trackedItemID") or cond.get("trackedItemID")
+                    if ref:
+                        err = _resolve_tracked_item_ref(ref, ids["trackedItem"], valid_skill_ids)
+                        if err:
+                            errors.append(f"Trigger '{tname}': {err}")
+                elif ctype == "triggerPrereqs" and isinstance(data, list):
+                    for prereq_id in data:
+                        if prereq_id not in ids["triggerEvent"]:
+                            errors.append(
+                                f"Trigger '{tname}': triggerPrereqs references "
+                                f"unknown trigger id '{prereq_id}'"
+                            )
+                elif ctype == "triggerBlockers" and isinstance(data, list):
+                    for blocker_id in data:
+                        if blocker_id not in ids["triggerEvent"]:
+                            errors.append(
+                                f"Trigger '{tname}': triggerBlockers references "
+                                f"unknown trigger id '{blocker_id}'"
+                            )
+
+            elif cat == "logic":
+                sub = cond.get("data", [])
+                if isinstance(sub, list):
+                    _check_cond_refs(sub, tname)
+
     # Validate trigger conditions and effects
     for trigger in world.get("triggerEvents", []):
         tname = trigger.get("name", trigger.get("id", "?"))
-
-        def _check_cond_refs(conditions: list[dict]) -> None:
-            for cond in conditions:
-                cat = cond.get("category")
-                ctype = cond.get("type")
-
-                if cat == "condition":
-                    data = cond.get("data")
-                    if ctype == "triggerOnCharacter" and isinstance(data, list):
-                        for cid in data:
-                            if cid not in ids["character"]:
-                                errors.append(
-                                    f"Trigger '{tname}': triggerOnCharacter references "
-                                    f"unknown characterId '{cid}'"
-                                )
-                    elif ctype == "triggerOnTrackedItem" and isinstance(data, dict):
-                        ref = data.get("trackedItemID") or cond.get("trackedItemID")
-                        if ref:
-                            err = _resolve_tracked_item_ref(
-                                ref, ids["trackedItem"], valid_skill_ids
-                            )
-                            if err:
-                                errors.append(f"Trigger '{tname}': {err}")
-                    elif ctype == "triggerPrereqs" and isinstance(data, list):
-                        for prereq_id in data:
-                            if prereq_id not in ids["triggerEvent"]:
-                                errors.append(
-                                    f"Trigger '{tname}': triggerPrereqs references "
-                                    f"unknown trigger id '{prereq_id}'"
-                                )
-                    elif ctype == "triggerBlockers" and isinstance(data, list):
-                        for blocker_id in data:
-                            if blocker_id not in ids["triggerEvent"]:
-                                errors.append(
-                                    f"Trigger '{tname}': triggerBlockers references "
-                                    f"unknown trigger id '{blocker_id}'"
-                                )
-
-                elif cat == "logic":
-                    sub = cond.get("data", [])
-                    if isinstance(sub, list):
-                        _check_cond_refs(sub)
-
-        _check_cond_refs(trigger.get("triggerConditions", []))
+        _check_cond_refs(trigger.get("triggerConditions", []), tname)
 
         for effect in trigger.get("triggerEffects", []):
             etype = effect.get("type")
@@ -280,15 +276,13 @@ def _check_cross_references(world: dict, errors: list[str], warnings: list[str])
                         f"unknown loreBookEntry id '{block_id}'"
                     )
             elif etype in ("effectSetTrackedItemValue", "effectModifyTrackedItemDetails"):
-                ref = (
-                    (isinstance(data, dict) and data.get("trackedItemID"))
-                    or effect.get("trackedItemID")
+                ref = (isinstance(data, dict) and data.get("trackedItemID")) or effect.get(
+                    "trackedItemID"
                 )
                 if ref:
                     if ref not in ids["trackedItem"]:
                         errors.append(
-                            f"Trigger '{tname}': {etype} references "
-                            f"unknown trackedItem id '{ref}'"
+                            f"Trigger '{tname}': {etype} references unknown trackedItem id '{ref}'"
                         )
             elif etype == "effectPresentChoice" and isinstance(data, dict):
                 ref = data.get("targetTrackedItemId")
@@ -313,7 +307,11 @@ def _check_cross_references(world: dict, errors: list[str], warnings: list[str])
             # Warn on unknown condition types
         for cond in trigger.get("triggerConditions", []):
             ctype = cond.get("type")
-            if ctype and ctype not in _KNOWN_CONDITION_TYPES and cond.get("category") == "condition":
+            if (
+                ctype
+                and ctype not in _KNOWN_CONDITION_TYPES
+                and cond.get("category") == "condition"
+            ):
                 warnings.append(
                     f"Trigger '{tname}': unknown condition type '{ctype}' "
                     "(may be a future platform feature — preserved verbatim)"
@@ -335,7 +333,9 @@ def _check_template_variables(world: dict, errors: list[str], warnings: list[str
     tracked_item_vars = {_snake(ti["name"]) for ti in world.get("trackedItems", []) if "name" in ti}
     valid_skill_ids = _skill_ids(world)
     # initial_<varname> is valid for any numerical tracked item or skill
-    valid_initial = {f"initial_{v}" for v in tracked_item_vars | {s[len("skill_"):] for s in valid_skill_ids}}
+    valid_initial = {
+        f"initial_{v}" for v in tracked_item_vars | {s[len("skill_") :] for s in valid_skill_ids}
+    }
 
     valid_vars = _ALWAYS_VALID_VARS | tracked_item_vars | valid_skill_ids | valid_initial
 
@@ -358,8 +358,16 @@ def _check_template_variables(world: dict, errors: list[str], warnings: list[str
                 _check_dict_texts(item, f"{location}[{i}]")
 
     # Check main text fields
-    for field in ("background", "instructions", "authorStyle", "firstInput", "objective",
-                  "descriptionRequest", "evaluationRequest", "summaryRequest"):
+    for field in (
+        "background",
+        "instructions",
+        "authorStyle",
+        "firstInput",
+        "objective",
+        "descriptionRequest",
+        "evaluationRequest",
+        "summaryRequest",
+    ):
         if val := world.get(field):
             _check_text(val, field)
 
@@ -379,15 +387,12 @@ def _check_template_variables(world: dict, errors: list[str], warnings: list[str
 
 
 def _check_unknown_top_level_keys(world: dict, errors: list[str], warnings: list[str]) -> None:
-    import json as _json
-
     schema = _get_schema()
     known = set(schema.get("properties", {}).keys())
     for key in world:
         if key not in known:
             warnings.append(
-                f"Unknown top-level key '{key}' — not in the known schema "
-                "but preserved verbatim"
+                f"Unknown top-level key '{key}' — not in the known schema but preserved verbatim"
             )
 
 
@@ -397,7 +402,9 @@ def validate_world(world_path: str) -> str:
     """
     path = Path(world_path)
     if not path.exists():
-        return json.dumps({"valid": False, "errors": [f"File not found: {world_path}"], "warnings": []})
+        return json.dumps(
+            {"valid": False, "errors": [f"File not found: {world_path}"], "warnings": []}
+        )
 
     try:
         world = json.loads(path.read_text())
@@ -424,8 +431,11 @@ def validate_world(world_path: str) -> str:
     _check_template_variables(world, errors, warnings)
     _check_unknown_top_level_keys(world, errors, warnings)
 
-    return json.dumps({
-        "valid": len(errors) == 0,
-        "errors": errors,
-        "warnings": warnings,
-    }, indent=2)
+    return json.dumps(
+        {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings,
+        },
+        indent=2,
+    )

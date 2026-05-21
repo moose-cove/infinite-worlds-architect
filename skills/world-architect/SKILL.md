@@ -25,7 +25,12 @@ You are assisting an author who is building or editing a story world for the **I
 
 ## Schema reference
 
-The world JSON schema is documented in `references/WORLD_JSON_SCHEMA_v2.1.md`. The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root. When in doubt about a field's shape, call `get_schema_summary()` or `read_world_field` on the fixture.
+The world JSON schema lives in this skill's `references/` directory:
+
+- `references/WORLD_JSON_SCHEMA_v2.1.md` — human-readable schema explanation
+- `references/world_v2.1.schema.json` — JSON Schema artifact used by `validate_world`
+
+The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root. When in doubt about a field's shape, call `get_schema_summary()` or `read_world_field` on the fixture.
 
 ## Workflows available
 

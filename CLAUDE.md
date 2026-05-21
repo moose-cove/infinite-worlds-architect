@@ -9,7 +9,6 @@ src/iw_architect/
 ├── server.py          # MCP server entry point (FastMCP, stdio transport)
 ├── validator.py       # Two-tier world validator (jsonschema + custom checks)
 ├── schema_model.py    # Structured schema metadata for get_schema_summary()
-├── world_schema.json  # JSON Schema v2.1 artifact (Tier 1 validator)
 └── tools/
     ├── inspection.py  # read_world_field, format_world_for_review, get_schema_summary
     ├── helpers.py     # scaffold_world, mint_ids, confirm_path
@@ -17,30 +16,40 @@ src/iw_architect/
 
 tests/
 ├── test_round_trip.py  # Fixture round-trip + scaffold tests (most critical)
-└── test_validator.py   # Negative tests for every error class in §4.6
+├── test_validator.py   # Negative tests for every error class in §4.6
+└── test_analysis.py    # Tests for audit_world, compare_worlds, get_diff_summary
 
 skills/
-├── world-architect/    # Top-level discovery skill
-│   └── references/WORLD_JSON_SCHEMA_v2.1.md
+├── world-architect/                                 # Top-level discovery skill
+│   └── references/
+│       ├── WORLD_JSON_SCHEMA_v2.1.md                # Human-readable schema reference
+│       └── world_v2.1.schema.json                   # JSON Schema artifact (Tier 1 validator)
 ├── new-world/          # Guided world creation workflow
 ├── modify-world/       # Edit existing world workflow
 └── spinoff-world/      # Variant world workflow
 
-.claude-plugin/plugin.json   # Plugin manifest
-.mcp.json                    # MCP server spawn configuration
+.claude-plugin/
+├── plugin.json         # Plugin manifest
+└── marketplace.json    # Marketplace index entry
+
+.github/workflows/ci.yml   # GitHub Actions: tests + version-bump check
+.mcp.json                  # MCP server spawn configuration
 ```
 
 ## Setup
 
 ```bash
-uv sync --all-extras
-uv run pytest
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+.venv/bin/pytest
 ```
+
+(`uv sync --all-extras` and `uv run ...` also work if you have `uv` installed.)
 
 ## Running the MCP server
 
 ```bash
-uv run python -m iw_architect.server
+.venv/bin/python -m iw_architect.server
 ```
 
 ## Source-of-truth rules (from DESIGN_BRIEF_v2.md §3)
@@ -54,16 +63,16 @@ uv run python -m iw_architect.server
 ## Design constraints
 
 - **No write tools.** The plugin has no add/modify/remove MCP tools. The agent edits `world.json` directly with Claude Code's native `Read`, `Edit`, `Write` tools.
-- **Single validator.** All schema knowledge lives in `validator.py` + `world_schema.json`. Update only those files when the platform schema evolves.
+- **Single validator.** All schema knowledge lives in `validator.py` + `skills/world-architect/references/world_v2.1.schema.json`. Update only those files when the platform schema evolves.
 - **Warn, don't error** on unknown top-level keys, unknown effect types, and future schema versions — the platform may add fields the validator doesn't know about.
 
 ## Adding a new platform feature
 
-1. Add the new field/effect/condition type to `world_schema.json`
+1. Add the new field/effect/condition type to `skills/world-architect/references/world_v2.1.schema.json`
 2. Add its shape to `schema_model.py` (SCHEMA_SUMMARY)
 3. Add cross-reference checks to `validator.py` if needed
 4. Add a negative test in `tests/test_validator.py`
-5. Verify the fixture still passes with `uv run pytest`
+5. Verify the fixture still passes with `.venv/bin/pytest`
 
 ## Open questions (from DESIGN_BRIEF_v2.md §9)
 
@@ -80,7 +89,7 @@ These are preserved verbatim and not validated beyond type-checking until a fixt
 
 | Tool | Purpose |
 |---|---|
-| `uv` | Package and environment management |
+| `asdf` + `pip` + `venv` | Package and environment management (`.tool-versions` pins 3.12.13) |
 | `mcp` | Official Python MCP SDK (FastMCP, stdio transport) |
 | `jsonschema` | Tier 1 structural validation |
 | `ruff` | Linting and formatting |
