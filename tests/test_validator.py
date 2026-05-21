@@ -9,9 +9,6 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
-from typing import Any
-
-import pytest
 
 
 def _write_world(world: dict) -> str:
@@ -34,8 +31,9 @@ def _validate(world: dict) -> dict:
 
 def _base_world(**overrides) -> dict:
     """Minimal valid world scaffold for test mutations."""
-    from iw_architect.tools.helpers import scaffold_world
     import tempfile
+
+    from iw_architect.tools.helpers import scaffold_world
 
     tmp = tempfile.mktemp(suffix=".json")
     scaffold_world(tmp, title="Test World")
@@ -46,6 +44,7 @@ def _base_world(**overrides) -> dict:
 
 
 # ── Type errors ───────────────────────────────────────────────────────────────
+
 
 def test_wrong_type_mature():
     world = _base_world(mature="yes")  # should be boolean
@@ -70,6 +69,7 @@ def test_wrong_type_skills():
 
 # ── Missing required fields ───────────────────────────────────────────────────
 
+
 def test_missing_schema_version():
     world = _base_world()
     del world["schemaVersion"]
@@ -88,16 +88,19 @@ def test_missing_title():
 
 # ── Invalid enum values ───────────────────────────────────────────────────────
 
+
 def test_invalid_tracked_item_data_type():
     world = _base_world()
-    world["trackedItems"] = [{
-        "id": "abc123def",
-        "name": "Health",
-        "positionInList": 0,
-        "dataType": "integer",  # invalid — must be text/number/xml
-        "visibility": "everyone",
-        "autoUpdate": False,
-    }]
+    world["trackedItems"] = [
+        {
+            "id": "abc123def",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "integer",  # invalid — must be text/number/xml
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("dataType" in e or "integer" in e for e in result["errors"])
@@ -105,14 +108,16 @@ def test_invalid_tracked_item_data_type():
 
 def test_invalid_tracked_item_visibility():
     world = _base_world()
-    world["trackedItems"] = [{
-        "id": "abc123def",
-        "name": "Health",
-        "positionInList": 0,
-        "dataType": "number",
-        "visibility": "public",  # invalid
-        "autoUpdate": False,
-    }]
+    world["trackedItems"] = [
+        {
+            "id": "abc123def",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "public",  # invalid
+            "autoUpdate": False,
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("visibility" in e or "public" in e for e in result["errors"])
@@ -120,19 +125,30 @@ def test_invalid_tracked_item_visibility():
 
 # ── Broken cross-references ───────────────────────────────────────────────────
 
+
 def test_trigger_on_character_unknown_id():
     world = _base_world()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test Trigger",
-        "triggerEffects": [{"id": "aaac5aa8-13cc-cc5a-f032-2016af92a391", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
-            "category": "condition",
-            "type": "triggerOnCharacter",
-            "data": ["UNKNOWN_CHAR_ID"],
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerOnCharacter",
+                    "data": ["UNKNOWN_CHAR_ID"],
+                }
+            ],
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("UNKNOWN_CHAR_ID" in e for e in result["errors"])
@@ -140,15 +156,19 @@ def test_trigger_on_character_unknown_id():
 
 def test_effect_modify_instruction_block_unknown_id():
     world = _base_world()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test Trigger",
-        "triggerEffects": [{
-            "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
-            "type": "effectModifyInstructionBlock",
-            "data": {"id": "NONEXISTENT", "content": "new content"},
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectModifyInstructionBlock",
+                    "data": {"id": "NONEXISTENT", "content": "new content"},
+                }
+            ],
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("NONEXISTENT" in e for e in result["errors"])
@@ -156,17 +176,27 @@ def test_effect_modify_instruction_block_unknown_id():
 
 def test_trigger_prereqs_unknown_id():
     world = _base_world()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test Trigger",
-        "triggerEffects": [{"id": "aaac5aa8-13cc-cc5a-f032-2016af92a391", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
-            "category": "condition",
-            "type": "triggerPrereqs",
-            "data": ["DOES_NOT_EXIST"],
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerPrereqs",
+                    "data": ["DOES_NOT_EXIST"],
+                }
+            ],
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("DOES_NOT_EXIST" in e for e in result["errors"])
@@ -174,23 +204,34 @@ def test_trigger_prereqs_unknown_id():
 
 def test_trigger_blockers_unknown_id():
     world = _base_world()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test Trigger",
-        "triggerEffects": [{"id": "aaac5aa8-13cc-cc5a-f032-2016af92a391", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
-            "category": "condition",
-            "type": "triggerBlockers",
-            "data": ["DOES_NOT_EXIST"],
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerBlockers",
+                    "data": ["DOES_NOT_EXIST"],
+                }
+            ],
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("DOES_NOT_EXIST" in e for e in result["errors"])
 
 
 # ── Duplicate IDs ─────────────────────────────────────────────────────────────
+
 
 def test_duplicate_tracked_item_ids():
     world = _base_world()
@@ -219,11 +260,26 @@ def test_duplicate_npc_ids():
 
 # ── positionInList ─────────────────────────────────────────────────────────────
 
+
 def test_non_unique_position_in_list():
     world = _base_world()
     world["trackedItems"] = [
-        {"id": "ITEM00001", "name": "Health", "positionInList": 0, "dataType": "number", "visibility": "everyone", "autoUpdate": False},
-        {"id": "ITEM00002", "name": "Mana", "positionInList": 0, "dataType": "number", "visibility": "everyone", "autoUpdate": False},
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        },
+        {
+            "id": "ITEM00002",
+            "name": "Mana",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        },
     ]
     result = _validate(world)
     assert not result["valid"]
@@ -231,6 +287,7 @@ def test_non_unique_position_in_list():
 
 
 # ── Cross-field invariants ────────────────────────────────────────────────────
+
 
 def test_nsfw_requires_mature():
     world = _base_world(nsfw=True, mature=False)
@@ -255,20 +312,31 @@ def test_editing_requires_sharing():
 
 # ── Logic conditions ──────────────────────────────────────────────────────────
 
+
 def test_logic_condition_requires_advanced_logic():
     world = _base_world()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test Trigger",
-        "advancedLogic": False,
-        "triggerEffects": [{"id": "aaac5aa8-13cc-cc5a-f032-2016af92a391", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
-            "category": "logic",
-            "operator": "or",
-            "data": [],
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "advancedLogic": False,
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "logic",
+                    "operator": "or",
+                    "data": [],
+                }
+            ],
+        }
+    ]
     result = _validate(world)
     assert not result["valid"]
     assert any("logic" in e.lower() and "advancedLogic" in e for e in result["errors"])
@@ -276,23 +344,34 @@ def test_logic_condition_requires_advanced_logic():
 
 def test_logic_condition_with_advanced_logic_is_valid():
     world = _base_world()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test Trigger",
-        "advancedLogic": True,
-        "triggerEffects": [{"id": "aaac5aa8-13cc-cc5a-f032-2016af92a391", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
-            "category": "logic",
-            "operator": "or",
-            "data": [],
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "advancedLogic": True,
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "logic",
+                    "operator": "or",
+                    "data": [],
+                }
+            ],
+        }
+    ]
     result = _validate(world)
     assert result["valid"]
 
 
 # ── Schema version warnings ────────────────────────────────────────────────────
+
 
 def test_future_schema_version_warns():
     world = _base_world(schemaVersion=99.0)
@@ -302,6 +381,7 @@ def test_future_schema_version_warns():
 
 
 # ── Unknown top-level keys produce warnings, not errors ───────────────────────
+
 
 def test_unknown_top_level_key_is_warning():
     world = _base_world()
@@ -313,9 +393,10 @@ def test_unknown_top_level_key_is_warning():
 
 # ── Tool function tests ────────────────────────────────────────────────────────
 
+
 def test_read_world_field_simple():
+
     from iw_architect.tools.inspection import read_world_field
-    import tempfile
 
     world = _base_world(background="The adventure begins")
     path = _write_world(world)
@@ -327,8 +408,8 @@ def test_read_world_field_simple():
 
 
 def test_read_world_field_dotted():
+
     from iw_architect.tools.inspection import read_world_field
-    import tempfile
 
     world = _base_world()
     world["imagePromptDetails"] = {"illustrGenre": "fantasy"}
@@ -357,11 +438,17 @@ def test_read_world_field_name_bracket():
     from iw_architect.tools.inspection import read_world_field
 
     world = _base_world()
-    world["trackedItems"] = [{
-        "id": "ITEM00001", "name": "Health", "positionInList": 0,
-        "dataType": "number", "visibility": "everyone", "autoUpdate": False,
-        "initialValue": "100",
-    }]
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+            "initialValue": "100",
+        }
+    ]
     path = _write_world(world)
     try:
         result = json.loads(read_world_field(path, "trackedItems[name=Health].initialValue"))
@@ -388,8 +475,9 @@ def test_mint_ids_npc():
 
 
 def test_mint_ids_trigger_step_is_uuid():
-    from iw_architect.tools.helpers import mint_ids
     import uuid
+
+    from iw_architect.tools.helpers import mint_ids
 
     result = json.loads(mint_ids("triggerStep", 1))
     assert len(result["ids"]) == 1

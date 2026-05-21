@@ -53,8 +53,7 @@ def test_fixture_passes_validator():
     result = json.loads(validate_world(str(FIXTURE_PATH)))
     assert result["errors"] == [], (
         "validate_world reported errors on the canonical fixture. "
-        f"The validator must be fixed:\n"
-        + "\n".join(f"  - {e}" for e in result["errors"])
+        "The validator must be fixed:\n" + "\n".join(f"  - {e}" for e in result["errors"])
     )
 
 

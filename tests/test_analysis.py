@@ -6,8 +6,6 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
 FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
 
 
@@ -30,6 +28,7 @@ def _base() -> dict:
 
 # ── audit_world ───────────────────────────────────────────────────────────────
 
+
 def test_audit_returns_findings():
     from iw_architect.tools.analysis import audit_world
 
@@ -46,17 +45,39 @@ def test_audit_detects_trigger_cycle(tmp_path):
         {
             "id": "TRIG0001",
             "name": "Trigger A",
-            "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
             "triggerConditions": [
-                {"id": "cond-uuid-1111-1111-1111-111111111111", "category": "condition", "type": "triggerPrereqs", "data": ["TRIG0002"]},
+                {
+                    "id": "cond-uuid-1111-1111-1111-111111111111",
+                    "category": "condition",
+                    "type": "triggerPrereqs",
+                    "data": ["TRIG0002"],
+                },
             ],
         },
         {
             "id": "TRIG0002",
             "name": "Trigger B",
-            "triggerEffects": [{"id": "eff-uuid-2222-2222-2222-222222222222", "type": "effectShowMessage", "data": "hi"}],
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-2222-2222-2222-222222222222",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
             "triggerConditions": [
-                {"id": "cond-uuid-2222-2222-2222-222222222222", "category": "condition", "type": "triggerPrereqs", "data": ["TRIG0001"]},
+                {
+                    "id": "cond-uuid-2222-2222-2222-222222222222",
+                    "category": "condition",
+                    "type": "triggerPrereqs",
+                    "data": ["TRIG0001"],
+                },
             ],
         },
     ]
@@ -78,7 +99,13 @@ def test_audit_no_cycle_finding(tmp_path):
         {
             "id": "TRIG0001",
             "name": "Trigger A",
-            "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
         },
     ]
     path = _write(world)
@@ -124,12 +151,20 @@ def test_audit_detects_unconditioned_trigger(tmp_path):
     from iw_architect.tools.analysis import audit_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Always Fires",
-        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Always Fires",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(audit_world(path))
@@ -144,13 +179,21 @@ def test_audit_triggerOnStartOfGame_not_flagged_as_unconditioned(tmp_path):
     from iw_architect.tools.analysis import audit_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Start Trigger",
-        "triggerOnStartOfGame": True,
-        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Start Trigger",
+            "triggerOnStartOfGame": True,
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(audit_world(path))
@@ -178,21 +221,25 @@ def test_audit_missing_per_character_overrides(tmp_path):
     from iw_architect.tools.analysis import audit_world
 
     world = _base()
-    world["trackedItems"] = [{
-        "id": "ITEM00001",
-        "name": "Health",
-        "positionInList": 0,
-        "dataType": "number",
-        "visibility": "everyone",
-        "autoUpdate": False,
-        "initialValueBasedOnPC": "character",
-    }]
-    world["possibleCharacters"] = [{
-        "name": "Alice",
-        "characterId": "CHAR0001",
-        "skills": {},
-        "initialTrackedItemValues": [],  # missing override for ITEM00001
-    }]
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+            "initialValueBasedOnPC": "character",
+        }
+    ]
+    world["possibleCharacters"] = [
+        {
+            "name": "Alice",
+            "characterId": "CHAR0001",
+            "skills": {},
+            "initialTrackedItemValues": [],  # missing override for ITEM00001
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(audit_world(path))
@@ -210,6 +257,7 @@ def test_audit_file_not_found():
 
 
 # ── compare_worlds ────────────────────────────────────────────────────────────
+
 
 def test_compare_worlds_scalar_change(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
@@ -264,6 +312,7 @@ def test_compare_worlds_missing_file_b(tmp_path):
 
 
 # ── get_diff_summary ──────────────────────────────────────────────────────────
+
 
 def test_get_diff_summary_no_changes(tmp_path):
     from iw_architect.tools.analysis import get_diff_summary
@@ -328,21 +377,31 @@ def test_get_diff_summary_entity_added(tmp_path):
 
 # ── Additional validator coverage ─────────────────────────────────────────────
 
+
 def test_validate_set_tracked_item_unknown_ref(tmp_path):
     """effectSetTrackedItemValue with unknown trackedItemID raises error."""
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{
-            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
-            "type": "effectSetTrackedItemValue",
-            "data": {"action": "set", "newValue": "x", "replaceWith": "", "trackedItemID": "BADID0001"},
-            "trackedItemID": "BADID0001",
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectSetTrackedItemValue",
+                    "data": {
+                        "action": "set",
+                        "newValue": "x",
+                        "replaceWith": "",
+                        "trackedItemID": "BADID0001",
+                    },
+                    "trackedItemID": "BADID0001",
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -356,17 +415,28 @@ def test_validate_effect_present_choice_unknown_tracked_item(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{
-            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
-            "type": "effectPresentChoice",
-            "data": {"choices": "A\nB", "message": "Pick", "updateMode": "replace",
-                     "maxSelections": None, "minSelections": None, "selectionMode": "single",
-                     "valueDelimiter": "newline", "targetTrackedItemId": "BADITEM01"},
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectPresentChoice",
+                    "data": {
+                        "choices": "A\nB",
+                        "message": "Pick",
+                        "updateMode": "replace",
+                        "maxSelections": None,
+                        "minSelections": None,
+                        "selectionMode": "single",
+                        "valueDelimiter": "newline",
+                        "targetTrackedItemId": "BADITEM01",
+                    },
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -380,16 +450,24 @@ def test_validate_effect_request_input_unknown_tracked_item(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{
-            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
-            "type": "effectRequestInput",
-            "data": {"inputMode": "multi", "requestText": "Enter text", "requiresInput": True,
-                     "targetTrackedItemId": "BADITEM01"},
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectRequestInput",
+                    "data": {
+                        "inputMode": "multi",
+                        "requestText": "Enter text",
+                        "requiresInput": True,
+                        "targetTrackedItemId": "BADITEM01",
+                    },
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -403,15 +481,19 @@ def test_validate_unknown_effect_type_is_warning(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{
-            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
-            "type": "effectSomeFutureType",
-            "data": "data",
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectSomeFutureType",
+                    "data": "data",
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -425,17 +507,27 @@ def test_validate_unknown_condition_type_is_warning(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "cond-uuid-1111-1111-1111-1111-111111111111",
-            "category": "condition",
-            "type": "triggerOnFuturePlatformType",
-            "data": "x",
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+                    "category": "condition",
+                    "type": "triggerOnFuturePlatformType",
+                    "data": "x",
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -463,14 +555,16 @@ def test_validate_template_variable_tracked_item_is_ok(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["trackedItems"] = [{
-        "id": "ITEM00001",
-        "name": "Health",
-        "positionInList": 0,
-        "dataType": "number",
-        "visibility": "everyone",
-        "autoUpdate": False,
-    }]
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
     world["instructions"] = "The player has <<health>> health."
     path = _write(world)
     try:
@@ -517,15 +611,19 @@ def test_validate_effect_modify_keyword_block_unknown_id(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{
-            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
-            "type": "effectModifyKeywordBlock",
-            "data": {"id": "NONEXISTENT", "content": "new", "keywords": ["kw"]},
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectModifyKeywordBlock",
+                    "data": {"id": "NONEXISTENT", "content": "new", "keywords": ["kw"]},
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -539,7 +637,11 @@ def test_validate_defeat_condition_alreadyfired_warns(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["defeatCondition"] = {"condition": "player dies", "text": "Game over.", "alreadyFired": True}
+    world["defeatCondition"] = {
+        "condition": "player dies",
+        "text": "Game over.",
+        "alreadyFired": True,
+    }
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -553,19 +655,34 @@ def test_validate_trigger_on_tracked_item_unknown_ref(tmp_path):
     from iw_architect.validator import validate_world
 
     world = _base()
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "cond-uuid-1111-1111-1111-1111-111111111111",
-            "category": "condition",
-            "type": "triggerOnTrackedItem",
-            "data": {"inequality": "at_least", "requiredValue": "5", "trackedItemID": "UNKNOWN01", "textComparison": "contains"},
-            "inequality": "at_least",
-            "trackedItemID": "UNKNOWN01",
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+                    "category": "condition",
+                    "type": "triggerOnTrackedItem",
+                    "data": {
+                        "inequality": "at_least",
+                        "requiredValue": "5",
+                        "trackedItemID": "UNKNOWN01",
+                        "textComparison": "contains",
+                    },
+                    "inequality": "at_least",
+                    "trackedItemID": "UNKNOWN01",
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))
@@ -580,19 +697,34 @@ def test_validate_trigger_on_tracked_item_skill_ref_is_ok(tmp_path):
 
     world = _base()
     world["skills"] = ["Patience"]
-    world["triggerEvents"] = [{
-        "id": "TRIG0001",
-        "name": "Test",
-        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
-        "triggerConditions": [{
-            "id": "cond-uuid-1111-1111-1111-1111-111111111111",
-            "category": "condition",
-            "type": "triggerOnTrackedItem",
-            "data": {"inequality": "at_least", "requiredValue": "3", "trackedItemID": "skill_patience", "textComparison": "contains"},
-            "inequality": "at_least",
-            "trackedItemID": "skill_patience",
-        }],
-    }]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test",
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+                    "category": "condition",
+                    "type": "triggerOnTrackedItem",
+                    "data": {
+                        "inequality": "at_least",
+                        "requiredValue": "3",
+                        "trackedItemID": "skill_patience",
+                        "textComparison": "contains",
+                    },
+                    "inequality": "at_least",
+                    "trackedItemID": "skill_patience",
+                }
+            ],
+        }
+    ]
     path = _write(world)
     try:
         result = json.loads(validate_world(path))

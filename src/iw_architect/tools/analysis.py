@@ -46,22 +46,21 @@ def _text_budget(world: dict) -> dict[str, int]:
         budgets["NPCs"] = npc_total
 
     ti_total = sum(
-        _token_estimate(str(ti.get("description", ""))) + _token_estimate(str(ti.get("updateInstructions", "")))
+        _token_estimate(str(ti.get("description", "")))
+        + _token_estimate(str(ti.get("updateInstructions", "")))
         for ti in world.get("trackedItems", [])
     )
     if ti_total:
         budgets["trackedItems"] = ti_total
 
     ib_total = sum(
-        _token_estimate(str(ib.get("content", "")))
-        for ib in world.get("instructionBlocks", [])
+        _token_estimate(str(ib.get("content", ""))) for ib in world.get("instructionBlocks", [])
     )
     if ib_total:
         budgets["instructionBlocks"] = ib_total
 
     lb_total = sum(
-        _token_estimate(str(lb.get("content", "")))
-        for lb in world.get("loreBookEntries", [])
+        _token_estimate(str(lb.get("content", ""))) for lb in world.get("loreBookEntries", [])
     )
     if lb_total:
         budgets["loreBookEntries"] = lb_total
@@ -138,43 +137,53 @@ def audit_world(world_path: str) -> str:
     # Token budgets
     budgets = _text_budget(world)
     total_tokens = sum(budgets.values())
-    findings.append({
-        "type": "token_budget",
-        "severity": "info",
-        "summary": f"Estimated total context tokens: ~{total_tokens}",
-        "detail": {k: f"~{v}" for k, v in sorted(budgets.items(), key=lambda x: -x[1])},
-    })
+    findings.append(
+        {
+            "type": "token_budget",
+            "severity": "info",
+            "summary": f"Estimated total context tokens: ~{total_tokens}",
+            "detail": {k: f"~{v}" for k, v in sorted(budgets.items(), key=lambda x: -x[1])},
+        }
+    )
 
     heavy = {k: v for k, v in budgets.items() if v > 1000}
     if heavy:
-        findings.append({
-            "type": "token_budget_warning",
-            "severity": "warning",
-            "summary": "Some sections use >1000 estimated tokens",
-            "detail": {k: f"~{v}" for k, v in heavy.items()},
-            "suggestion": "Consider condensing these sections to reduce AI context cost.",
-        })
+        findings.append(
+            {
+                "type": "token_budget_warning",
+                "severity": "warning",
+                "summary": "Some sections use >1000 estimated tokens",
+                "detail": {k: f"~{v}" for k, v in heavy.items()},
+                "suggestion": "Consider condensing these sections to reduce AI context cost.",
+            }
+        )
 
     # Trigger-graph cycle detection
     graph = _build_prereq_graph(world)
     cycles = _find_cycles(graph)
     if cycles:
-        trigger_names = {te.get("id"): te.get("name", te.get("id")) for te in world.get("triggerEvents", [])}
+        trigger_names = {
+            te.get("id"): te.get("name", te.get("id")) for te in world.get("triggerEvents", [])
+        }
         for cycle in cycles:
             named = [trigger_names.get(nid, nid) for nid in cycle]
-            findings.append({
-                "type": "trigger_cycle",
-                "severity": "error",
-                "summary": "Trigger prerequisite cycle detected",
-                "cycle": named,
-                "suggestion": "Break the cycle by removing one triggerPrereqs condition.",
-            })
+            findings.append(
+                {
+                    "type": "trigger_cycle",
+                    "severity": "error",
+                    "summary": "Trigger prerequisite cycle detected",
+                    "cycle": named,
+                    "suggestion": "Break the cycle by removing one triggerPrereqs condition.",
+                }
+            )
     else:
-        findings.append({
-            "type": "trigger_graph",
-            "severity": "ok",
-            "summary": "No prerequisite cycles detected in trigger graph",
-        })
+        findings.append(
+            {
+                "type": "trigger_graph",
+                "severity": "ok",
+                "summary": "No prerequisite cycles detected in trigger graph",
+            }
+        )
 
     # Redundancy: NPC names mentioned verbatim in instructions
     instructions = world.get("instructions", "")
@@ -184,17 +193,19 @@ def audit_world(world_path: str) -> str:
         if name and name in instructions:
             npc_names_in_instructions.append(name)
     if npc_names_in_instructions:
-        findings.append({
-            "type": "npc_instruction_overlap",
-            "severity": "info",
-            "summary": "NPC names found in main instructions",
-            "npcs": npc_names_in_instructions,
-            "suggestion": (
-                "The platform automatically provides NPC details to the AI. "
-                "Brief mentions in instructions are fine, but full NPC descriptions in instructions "
-                "are redundant and waste tokens."
-            ),
-        })
+        findings.append(
+            {
+                "type": "npc_instruction_overlap",
+                "severity": "info",
+                "summary": "NPC names found in main instructions",
+                "npcs": npc_names_in_instructions,
+                "suggestion": (
+                    "The platform automatically provides NPC details to the AI. "
+                    "Brief mentions in instructions are fine, but full NPC "
+                    "descriptions in instructions are redundant and waste tokens."
+                ),
+            }
+        )
 
     # Instruction blocks with very short content
     short_blocks = [
@@ -203,13 +214,15 @@ def audit_world(world_path: str) -> str:
         if len(ib.get("content", "")) < 10
     ]
     if short_blocks:
-        findings.append({
-            "type": "empty_instruction_blocks",
-            "severity": "warning",
-            "summary": "Instruction blocks with very short content",
-            "blocks": short_blocks,
-            "suggestion": "Consider adding meaningful content or removing empty blocks.",
-        })
+        findings.append(
+            {
+                "type": "empty_instruction_blocks",
+                "severity": "warning",
+                "summary": "Instruction blocks with very short content",
+                "blocks": short_blocks,
+                "suggestion": "Consider adding meaningful content or removing empty blocks.",
+            }
+        )
 
     # Triggers without any conditions (always fires unless triggerOnStartOfGame)
     unconditioned = []
@@ -218,13 +231,18 @@ def audit_world(world_path: str) -> str:
         if not conds and not te.get("triggerOnStartOfGame"):
             unconditioned.append(te.get("name", te.get("id", "?")))
     if unconditioned:
-        findings.append({
-            "type": "unconditioned_triggers",
-            "severity": "warning",
-            "summary": "Triggers with no conditions (fires every eligible turn)",
-            "triggers": unconditioned,
-            "suggestion": "Add conditions to limit when these triggers fire, or verify this is intentional.",
-        })
+        findings.append(
+            {
+                "type": "unconditioned_triggers",
+                "severity": "warning",
+                "summary": "Triggers with no conditions (fires every eligible turn)",
+                "triggers": unconditioned,
+                "suggestion": (
+                    "Add conditions to limit when these triggers fire, "
+                    "or verify this is intentional."
+                ),
+            }
+        )
 
     # Characters with no tracked item overrides when items use initialValueBasedOnPC="character"
     per_char_items = [
@@ -235,7 +253,11 @@ def audit_world(world_path: str) -> str:
     if per_char_items:
         for ch in world.get("possibleCharacters", []):
             override_ids = {itv.get("id") for itv in ch.get("initialTrackedItemValues", [])}
-            item_ids = {ti.get("id") for ti in world.get("trackedItems", []) if ti.get("initialValueBasedOnPC") == "character"}
+            item_ids = {
+                ti.get("id")
+                for ti in world.get("trackedItems", [])
+                if ti.get("initialValueBasedOnPC") == "character"
+            }
             missing = item_ids - override_ids
             if missing:
                 missing_names = [
@@ -244,21 +266,35 @@ def audit_world(world_path: str) -> str:
                     for ti in world.get("trackedItems", [])
                     if ti.get("id") == tid
                 ]
-                findings.append({
-                    "type": "missing_per_character_overrides",
-                    "severity": "warning",
-                    "summary": f"Character '{ch.get('name', '?')}' missing initialTrackedItemValues overrides",
-                    "items": missing_names,
-                    "suggestion": "Add initialTrackedItemValues entries for per-character tracked items.",
-                })
+                findings.append(
+                    {
+                        "type": "missing_per_character_overrides",
+                        "severity": "warning",
+                        "summary": (
+                            f"Character '{ch.get('name', '?')}' missing "
+                            "initialTrackedItemValues overrides"
+                        ),
+                        "items": missing_names,
+                        "suggestion": (
+                            "Add initialTrackedItemValues entries for per-character tracked items."
+                        ),
+                    }
+                )
 
     return json.dumps({"findings": findings}, indent=2)
 
 
 def _diff_value(a: Any, b: Any, path: str, changes: list[dict]) -> None:
     """Recursively diff two values, recording changes."""
-    if type(a) != type(b):
-        changes.append({"path": path, "type": "type_change", "from": type(a).__name__, "to": type(b).__name__})
+    if not isinstance(b, type(a)) and not isinstance(a, type(b)):
+        changes.append(
+            {
+                "path": path,
+                "type": "type_change",
+                "from": type(a).__name__,
+                "to": type(b).__name__,
+            }
+        )
         return
 
     if isinstance(a, dict):
@@ -275,9 +311,7 @@ def _diff_value(a: Any, b: Any, path: str, changes: list[dict]) -> None:
         # Check either side for the representative element shape.
         _rep = (a[0] if a else b[0]) if (a or b) else None
         is_entity_list = (
-            _rep is not None
-            and isinstance(_rep, dict)
-            and ("id" in _rep or "name" in _rep)
+            _rep is not None and isinstance(_rep, dict) and ("id" in _rep or "name" in _rep)
         )
         if is_entity_list:
             id_key = "id" if ("id" in (a[0] if a else b[0])) else "name"
@@ -313,12 +347,15 @@ def compare_worlds(world_path_a: str, world_path_b: str) -> str:
     changes: list[dict] = []
     _diff_value(world_a, world_b, "(root)", changes)
 
-    return json.dumps({
-        "world_a": world_path_a,
-        "world_b": world_path_b,
-        "total_changes": len(changes),
-        "changes": changes,
-    }, indent=2)
+    return json.dumps(
+        {
+            "world_a": world_path_a,
+            "world_b": world_path_b,
+            "total_changes": len(changes),
+            "changes": changes,
+        },
+        indent=2,
+    )
 
 
 def get_diff_summary(original_path: str, current_path: str) -> str:
@@ -338,13 +375,17 @@ def get_diff_summary(original_path: str, current_path: str) -> str:
     if not changes:
         return "No differences found between the two worlds."
 
+    original_title = original.get("title", original_path)
+    current_title = current.get("title", current_path)
     lines = [
-        f"## Changes: {original.get('title', original_path)} → {current.get('title', current_path)}\n",
+        f"## Changes: {original_title} → {current_title}\n",
         f"**{len(changes)} change(s) detected**\n",
     ]
 
     # Group by category
-    scalar_changes = [c for c in changes if c["type"] == "changed" and not c["path"].startswith("(root).[")]
+    scalar_changes = [
+        c for c in changes if c["type"] == "changed" and not c["path"].startswith("(root).[")
+    ]
     array_adds = [c for c in changes if c["type"] == "added"]
     array_removes = [c for c in changes if c["type"] == "removed"]
     other = [c for c in changes if c not in scalar_changes + array_adds + array_removes]

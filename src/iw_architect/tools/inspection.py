@@ -65,7 +65,7 @@ def _resolve_path(world: dict, path: str) -> Any:
             current = current[step]
         elif isinstance(step, int):
             if not isinstance(current, list):
-                raise ValueError(f"Cannot index a non-list value")
+                raise ValueError("Cannot index a non-list value")
             current = current[step]
         else:
             field_name, field_value = step
@@ -139,7 +139,9 @@ def format_world_for_review(world_path: str) -> str:
 
     parts.append(f"# {world.get('title', '(Untitled)')}\n")
     parts.append(f"**Schema version**: {world.get('schemaVersion', '?')}  ")
-    parts.append(f"**Mature**: {world.get('mature', False)}  **NSFW**: {world.get('nsfw', False)}\n")
+    parts.append(
+        f"**Mature**: {world.get('mature', False)}  **NSFW**: {world.get('nsfw', False)}\n"
+    )
 
     if desc := world.get("description"):
         parts.append(_section("Description", desc))

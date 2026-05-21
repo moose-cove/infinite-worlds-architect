@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 import secrets
@@ -37,14 +36,15 @@ def _random_short_id(length: int) -> str:
 def mint_ids(kind: str, count: int = 1) -> str:
     """Generate IDs in the format the platform expects for the given entity kind.
 
-    kind: one of character, npc, trackedItem, triggerEvent, triggerStep, instructionBlock, loreBookEntry
+    kind: one of character, npc, trackedItem, triggerEvent, triggerStep,
+        instructionBlock, loreBookEntry
     count: how many IDs to generate (default 1)
     Returns a JSON array of ID strings.
     """
     if kind not in _ENTITY_ID_LENGTHS:
-        return json.dumps({
-            "error": f"Unknown kind '{kind}'. Valid kinds: {sorted(_ENTITY_ID_LENGTHS)}"
-        })
+        return json.dumps(
+            {"error": f"Unknown kind '{kind}'. Valid kinds: {sorted(_ENTITY_ID_LENGTHS)}"}
+        )
     if not isinstance(count, int) or count < 1:
         return json.dumps({"error": "count must be a positive integer"})
     if count > 100:
@@ -130,11 +130,13 @@ def scaffold_world(
         world["mature"] = True
 
     path.write_text(json.dumps(world, indent=2))
-    return json.dumps({
-        "status": "created",
-        "path": str(path.resolve()),
-        "message": f"World '{title}' scaffolded at {path}. Run validate_world to confirm.",
-    })
+    return json.dumps(
+        {
+            "status": "created",
+            "path": str(path.resolve()),
+            "message": f"World '{title}' scaffolded at {path}. Run validate_world to confirm.",
+        }
+    )
 
 
 def confirm_path(path: str) -> str:
@@ -148,21 +150,29 @@ def confirm_path(path: str) -> str:
     parent_exists = resolved.parent.exists()
 
     if not exists and not parent_exists:
-        return json.dumps({
-            "resolved_path": str(resolved),
-            "exists": False,
-            "parent_exists": False,
-            "status": "error",
-            "message": f"Neither '{resolved}' nor its parent directory exists.",
-        })
+        return json.dumps(
+            {
+                "resolved_path": str(resolved),
+                "exists": False,
+                "parent_exists": False,
+                "status": "error",
+                "message": f"Neither '{resolved}' nor its parent directory exists.",
+            }
+        )
 
-    return json.dumps({
-        "resolved_path": str(resolved),
-        "exists": exists,
-        "parent_exists": parent_exists,
-        "status": "ok",
-        "message": (
-            f"Path resolves to: {resolved}"
-            + (" (file exists)" if exists else " (parent directory exists, file not yet created)")
-        ),
-    })
+    return json.dumps(
+        {
+            "resolved_path": str(resolved),
+            "exists": exists,
+            "parent_exists": parent_exists,
+            "status": "ok",
+            "message": (
+                f"Path resolves to: {resolved}"
+                + (
+                    " (file exists)"
+                    if exists
+                    else " (parent directory exists, file not yet created)"
+                )
+            ),
+        }
+    )

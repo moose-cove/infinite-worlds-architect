@@ -44,11 +44,27 @@ SCHEMA_SUMMARY = {
         "imagePromptDetails": {"type": "object", "category": "hybrid"},
         "permissionsOnceShared": {"type": "object", "category": "editable"},
         "allowChangeCharacterName": {"type": "boolean", "category": "editable", "default": True},
-        "allowChangeCharacterDescription": {"type": "boolean", "category": "editable", "default": True},
+        "allowChangeCharacterDescription": {
+            "type": "boolean",
+            "category": "editable",
+            "default": True,
+        },
         "allowChangeCharacterSkills": {"type": "boolean", "category": "editable", "default": False},
-        "allowChangeCharacterItemValues": {"type": "boolean", "category": "editable", "default": False},
-        "allowChangeCharacterPortrait": {"type": "boolean", "category": "editable", "default": False},
-        "allowChangeCharacterNewPortrait": {"type": "boolean", "category": "editable", "default": False},
+        "allowChangeCharacterItemValues": {
+            "type": "boolean",
+            "category": "editable",
+            "default": False,
+        },
+        "allowChangeCharacterPortrait": {
+            "type": "boolean",
+            "category": "editable",
+            "default": False,
+        },
+        "allowChangeCharacterNewPortrait": {
+            "type": "boolean",
+            "category": "editable",
+            "default": False,
+        },
         "possibleCharacters": {"type": "object[]", "category": "editable+platform"},
         "NPCs": {"type": "object[]", "category": "editable"},
         "trackedItems": {"type": "object[]", "category": "editable"},
@@ -203,16 +219,31 @@ SCHEMA_SUMMARY = {
     },
     "effectTypes": {
         "effectShowMessage": {"data": "string", "description": "Show message to player"},
-        "effectTellAIWhatToDo": {"data": "string", "description": "Directive to the AI for next turn"},
-        "effectGiveInfo": {"data": "string", "description": "Append to secretInfo (not guaranteed to be followed)"},
+        "effectTellAIWhatToDo": {
+            "data": "string",
+            "description": "Directive to the AI for next turn",
+        },
+        "effectGiveInfo": {
+            "data": "string",
+            "description": "Append to secretInfo (not guaranteed to be followed)",
+        },
         "effectChangeBackground": {"data": "string", "description": "Replace world background"},
-        "effectChangeMainInstructions": {"data": "string", "description": "Replace world instructions"},
+        "effectChangeMainInstructions": {
+            "data": "string",
+            "description": "Replace world instructions",
+        },
         "effectChangeAuthorStyle": {"data": "string", "description": "Replace world authorStyle"},
-        "effectChangeDescriptionInstructions": {"data": "string", "description": "Replace descriptionRequest"},
+        "effectChangeDescriptionInstructions": {
+            "data": "string",
+            "description": "Replace descriptionRequest",
+        },
         "effectChangeObjective": {"data": "string", "description": "Replace world objective"},
         "effectChangeFirstAction": {"data": "string", "description": "Replace world firstInput"},
         "effectChangePCName": {"data": "string", "description": "Rename active player character"},
-        "effectChangePCDescription": {"data": "string", "description": "Replace active PC description"},
+        "effectChangePCDescription": {
+            "data": "string",
+            "description": "Replace active PC description",
+        },
         "effectChangePCSkill": {
             "data": "{name, amount, minmax, increase}",
             "description": "Modify a PC skill value",
@@ -240,12 +271,19 @@ SCHEMA_SUMMARY = {
             "description": "Set or modify a tracked item's value",
         },
         "effectModifyTrackedItemDetails": {
-            "data": "{trackedItemID, overrideName, overrideDescription, overrideUpdateInstructions, overrideVisibility, overrideAutoUpdate, name?, description?, updateInstructions?, visibility?, autoUpdate?}",
+            "data": (
+                "{trackedItemID, overrideName, overrideDescription, "
+                "overrideUpdateInstructions, overrideVisibility, overrideAutoUpdate, "
+                "name?, description?, updateInstructions?, visibility?, autoUpdate?}"
+            ),
             "topLevelFields": ["trackedItemID"],
             "description": "Modify tracked item metadata (not its value)",
         },
         "effectPresentChoice": {
-            "data": "{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId}",
+            "data": (
+                "{choices, message, updateMode, maxSelections, minSelections, "
+                "selectionMode, valueDelimiter, targetTrackedItemId}"
+            ),
             "description": "Present player a choice; result saved to tracked item (blocking)",
         },
         "effectRequestInput": {
