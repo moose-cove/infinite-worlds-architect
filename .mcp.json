@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "iw-json-tools": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "python",
+        "-m",
+        "iw_architect.server"
+      ],
+      "env": {}
+    }
+  }
+}

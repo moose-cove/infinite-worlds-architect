@@ -1,0 +1,601 @@
+"""Tests for audit_world, compare_worlds, and get_diff_summary."""
+
+from __future__ import annotations
+
+import json
+import tempfile
+from pathlib import Path
+
+import pytest
+
+FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
+
+
+def _write(world: dict) -> str:
+    tmp = tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False)
+    json.dump(world, tmp)
+    tmp.flush()
+    return tmp.name
+
+
+def _base() -> dict:
+    from iw_architect.tools.helpers import scaffold_world
+
+    tmp = tempfile.mktemp(suffix=".json")
+    scaffold_world(tmp, title="Test")
+    world = json.loads(Path(tmp).read_text())
+    Path(tmp).unlink(missing_ok=True)
+    return world
+
+
+# ── audit_world ───────────────────────────────────────────────────────────────
+
+def test_audit_returns_findings():
+    from iw_architect.tools.analysis import audit_world
+
+    result = json.loads(audit_world(str(FIXTURE_PATH)))
+    assert "findings" in result
+    assert any(f["type"] == "token_budget" for f in result["findings"])
+
+
+def test_audit_detects_trigger_cycle(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Trigger A",
+            "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+            "triggerConditions": [
+                {"id": "cond-uuid-1111-1111-1111-111111111111", "category": "condition", "type": "triggerPrereqs", "data": ["TRIG0002"]},
+            ],
+        },
+        {
+            "id": "TRIG0002",
+            "name": "Trigger B",
+            "triggerEffects": [{"id": "eff-uuid-2222-2222-2222-222222222222", "type": "effectShowMessage", "data": "hi"}],
+            "triggerConditions": [
+                {"id": "cond-uuid-2222-2222-2222-222222222222", "category": "condition", "type": "triggerPrereqs", "data": ["TRIG0001"]},
+            ],
+        },
+    ]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        cycle_findings = [f for f in result["findings"] if f["type"] == "trigger_cycle"]
+        assert len(cycle_findings) >= 1
+        assert cycle_findings[0]["severity"] == "error"
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_no_cycle_finding(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Trigger A",
+            "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+        },
+    ]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        ok_findings = [f for f in result["findings"] if f["type"] == "trigger_graph"]
+        assert any(f["severity"] == "ok" for f in ok_findings)
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_detects_npc_name_in_instructions(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["instructions"] = "The world is guarded by Elara the wizard."
+    world["NPCs"] = [{"id": "NPC000001", "name": "Elara", "positionInList": 0}]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        overlap = [f for f in result["findings"] if f["type"] == "npc_instruction_overlap"]
+        assert len(overlap) == 1
+        assert "Elara" in overlap[0]["npcs"]
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_detects_empty_instruction_block(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["instructionBlocks"] = [{"id": "IB000001A", "name": "Empty Block", "content": "hi"}]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        short = [f for f in result["findings"] if f["type"] == "empty_instruction_blocks"]
+        assert len(short) == 1
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_detects_unconditioned_trigger(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Always Fires",
+        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+        "triggerConditions": [],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        uncond = [f for f in result["findings"] if f["type"] == "unconditioned_triggers"]
+        assert len(uncond) == 1
+        assert "Always Fires" in uncond[0]["triggers"]
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_triggerOnStartOfGame_not_flagged_as_unconditioned(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Start Trigger",
+        "triggerOnStartOfGame": True,
+        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+        "triggerConditions": [],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        uncond = [f for f in result["findings"] if f["type"] == "unconditioned_triggers"]
+        assert len(uncond) == 0
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_heavy_section_warns(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["instructions"] = "A" * 5000  # ~1250 tokens
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        heavy = [f for f in result["findings"] if f["type"] == "token_budget_warning"]
+        assert len(heavy) == 1
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_missing_per_character_overrides(tmp_path):
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["trackedItems"] = [{
+        "id": "ITEM00001",
+        "name": "Health",
+        "positionInList": 0,
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+        "initialValueBasedOnPC": "character",
+    }]
+    world["possibleCharacters"] = [{
+        "name": "Alice",
+        "characterId": "CHAR0001",
+        "skills": {},
+        "initialTrackedItemValues": [],  # missing override for ITEM00001
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        missing = [f for f in result["findings"] if f["type"] == "missing_per_character_overrides"]
+        assert len(missing) >= 1
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_file_not_found():
+    from iw_architect.tools.analysis import audit_world
+
+    result = json.loads(audit_world("/nonexistent/world.json"))
+    assert "error" in result
+
+
+# ── compare_worlds ────────────────────────────────────────────────────────────
+
+def test_compare_worlds_scalar_change(tmp_path):
+    from iw_architect.tools.analysis import compare_worlds
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    scaffold_world(str(a), title="Original")
+    scaffold_world(str(b), title="Modified")
+
+    result = json.loads(compare_worlds(str(a), str(b)))
+    assert result["total_changes"] > 0
+    paths = [c["path"] for c in result["changes"]]
+    assert any("title" in p for p in paths)
+
+
+def test_compare_worlds_entity_added(tmp_path):
+    from iw_architect.tools.analysis import compare_worlds
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    scaffold_world(str(a))
+    scaffold_world(str(b))
+
+    world_b = json.loads(b.read_text())
+    world_b["NPCs"] = [{"id": "NPC000001", "name": "Bob", "positionInList": 0}]
+    b.write_text(json.dumps(world_b))
+
+    result = json.loads(compare_worlds(str(a), str(b)))
+    assert any(c["type"] == "added" for c in result["changes"])
+
+
+def test_compare_worlds_missing_file_a(tmp_path):
+    from iw_architect.tools.analysis import compare_worlds
+    from iw_architect.tools.helpers import scaffold_world
+
+    b = tmp_path / "b.json"
+    scaffold_world(str(b))
+    result = json.loads(compare_worlds("/nonexistent.json", str(b)))
+    assert "error" in result
+
+
+def test_compare_worlds_missing_file_b(tmp_path):
+    from iw_architect.tools.analysis import compare_worlds
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    scaffold_world(str(a))
+    result = json.loads(compare_worlds(str(a), "/nonexistent.json"))
+    assert "error" in result
+
+
+# ── get_diff_summary ──────────────────────────────────────────────────────────
+
+def test_get_diff_summary_no_changes(tmp_path):
+    from iw_architect.tools.analysis import get_diff_summary
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    scaffold_world(str(a), title="Same")
+    result = get_diff_summary(str(a), str(a))
+    assert "No differences" in result
+
+
+def test_get_diff_summary_with_changes(tmp_path):
+    from iw_architect.tools.analysis import get_diff_summary
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    scaffold_world(str(a), title="Original")
+    scaffold_world(str(b), title="Changed")
+
+    result = get_diff_summary(str(a), str(b))
+    assert "## Changes" in result
+    assert "change" in result.lower()
+
+
+def test_get_diff_summary_missing_original(tmp_path):
+    from iw_architect.tools.analysis import get_diff_summary
+    from iw_architect.tools.helpers import scaffold_world
+
+    b = tmp_path / "b.json"
+    scaffold_world(str(b))
+    result = get_diff_summary("/nonexistent.json", str(b))
+    assert "Error" in result
+
+
+def test_get_diff_summary_missing_current(tmp_path):
+    from iw_architect.tools.analysis import get_diff_summary
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    scaffold_world(str(a))
+    result = get_diff_summary(str(a), "/nonexistent.json")
+    assert "Error" in result
+
+
+def test_get_diff_summary_entity_added(tmp_path):
+    from iw_architect.tools.analysis import get_diff_summary
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    scaffold_world(str(a))
+    scaffold_world(str(b))
+
+    world_b = json.loads(b.read_text())
+    world_b["NPCs"] = [{"id": "NPC000001", "name": "Bob", "positionInList": 0}]
+    b.write_text(json.dumps(world_b))
+
+    result = get_diff_summary(str(a), str(b))
+    assert "Added" in result
+
+
+# ── Additional validator coverage ─────────────────────────────────────────────
+
+def test_validate_set_tracked_item_unknown_ref(tmp_path):
+    """effectSetTrackedItemValue with unknown trackedItemID raises error."""
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{
+            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+            "type": "effectSetTrackedItemValue",
+            "data": {"action": "set", "newValue": "x", "replaceWith": "", "trackedItemID": "BADID0001"},
+            "trackedItemID": "BADID0001",
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert not result["valid"]
+        assert any("BADID0001" in e for e in result["errors"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_effect_present_choice_unknown_tracked_item(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{
+            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+            "type": "effectPresentChoice",
+            "data": {"choices": "A\nB", "message": "Pick", "updateMode": "replace",
+                     "maxSelections": None, "minSelections": None, "selectionMode": "single",
+                     "valueDelimiter": "newline", "targetTrackedItemId": "BADITEM01"},
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert not result["valid"]
+        assert any("BADITEM01" in e for e in result["errors"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_effect_request_input_unknown_tracked_item(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{
+            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+            "type": "effectRequestInput",
+            "data": {"inputMode": "multi", "requestText": "Enter text", "requiresInput": True,
+                     "targetTrackedItemId": "BADITEM01"},
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert not result["valid"]
+        assert any("BADITEM01" in e for e in result["errors"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_unknown_effect_type_is_warning(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{
+            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+            "type": "effectSomeFutureType",
+            "data": "data",
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert result["valid"]
+        assert any("effectSomeFutureType" in w for w in result["warnings"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_unknown_condition_type_is_warning(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+        "triggerConditions": [{
+            "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+            "category": "condition",
+            "type": "triggerOnFuturePlatformType",
+            "data": "x",
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert result["valid"]
+        assert any("triggerOnFuturePlatformType" in w for w in result["warnings"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_template_variable_undeclared_warns(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["instructions"] = "The player has <<undeclared_variable>> health."
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert result["valid"]
+        assert any("undeclared_variable" in w for w in result["warnings"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_template_variable_tracked_item_is_ok(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["trackedItems"] = [{
+        "id": "ITEM00001",
+        "name": "Health",
+        "positionInList": 0,
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+    }]
+    world["instructions"] = "The player has <<health>> health."
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        # No warning about <<health>>
+        assert not any("health" in w for w in result["warnings"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_older_schema_version_warns(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["schemaVersion"] = 1.0
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert result["valid"]
+        assert any("older" in w for w in result["warnings"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_file_not_found():
+    from iw_architect.validator import validate_world
+
+    result = json.loads(validate_world("/nonexistent/world.json"))
+    assert not result["valid"]
+    assert any("not found" in e for e in result["errors"])
+
+
+def test_validate_invalid_json(tmp_path):
+    from iw_architect.validator import validate_world
+
+    bad = tmp_path / "bad.json"
+    bad.write_text("not valid json {{{")
+    result = json.loads(validate_world(str(bad)))
+    assert not result["valid"]
+    assert any("Invalid JSON" in e for e in result["errors"])
+
+
+def test_validate_effect_modify_keyword_block_unknown_id(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{
+            "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+            "type": "effectModifyKeywordBlock",
+            "data": {"id": "NONEXISTENT", "content": "new", "keywords": ["kw"]},
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert not result["valid"]
+        assert any("NONEXISTENT" in e for e in result["errors"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_defeat_condition_alreadyfired_warns(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["defeatCondition"] = {"condition": "player dies", "text": "Game over.", "alreadyFired": True}
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert result["valid"]  # warning, not error
+        assert any("alreadyFired" in w for w in result["warnings"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_trigger_on_tracked_item_unknown_ref(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+        "triggerConditions": [{
+            "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+            "category": "condition",
+            "type": "triggerOnTrackedItem",
+            "data": {"inequality": "at_least", "requiredValue": "5", "trackedItemID": "UNKNOWN01", "textComparison": "contains"},
+            "inequality": "at_least",
+            "trackedItemID": "UNKNOWN01",
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert not result["valid"]
+        assert any("UNKNOWN01" in e for e in result["errors"])
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_validate_trigger_on_tracked_item_skill_ref_is_ok(tmp_path):
+    from iw_architect.validator import validate_world
+
+    world = _base()
+    world["skills"] = ["Patience"]
+    world["triggerEvents"] = [{
+        "id": "TRIG0001",
+        "name": "Test",
+        "triggerEffects": [{"id": "eff-uuid-1111-1111-1111-1111-111111111111", "type": "effectShowMessage", "data": "hi"}],
+        "triggerConditions": [{
+            "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+            "category": "condition",
+            "type": "triggerOnTrackedItem",
+            "data": {"inequality": "at_least", "requiredValue": "3", "trackedItemID": "skill_patience", "textComparison": "contains"},
+            "inequality": "at_least",
+            "trackedItemID": "skill_patience",
+        }],
+    }]
+    path = _write(world)
+    try:
+        result = json.loads(validate_world(path))
+        assert result["valid"]
+    finally:
+        Path(path).unlink(missing_ok=True)

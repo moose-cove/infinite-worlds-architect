@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infiniteworlds.app/schemas/world_v2.1",
+  "title": "Infinite Worlds World v2.1",
+  "description": "Schema for Infinite Worlds story world JSON files",
+  "type": "object",
+  "required": ["schemaVersion", "title"],
+  "properties": {
+    "schemaVersion": { "type": "number" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "background": { "type": "string" },
+    "instructions": { "type": "string" },
+    "authorStyle": { "type": "string" },
+    "firstInput": { "type": "string" },
+    "objective": { "type": "string" },
+    "mature": { "type": "boolean" },
+    "nsfw": { "type": "boolean" },
+    "contentWarnings": { "type": "string" },
+    "descriptionRequest": { "type": "string" },
+    "evaluationRequest": { "type": "string" },
+    "summaryRequest": { "type": "string" },
+    "hideSkillSystem": { "type": "boolean" },
+    "imageModel": { "type": "string" },
+    "imageStyle": { "type": "string" },
+    "imageStyleCharacterPre": { "type": "string" },
+    "imageStyleCharacterPost": { "type": "string" },
+    "imageStyleNonCharacterPre": { "type": "string" },
+    "imageStyleNonCharacterPost": { "type": "string" },
+    "illustrationStyleCharacterLowPriority": { "type": "string" },
+    "illustrationStyleCharacterHighPriority": { "type": "string" },
+    "illustrationStyleNonCharacterLowPriority": { "type": "string" },
+    "illustrationStyleNonCharacterHighPriority": { "type": "string" },
+    "enableAISpecificInstructionBlocks": { "type": "boolean" },
+    "recommendedAIModel": { "type": ["string", "null"] },
+    "charSelectText": { "type": "string" },
+    "designNotes": { "type": "string" },
+    "skills": { "type": "array", "items": { "type": "string" } },
+    "version": { "type": "string" },
+    "autoAdvanceVersion": { "type": "boolean" },
+    "favorite": { "type": "boolean" },
+    "previewImage": { "type": "string" },
+    "fullSizePreviewImage": { "type": "string" },
+    "previewImageOptions": { "type": "array", "items": { "type": "string" } },
+    "fullSizePreviewImageOptions": { "type": "array", "items": { "type": "string" } },
+    "currentPreviewImageIndex": { "type": "number" },
+    "allowChangeCharacterName": { "type": "boolean" },
+    "allowChangeCharacterDescription": { "type": "boolean" },
+    "allowChangeCharacterSkills": { "type": "boolean" },
+    "allowChangeCharacterItemValues": { "type": "boolean" },
+    "allowChangeCharacterPortrait": { "type": "boolean" },
+    "allowChangeCharacterNewPortrait": { "type": "boolean" },
+    "permissionsOnceShared": {
+      "type": "object",
+      "properties": {
+        "sharing": { "type": "boolean" },
+        "editing": { "type": "boolean" }
+      },
+      "required": ["sharing", "editing"]
+    },
+    "victoryCondition": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/winLoseCondition" }
+      ]
+    },
+    "defeatCondition": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/winLoseCondition" }
+      ]
+    },
+    "imagePromptDetails": { "$ref": "#/$defs/imagePromptDetails" },
+    "possibleCharacters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/character" }
+    },
+    "NPCs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/npc" }
+    },
+    "trackedItems": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/trackedItem" }
+    },
+    "triggerEvents": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/triggerEvent" }
+    },
+    "instructionBlocks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/instructionBlock" }
+    },
+    "loreBookEntries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/loreBookEntry" }
+    }
+  },
+  "$defs": {
+    "winLoseCondition": {
+      "type": "object",
+      "properties": {
+        "condition": { "type": "string" },
+        "text": { "type": "string" },
+        "alreadyFired": { "type": "boolean" }
+      },
+      "required": ["condition", "text", "alreadyFired"]
+    },
+    "imagePromptDetails": {
+      "type": "object",
+      "properties": {
+        "illustrGenre": { "type": "string" },
+        "illustrClothes": { "type": "string" },
+        "illustrSetting": { "type": "string" },
+        "illustrSubject": { "type": "string" },
+        "illustrAppearance": { "type": "string" },
+        "illustrIsCharacter": { "type": "boolean" },
+        "illustrExpressionPosition": { "type": "string" }
+      }
+    },
+    "initialTrackedItemValue": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "visibility": {
+          "type": "string",
+          "enum": ["everyone", "ai_only", "ai_only_boring", "player_only", "hidden"]
+        },
+        "initialPCValue": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" } }
+          ]
+        },
+        "initialValueBasedOnPC": {
+          "type": "string",
+          "enum": ["same", "character", "player"]
+        }
+      },
+      "required": ["id", "visibility", "initialPCValue", "initialValueBasedOnPC"]
+    },
+    "character": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "characterId": { "type": "string" },
+        "skills": { "type": "object" },
+        "portrait": { "type": "string" },
+        "fullSizePortrait": { "type": "string" },
+        "portraitOptions": { "type": "array", "items": { "type": "string" } },
+        "fullSizePortraitOptions": { "type": "array", "items": { "type": "string" } },
+        "currentPortraitIndex": { "type": "number" },
+        "portraitPromptDetails": { "$ref": "#/$defs/imagePromptDetails" },
+        "initialTrackedItemValues": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/initialTrackedItemValue" }
+        }
+      },
+      "required": ["name"]
+    },
+    "npc": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "positionInList": { "type": "number" },
+        "name": { "type": "string" },
+        "detail": { "type": "string" },
+        "one_liner": { "type": "string" },
+        "appearance": { "type": "string" },
+        "location": { "type": "string" },
+        "secret_info": { "type": "string" },
+        "names": { "type": "array", "items": { "type": "string" } },
+        "img_appearance": { "type": "string" },
+        "img_clothing": { "type": "string" }
+      },
+      "required": ["name", "positionInList"]
+    },
+    "trackedItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "positionInList": { "type": "number" },
+        "dataType": {
+          "type": "string",
+          "enum": ["text", "number", "xml"]
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["everyone", "ai_only", "ai_only_boring", "player_only", "hidden"]
+        },
+        "description": { "type": "string" },
+        "updateInstructions": { "type": "string" },
+        "initialValue": { "type": "string" },
+        "initialValueBasedOnPC": {
+          "type": "string",
+          "enum": ["same", "character", "player"]
+        },
+        "autoUpdate": { "type": "boolean" }
+      },
+      "required": ["name", "positionInList", "dataType", "visibility", "autoUpdate"]
+    },
+    "triggerEvent": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "canTriggerMoreThanOnce": { "type": "boolean" },
+        "advancedLogic": { "type": "boolean" },
+        "triggerOnStartOfGame": { "type": "boolean" },
+        "triggerConditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/triggerCondition" }
+        },
+        "triggerEffects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/triggerEffect" }
+        }
+      },
+      "required": ["name", "triggerEffects"]
+    },
+    "triggerCondition": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string", "enum": ["condition", "logic"] },
+        "type": { "type": "string" },
+        "operator": { "type": "string", "enum": ["and", "or"] },
+        "inequality": { "type": "string" },
+        "trackedItemID": { "type": "string" }
+      },
+      "required": ["id", "category"]
+    },
+    "triggerEffect": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "trackedItemID": { "type": "string" }
+      },
+      "required": ["id", "type"]
+    },
+    "instructionBlock": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "content": { "type": "string" },
+        "selectedAIProfiles": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "content"]
+    },
+    "loreBookEntry": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "content": { "type": "string" },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "content", "keywords"]
+    }
+  }
+}
