@@ -1,16 +1,33 @@
-repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.0
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
+# Pre-commit hooks mirror the GitHub Actions CI workflow in
+# .github/workflows/ci.yml. All hooks run the venv's installed binaries
+# rather than pinning their own copies — that way pyproject.toml is the
+# single source of tool versions and pre-commit cannot drift from CI.
+#
+# Do NOT bypass with `git commit --no-verify`. See CLAUDE.md.
+#
+# To install hooks after cloning:    .venv/bin/pre-commit install
+# To run hooks on the whole tree:    .venv/bin/pre-commit run --all-files
 
+repos:
   - repo: local
     hooks:
+      - id: ruff-check
+        name: ruff check (matches CI)
+        entry: .venv/bin/ruff check
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: ruff-format-check
+        name: ruff format --check (matches CI)
+        entry: .venv/bin/ruff format --check
+        language: system
+        types: [python]
+        require_serial: true
+
       - id: pytest
-        name: pytest
-        entry: uv run pytest --no-header -q
+        name: pytest with coverage (matches CI)
+        entry: .venv/bin/pytest --no-header -q
         language: system
         pass_filenames: false
         always_run: true

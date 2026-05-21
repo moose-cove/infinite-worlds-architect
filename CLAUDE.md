@@ -41,10 +41,19 @@ skills/
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
+.venv/bin/pre-commit install      # registers the git pre-commit hook
 .venv/bin/pytest
 ```
 
 (`uv sync --all-extras` and `uv run ...` also work if you have `uv` installed.)
+
+## Pre-commit hook policy
+
+`.pre-commit-config.yaml` mirrors the GitHub Actions CI workflow exactly: every check that fails in CI will fail on commit, locally, with the same arguments. This is intentional — it shortens the feedback loop from "wait for CI" to "wait for `git commit`".
+
+**Never bypass the pre-commit hook.** Do not run `git commit --no-verify`, do not set `SKIP=...`, do not edit `.pre-commit-config.yaml` to silence checks rather than fix them, and do not delete `.git/hooks/pre-commit`. If the hook is failing, fix the underlying issue — the failure is the system working as designed.
+
+The only legitimate reason to change the hook config is to keep it in sync with `.github/workflows/ci.yml` when CI changes; the two must stay aligned.
 
 ## Running the MCP server
 
