@@ -9,6 +9,15 @@ argument-hint: "[source_path] [target_path]"
 
 You are helping an author create a **variant** of an existing Infinite Worlds world — keeping the original intact and producing a new divergent version.
 
+## Recommended reading
+
+The references in `skills/world-architect/references/` cover authoring judgments specific to spinoffs:
+
+- **Before changing any character** → read `references/CHARACTER_AUTHORING_GUARDRAILS.md`. Spinoffs especially benefit from the no-fabrication rule because the temptation is to "complete" thinly-sketched source characters by inventing detail. The source dossier is the floor, not a starting point to embellish. Premise changes don't license character changes — ask the author what carries forward and what doesn't.
+- **When deciding whether to keep or restructure source content** → read `references/FIELD_ALLOCATION_STRATEGY.md`. A spinoff with a different premise often needs content reallocated (e.g., the original's `background` describes the wrong setting; some of its `instructionBlocks` become irrelevant). Use the allocation rules to decide what to keep, what to move, and what to drop.
+- **When changing `instructions`, `authorStyle`, or any trigger that the spinoff inherits** → read `references/AI_RUNTIME_MECHANICS.md` to understand what those fields actually shape at runtime.
+- **For per-field judgment calls** → read the matching file in `references/sections/`.
+
 ## Step 1 — Confirm paths
 
 If `$ARGUMENTS` contains two paths (source then target, space-separated), use them directly. Otherwise, ask the user for each path in turn.

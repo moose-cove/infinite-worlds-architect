@@ -23,14 +23,35 @@ You are assisting an author who is building or editing a story world for the **I
 | `compare_worlds(world_path_a, world_path_b)` | Structural diff between two worlds |
 | `get_diff_summary(original_path, current_path)` | Human-readable narrative of what changed |
 
-## Schema reference
+## References
 
-The world JSON schema lives in this skill's `references/` directory:
+The skill's `references/` directory contains two kinds of material — schema (the *shapes* of world JSON) and authoring guidance (the *judgments* about what to write).
+
+**Schema:**
 
 - `references/WORLD_JSON_SCHEMA_v2.1.md` — human-readable schema explanation
 - `references/world_v2.1.schema.json` — JSON Schema artifact used by `validate_world`
 
 The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root. When in doubt about a field's shape, call `get_schema_summary()` or `read_world_field` on the fixture.
+
+**Authoring guidance — read on demand based on the task:**
+
+- `references/AI_RUNTIME_MECHANICS.md` — what the AI produces each turn (`evaluation`, `whereWhen`, `outcomeDescription`, `secretInfo`, illustration fields), time tracking, the skill 0–5 scale, author-style discipline. Read when designing `instructions`, `authorStyle`, `descriptionRequest`, `evaluationRequest`, or any trigger effect that shapes AI output.
+- `references/FIELD_ALLOCATION_STRATEGY.md` — where content belongs (always-on vs keyword-gated vs trigger-gated), the field assignment quick reference, and the anti-patterns list. Read before populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world.
+- `references/CHARACTER_AUTHORING_GUARDRAILS.md` — no-fabrication discipline for `possibleCharacters` and `NPCs`. The no-citation rule. Always ask the author for `img_appearance` and `img_clothing` — never invent them. Read before writing any character.
+- `references/sections/*.md` — per-field authoring notes (judgments not in the schema doc):
+  - `INTRODUCING_THE_STORY.md` — `title`, `description`, `background`, `firstInput`, `objective`
+  - `MAIN_INSTRUCTIONS.md` — `instructions`, `instructionBlocks`, `authorStyle`, `designNotes`, content flags
+  - `PLAYER_CHARACTERS.md` — `skills`, `possibleCharacters`, `allowChangeCharacter*` permissions
+  - `OTHER_CHARACTERS.md` — `NPCs` (the critical `one_liner` rule)
+  - `TRACKED_ITEMS.md` — `trackedItems` (dataType / visibility choices, the 10,000-char limit, what NOT to track)
+  - `TRIGGER_EVENTS.md` — `triggerEvents` (when to use which effect type)
+  - `KEYWORD_INSTRUCTION_BLOCKS.md` — `loreBookEntries` (substring matching, the awareness paradox)
+  - `VICTORY_DEFEAT.md` — `victoryCondition` / `defeatCondition` (why the AI cannot see them)
+  - `IMAGE_STYLE.md` — `imageStyle*`, `illustrationStyle*`, LoRA keywords, model word limits
+  - `MISC_ADVANCED_FEATURES.md` — `descriptionRequest`, `summaryRequest`, the Summary AI cadence
+
+  Read the relevant section file before editing the corresponding field — they cover authoring judgments that don't fit in the schema doc.
 
 ## Commands available
 

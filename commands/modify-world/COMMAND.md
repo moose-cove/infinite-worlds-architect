@@ -9,6 +9,15 @@ argument-hint: "[world_path]"
 
 You are helping an author edit an **existing** Infinite Worlds world JSON. Follow this workflow precisely.
 
+## Recommended reading
+
+The references in `skills/world-architect/references/` cover authoring judgments worth consulting during modification:
+
+- **When refactoring poor field allocation** (the most common "improve this world" task) → read `references/FIELD_ALLOCATION_STRATEGY.md`. Typical refactors: moving NPC descriptions out of `background` into `NPCs`, lifting lore from `instructions` into `loreBookEntries`, hoisting state changes into `triggerEvents`. The anti-patterns section names the most common allocation mistakes.
+- **When editing any character field** → read `references/CHARACTER_AUTHORING_GUARDRAILS.md`. The temptation to "improve" a character by embellishing their dossier is the most common modify-world failure mode. Read the existing dossier first; confirm changes with the author; don't paraphrase away `<<template_variables>>` or details in `names`.
+- **When editing `instructions`, `authorStyle`, `descriptionRequest`, or trigger effects** → read `references/AI_RUNTIME_MECHANICS.md` to understand what the AI emits each turn before changing the rules that shape it.
+- **For per-field judgment calls** → read the matching file in `references/sections/`.
+
 ## Step 1 — Confirm the world path
 
 If `$ARGUMENTS` is non-empty, use it directly as the world path. Otherwise, ask the user for the path.
