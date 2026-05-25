@@ -8,7 +8,7 @@ Claude Code plugin for building and editing [Infinite Worlds](https://infinitewo
 src/iw_architect/
 ├── server.py          # MCP server entry point (FastMCP, stdio transport)
 ├── validator.py       # Two-tier world validator (jsonschema + custom checks)
-├── schema_model.py    # Structured schema metadata for get_schema_summary()
+├── schema_model.py    # Deriver: builds SCHEMA_SUMMARY from the JSON Schema at import time
 └── tools/
     ├── inspection.py  # read_world_field, format_world_for_review, get_schema_summary
     ├── helpers.py     # scaffold_world, mint_ids, confirm_path
@@ -72,16 +72,22 @@ The only legitimate reason to change the hook config is to keep it in sync with 
 ## Design constraints
 
 - **No write tools.** The plugin has no add/modify/remove MCP tools. The agent edits `world.json` directly with Claude Code's native `Read`, `Edit`, `Write` tools.
-- **Single validator.** All schema knowledge lives in `validator.py` + `skills/world-architect/references/world_v2.1.schema.json`. Update only those files when the platform schema evolves.
-- **Warn, don't error** on unknown top-level keys, unknown effect types, and future schema versions — the platform may add fields the validator doesn't know about.
+- **Single source of schema truth.** `skills/world-architect/references/world_v2.1.schema.json` is the canonical schema artifact. `validator.py` enforces it (Tier 1 jsonschema + Tier 2 custom checks). `schema_model.py` derives `SCHEMA_SUMMARY` from it at import time for the LLM-facing summary. When the platform schema evolves, edit the JSON Schema — the rest follows.
+- **Warn, don't error** on unknown top-level keys, unknown effect types, and future schema versions — the platform may add fields the validator doesn't know about. Build-time strictness is enforced separately by `test_fixture_schema_coverage_nested` in `tests/test_round_trip.py`.
 
 ## Adding a new platform feature
 
-1. Add the new field/effect/condition type to `skills/world-architect/references/world_v2.1.schema.json`
-2. Add its shape to `schema_model.py` (SCHEMA_SUMMARY)
-3. Add cross-reference checks to `validator.py` if needed
-4. Add a negative test in `tests/test_validator.py`
-5. Verify the fixture still passes with `.venv/bin/pytest`
+The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it automatically, so there is no second place to update.
+
+1. **Edit the JSON Schema** at `skills/world-architect/references/world_v2.1.schema.json`:
+   - For a new top-level field: add an entry to `properties` with `description`, `x-iw-category`, optionally `default`, `x-iw-note`, `enum`.
+   - For a new entity field: add it under the relevant `$defs.<entity>.properties`. If required, also add the field name to that `$defs.<entity>.required` array.
+   - For a new effect/condition type: add an entry to `$defs.triggerEffect.x-iw-effect-types` or `$defs.triggerCondition.x-iw-condition-types`. Register the type in `validator.py`'s `_KNOWN_EFFECT_TYPES` / `_KNOWN_CONDITION_TYPES` set so it stops warning as "unknown".
+2. **Add cross-reference checks** to `validator.py` if the new field references other entity IDs (e.g. tracked-item, instruction-block, trigger IDs).
+3. **Add a negative test** in `tests/test_validator.py` that constructs a world violating the new rule and asserts `validate_world` reports it.
+4. **Run `.venv/bin/pytest`.** The fixture round-trip (§6.1) and nested coverage tests (§6.2) will catch any drift between the schema and the canonical fixture.
+
+`schema_model.SCHEMA_SUMMARY` and `get_schema_summary()` update automatically — no manual edit needed.
 
 ## Open questions (from DESIGN_BRIEF_v2.md §9)
 
