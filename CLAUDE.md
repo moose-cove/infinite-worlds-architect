@@ -20,13 +20,15 @@ tests/
 └── test_analysis.py    # Tests for audit_world, compare_worlds, get_diff_summary
 
 skills/
-├── world-architect/                                 # Top-level discovery skill
-│   └── references/
-│       ├── WORLD_JSON_SCHEMA_v2.1.md                # Human-readable schema reference
-│       └── world_v2.1.schema.json                   # JSON Schema artifact (Tier 1 validator)
-├── new-world/          # Guided world creation workflow
-├── modify-world/       # Edit existing world workflow
-└── spinoff-world/      # Variant world workflow
+└── world-architect/                                 # Top-level discovery skill (model-invoked)
+    └── references/
+        ├── WORLD_JSON_SCHEMA_v2.1.md                # Human-readable schema reference
+        └── world_v2.1.schema.json                   # JSON Schema artifact (Tier 1 validator)
+
+commands/
+├── new-world/          # /infinite-worlds-architect:new-world  — guided world creation
+├── modify-world/       # /infinite-worlds-architect:modify-world — edit existing world
+└── spinoff-world/      # /infinite-worlds-architect:spinoff-world — derive a variant
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest

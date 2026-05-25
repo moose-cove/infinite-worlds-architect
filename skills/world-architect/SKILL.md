@@ -32,11 +32,13 @@ The world JSON schema lives in this skill's `references/` directory:
 
 The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root. When in doubt about a field's shape, call `get_schema_summary()` or `read_world_field` on the fixture.
 
-## Workflows available
+## Commands available
 
-- **`/infinite-worlds-architect:new-world`** — Create a new world from scratch
-- **`/infinite-worlds-architect:modify-world`** — Edit an existing world
-- **`/infinite-worlds-architect:spinoff-world`** — Derive a variant from an existing world
+Run these slash commands to start a guided workflow:
+
+- **`/infinite-worlds-architect:new-world [output_path]`** — Create a new world from scratch
+- **`/infinite-worlds-architect:modify-world [world_path]`** — Edit an existing world
+- **`/infinite-worlds-architect:spinoff-world [source_path] [target_path]`** — Derive a variant from an existing world
 
 ## Key principles
 
