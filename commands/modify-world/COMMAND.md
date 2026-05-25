@@ -69,6 +69,8 @@ Once the author's requested changes are complete:
 
 ### Adding a new NPC
 
+> Read `references/sections/OTHER_CHARACTERS.md` before defining NPC fields.
+
 ```
 1. mint_ids("npc", 1)           → get the new ID
 2. Determine positionInList     → max(existing positions) + 1
@@ -78,6 +80,8 @@ Once the author's requested changes are complete:
 
 ### Adding a tracked item
 
+> Read `references/sections/TRACKED_ITEMS.md` before defining item properties.
+
 ```
 1. mint_ids("trackedItem", 1)
 2. Determine positionInList
@@ -86,6 +90,8 @@ Once the author's requested changes are complete:
 ```
 
 ### Adding a trigger
+
+> Read `references/sections/TRIGGER_EVENTS.md` before authoring conditions and effects.
 
 ```
 1. mint_ids("triggerEvent", 1)           → trigger ID

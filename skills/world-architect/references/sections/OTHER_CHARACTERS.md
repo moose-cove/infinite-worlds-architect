@@ -61,11 +61,11 @@ Not a strong enforcement mechanism — the AI may not act on `secret_info` relia
 
 Leave blank if there are no secrets.
 
-### `names` (Comma-separated string)
+### `names` (string[])
 
 **Prevents the AI from treating different name forms as separate characters.**
 
-Include all name variants the character is known by: full name, nicknames, titles, how they're addressed in dialogue. Example: `"Dr. Sharon Stone, Dr. Stone, Sharon Stone, Sharon, Doc"`.
+Include all name variants the character is known by: full name, nicknames, titles, how they're addressed in dialogue. Example: `["Dr. Sharon Stone", "Dr. Stone", "Sharon Stone", "Sharon", "Doc"]`.
 
 If omitted, the AI may create separate runtime character records for "Dr. Stone" and "Sharon" as if they were two different people. The Summary AI will then maintain divergent records for what is conceptually one character. Always populate this field if a character has any name variants.
 

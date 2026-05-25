@@ -127,6 +127,10 @@ The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it au
 
 `schema_model.SCHEMA_SUMMARY` and `get_schema_summary()` update automatically — no manual edit needed.
 
+## Reference file naming convention
+
+Markdown reference files in `skills/world-architect/references/` (and `references/sections/`) use **UPPER_SNAKE_CASE** (e.g., `FIELD_ALLOCATION_STRATEGY.md`, `TRIGGER_EVENTS.md`). This matches the repo's existing `.md` convention (CLAUDE.md, DESIGN_BRIEF_v2.md, etc.). Do not rename files to kebab-case.
+
 ## Open questions (from DESIGN_BRIEF_v2.md §9)
 
 - `illustrationStyle*HighPriority` / `LowPriority` coexistence rules with older `imageStyle*` fields

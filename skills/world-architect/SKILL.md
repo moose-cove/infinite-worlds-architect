@@ -29,7 +29,7 @@ The skill's `references/` directory contains two kinds of material — schema (t
 
 **Schema:**
 
-- `references/WORLD_JSON_SCHEMA_v2.1.md` — human-readable schema explanation
+- `references/WORLD_JSON_SCHEMA_v2.1.md` — human-readable schema explanation. Read when: a section file or top-level reference cross-links to a specific section, or when the JSON Schema artifact's `description` strings are insufficient.
 - `references/world_v2.1.schema.json` — JSON Schema artifact used by `validate_world`
 
 The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root. When in doubt about a field's shape, call `get_schema_summary()` or `read_world_field` on the fixture.
@@ -38,7 +38,7 @@ The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root.
 
 - `references/AI_RUNTIME_MECHANICS.md` — what the AI produces each turn (`evaluation`, `whereWhen`, `outcomeDescription`, `secretInfo`, illustration fields), time tracking, the skill 0–5 scale, author-style discipline. Read when designing `instructions`, `authorStyle`, `descriptionRequest`, `evaluationRequest`, or any trigger effect that shapes AI output.
 - `references/FIELD_ALLOCATION_STRATEGY.md` — where content belongs (always-on vs keyword-gated vs trigger-gated), the field assignment quick reference, and the anti-patterns list. Read before populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world.
-- `references/CHARACTER_AUTHORING_GUARDRAILS.md` — no-fabrication discipline for `possibleCharacters` and `NPCs`. The no-citation rule. Always ask the author for `img_appearance` and `img_clothing` — never invent them. Read before writing any character.
+- `references/CHARACTER_AUTHORING_GUARDRAILS.md` — no-fabrication discipline for `possibleCharacters` and `NPCs`. The no-citation rule. Always ask the author for `img_appearance` and `img_clothing` — never invent them (see `references/CHARACTER_AUTHORING_GUARDRAILS.md` §2 for the canonical formulation). Read before writing any character.
 - `references/sections/*.md` — per-field authoring notes (judgments not in the schema doc):
   - `INTRODUCING_THE_STORY.md` — `title`, `description`, `background`, `firstInput`, `objective`
   - `MAIN_INSTRUCTIONS.md` — `instructions`, `instructionBlocks`, `authorStyle`, `designNotes`, content flags
@@ -52,6 +52,21 @@ The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root.
   - `MISC_ADVANCED_FEATURES.md` — `descriptionRequest`, `summaryRequest`, the Summary AI cadence
 
   Read the relevant section file before editing the corresponding field — they cover authoring judgments that don't fit in the schema doc.
+
+**Authoring intent → section file lookup** (use this when the author's request doesn't map obviously to a field name):
+
+| When the author asks about… | Load this section file |
+|---|---|
+| Opening scene, premise, title, first action | `INTRODUCING_THE_STORY.md` |
+| AI behavior, writing style, instructions | `MAIN_INSTRUCTIONS.md` |
+| Player characters, skills, character switching | `PLAYER_CHARACTERS.md` |
+| NPCs, adding/editing characters | `OTHER_CHARACTERS.md` |
+| Tracked items, inventory, game-state variables | `TRACKED_ITEMS.md` |
+| Triggers, conditional events, "when X happens", "end when dragon dies" | `TRIGGER_EVENTS.md` |
+| Lore, faction backstory, location info, keyword injection | `KEYWORD_INSTRUCTION_BLOCKS.md` |
+| Victory, defeat, ending the game | `VICTORY_DEFEAT.md` |
+| Illustration style, image generation, LoRAs | `IMAGE_STYLE.md` |
+| Summary AI, description format, advanced mechanics | `MISC_ADVANCED_FEATURES.md` |
 
 ## Commands available
 

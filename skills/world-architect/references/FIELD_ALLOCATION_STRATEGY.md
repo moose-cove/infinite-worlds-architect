@@ -15,7 +15,7 @@ Every text field in the world JSON has a different *injection profile* — when,
 - **Always-on fields** (`background`, `instructions`, `objective`, `authorStyle`, `descriptionRequest`, `firstInput`) are sent to the AI **every single turn**. Token cost is paid every turn, forever. Content here had better deserve that cost.
 - **Per-character fields** (`possibleCharacters[*].description`, skill list) are sent every turn for the active PC, but only the active PC.
 - **NPC dossiers** (`NPCs[*]`) are typically referenced when the NPC is in the scene — they don't all get injected every turn by default.
-- **Keyword instruction blocks** (`loreBookEntries[*]`) only inject for ~3 turns after a matching keyword appears in recent narrative. Effectively free when irrelevant, present when needed.
+- **Keyword instruction blocks** (`loreBookEntries[*]`) only inject for 3 turns after a matching keyword appears in recent narrative. Effectively free when irrelevant, present when needed.
 - **Extra instruction blocks** (`instructionBlocks[*]`) are always-on like `instructions`, but separable (and modifiable via `effectModifyInstructionBlock`). Use when you want a chunk of always-on text you can swap out by trigger.
 - **Trigger-gated content** (`triggerEvents[*].triggerEffects[*]`) only injects when the trigger's conditions fire. The most surgical option for state-dependent content.
 
@@ -39,7 +39,7 @@ Populate these for the *minimum* framing every turn needs.
 |---|---|---|
 | `title` | World name | — |
 | `description` | User-facing blurb shown in the world browser | Spoilers; mechanics |
-| `background` | The initial situation at turn 0 — premise, world state, setting framing | NPC descriptions, location lore, ongoing plot state, post-turn-0 events |
+| `background` | The initial situation at turn 0 — premise, world state, setting framing (after turn 8, the storyteller views the Summary AI's output rather than raw background — see `INTRODUCING_THE_STORY.md`) | NPC descriptions, location lore, ongoing plot state, post-turn-0 events |
 | `objective` | The player's primary goal (one or two sentences) | Sub-goals; conditional goals — use triggers to change `objective` over the course of the story |
 | `instructions` | AI decision-making logic — *how to behave*, not *what has happened* | Narrative history; character bios; lore |
 | `authorStyle` | Voice, register, prose constraints | Story content |
@@ -75,7 +75,7 @@ Do not embed NPC content in `background`. If an NPC is foundational to the world
 
 ### Keyword-gated (Tier 4) — `loreBookEntries`
 
-The most token-efficient field type. Each entry has `keywords` (array of trigger phrases) and `content`. Content only injects for ~3 turns after a keyword appears in the recent narrative (player action or AI output).
+The most token-efficient field type. Each entry has `keywords` (array of trigger phrases) and `content`. Content only injects for 3 turns after a keyword appears in the recent narrative (player action or AI output).
 
 **Use for:**
 

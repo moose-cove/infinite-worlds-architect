@@ -74,7 +74,7 @@ The world's `instructions` field is the primary lever for shaping the fields abo
 - "When the player attempts a deception, mark `evaluation` as DENIED if their `<<skill_charisma>>` is below 3" → AI uses the skill template variable in its evaluation logic.
 - "Track the relationship between the player and Mira in `secretInfo`" → AI writes a running note into `secretInfo` each turn.
 
-The world's `descriptionRequest` is a more surgical lever: it specifically overrides how `outcomeDescription` is composed (point of view, tense, naming rules, what to push into `secretInfo` vs the visible narrative). See `WORLD_JSON_SCHEMA_v2.1.md` for the field's exact role; this doc just notes that `descriptionRequest` lives downstream of `instructions` in the prompt pipeline and can therefore correct or constrain things `instructions` couldn't reach.
+The world's `descriptionRequest` is a more surgical lever: it specifically overrides how `outcomeDescription` is composed (point of view, tense, naming rules, what to push into `secretInfo` vs the visible narrative). See [`WORLD_JSON_SCHEMA_v2.1.md`](./WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1 for the field's exact role; this doc just notes that `descriptionRequest` lives downstream of `instructions` in the prompt pipeline and can therefore correct or constrain things `instructions` couldn't reach.
 
 ---
 

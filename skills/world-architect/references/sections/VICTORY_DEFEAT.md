@@ -64,7 +64,7 @@ If `defeatCondition` is left at the platform default (with empty `condition`):
 
 > "ONLY trigger victory if the player has EXPLICITLY and COMPLETELY achieved escape from the island AND has been confirmed safe in the rescue boat. Do not trigger for partial success. Do not trigger for implied success."
 
-**For precise victory/defeat control, modify conditions via triggers.** Use `effectChangeVictoryCondition` and `effectChangeDefeatCondition` to swap the active conditions at story phase transitions. Both effects take a `{condition, text, alreadyFired}` object as their data.
+**For precise victory/defeat control, modify conditions via triggers.** Use `effectChangeVictoryCondition` and `effectChangeDefeatCondition` to swap the active conditions at story phase transitions. Both effects take a `{condition, text, alreadyFired}` object as their data — always set `alreadyFired: false` when authoring; the platform sets `true` when the condition has fired.
 
 This pattern is the v2.1-canonical alternative to ending the game from inside a trigger:
 

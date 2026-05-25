@@ -28,7 +28,7 @@ If a prerequisite fires on the same turn, it only satisfies the condition if it 
 ### `triggerBlockers` (condition type)
 Same shape as `triggerPrereqs`. The named triggers must NOT have fired previously. If any have fired, this trigger is permanently blocked.
 
-**Reference by ID, not by name.** Both `triggerPrereqs` and `triggerBlockers` reference trigger `id` values, not trigger `name` values. Use `mint_ids("trigger", n)` to allocate IDs, and keep a mapping handy while authoring.
+**Reference by ID, not by name.** Both `triggerPrereqs` and `triggerBlockers` reference trigger `id` values, not trigger `name` values. Use `mint_ids("triggerEvent", n)` to allocate IDs, and keep a mapping handy while authoring.
 
 ---
 

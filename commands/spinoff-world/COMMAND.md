@@ -64,7 +64,9 @@ Key fields that usually diverge in a spinoff:
 - `title`, `description`, `background` — identify the variant clearly
 - `designNotes` — record why this variant exists (not sent to AI)
 - Character `name` and `description` if the protagonist changes
+  > Read `references/sections/OTHER_CHARACTERS.md` and `references/sections/PLAYER_CHARACTERS.md` before editing character fields.
 - Tracked item initial values if mechanics differ
+  > Read `references/sections/TRACKED_ITEMS.md` before modifying item definitions.
 
 ## Step 5 — Validate and audit the variant
 

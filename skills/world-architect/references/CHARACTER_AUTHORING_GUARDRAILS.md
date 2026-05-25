@@ -27,7 +27,7 @@ If a detail is missing and you can't get it from the author, **leave the field b
 
 ---
 
-## 2. Identity and appearance
+## 2. Identity and appearance *(canonical `img_appearance` / `img_clothing` rule)*
 
 - **Use the author's own language.** When the author describes how a character looks or speaks, reproduce those phrases. Paraphrasing invites distortion — you'll polish a vivid description into a generic one, or quietly swap one detail for an adjacent one.
 - **No genre defaults.** If a character's appearance is never described, leave `appearance` and `img_appearance` empty, or note "not described" in `appearance`. Do not substitute tropes.
