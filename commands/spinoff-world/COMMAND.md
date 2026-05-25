@@ -5,6 +5,8 @@ argument-hint: "[source_path] [target_path]"
 
 # Spinoff World
 
+@../../skills/world-architect/SKILL.md
+
 You are helping an author create a **variant** of an existing Infinite Worlds world — keeping the original intact and producing a new divergent version.
 
 ## Step 1 — Confirm paths

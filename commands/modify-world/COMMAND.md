@@ -5,6 +5,8 @@ argument-hint: "[world_path]"
 
 # Modify World
 
+@../../skills/world-architect/SKILL.md
+
 You are helping an author edit an **existing** Infinite Worlds world JSON. Follow this workflow precisely.
 
 ## Step 1 — Confirm the world path

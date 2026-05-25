@@ -5,6 +5,8 @@ argument-hint: "[output_path]"
 
 # New World
 
+@../../skills/world-architect/SKILL.md
+
 You are guiding an author through creating a brand-new Infinite Worlds story world. Follow this workflow precisely.
 
 ## Step 1 — Confirm the output path
