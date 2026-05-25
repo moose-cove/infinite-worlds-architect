@@ -17,19 +17,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version-file: .tool-versions
-          cache: pip
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync --all-extras
 
       - name: Run ruff lint
-        run: ruff check .
+        run: uv run ruff check .
 
       - name: Run ruff format check
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
       - name: Run pytest with coverage
-        run: pytest --no-header
+        run: uv run pytest --no-header
 
   version-bump:
     name: Version bump check

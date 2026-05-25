@@ -17,14 +17,15 @@ The plugin has **no write tools** — Claude edits world JSON directly using its
 
 ## Quick install
 
-Requires Python 3.12.13 (pinned via [`.tool-versions`](./.tool-versions) for asdf users).
+Requires Python 3.12.13 (pinned via [`.tool-versions`](./.tool-versions) for asdf users) and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
-.venv/bin/pre-commit install
-.venv/bin/pytest
+uv sync --all-extras       # creates .venv/ and installs runtime + dev deps
+uv run pre-commit install
+uv run pytest
 ```
+
+If you'd rather use stdlib `venv` + `pip`, see the legacy block in [`CLAUDE.md`](./CLAUDE.md#setup).
 
 The MCP server is spawned by Claude Code via [`.mcp.json`](./.mcp.json) when the plugin is loaded — no separate launch needed.
 

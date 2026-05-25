@@ -41,13 +41,37 @@ commands/
 ## Setup
 
 ```bash
+uv sync --all-extras              # creates .venv/ and installs runtime + dev deps
+uv run pre-commit install         # registers the git pre-commit hook
+uv run pytest
+```
+
+`uv sync` resolves against `pyproject.toml` (PEP 621 metadata + `[project.optional-dependencies].dev`) and writes the environment to `./.venv/`. The pre-commit config's hook entries reference `.venv/bin/ruff` and `.venv/bin/pytest` directly, so they pick up the same binaries `uv sync` installed — no extra wiring needed.
+
+Prefer `uv run <cmd>` over activating the venv. It avoids stale `$PATH` state across worktrees and is what CI runs.
+
+<details>
+<summary>Legacy pip/venv setup (still works, no longer the default)</summary>
+
+```bash
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
-.venv/bin/pre-commit install      # registers the git pre-commit hook
+.venv/bin/pre-commit install
 .venv/bin/pytest
 ```
 
-(`uv sync --all-extras` and `uv run ...` also work if you have `uv` installed.)
+</details>
+
+### Setting up a new worktree
+
+When you create a worktree via `EnterWorktree` (or `claude --worktree <name>`), it lands at `.claude/worktrees/<name>/` with the git history but **no `.venv/`** — venvs are per-working-directory, not shared across worktrees. Bootstrap inside the worktree:
+
+```bash
+uv sync --all-extras              # creates .venv/ in this worktree
+uv run pytest                     # sanity-check the install
+```
+
+The repo's pre-commit hooks are installed in the main repo's `.git/hooks/` and fire for every worktree, but their entries are relative paths (`.venv/bin/ruff` etc.). That's why each worktree needs its own `.venv/` — without it, `git commit` inside the worktree will fail with "ruff: not found". `uv sync` is the one-shot fix.
 
 ## Pre-commit hook policy
 
@@ -60,8 +84,10 @@ The only legitimate reason to change the hook config is to keep it in sync with 
 ## Running the MCP server
 
 ```bash
-.venv/bin/python -m iw_architect.server
+uv run python -m iw_architect.server
 ```
+
+(`.venv/bin/python -m iw_architect.server` also works once the venv is built.)
 
 ## Source-of-truth rules (from DESIGN_BRIEF_v2.md §3)
 
@@ -87,7 +113,7 @@ The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it au
    - For a new effect/condition type: add an entry to `$defs.triggerEffect.x-iw-effect-types` or `$defs.triggerCondition.x-iw-condition-types`. Register the type in `validator.py`'s `_KNOWN_EFFECT_TYPES` / `_KNOWN_CONDITION_TYPES` set so it stops warning as "unknown".
 2. **Add cross-reference checks** to `validator.py` if the new field references other entity IDs (e.g. tracked-item, instruction-block, trigger IDs).
 3. **Add a negative test** in `tests/test_validator.py` that constructs a world violating the new rule and asserts `validate_world` reports it.
-4. **Run `.venv/bin/pytest`.** The fixture round-trip (§6.1) and nested coverage tests (§6.2) will catch any drift between the schema and the canonical fixture.
+4. **Run `uv run pytest`.** The fixture round-trip (§6.1) and nested coverage tests (§6.2) will catch any drift between the schema and the canonical fixture.
 
 `schema_model.SCHEMA_SUMMARY` and `get_schema_summary()` update automatically — no manual edit needed.
 
@@ -106,7 +132,8 @@ These are preserved verbatim and not validated beyond type-checking until a fixt
 
 | Tool | Purpose |
 |---|---|
-| `asdf` + `pip` + `venv` | Package and environment management (`.tool-versions` pins 3.12.13) |
+| `asdf` | Python version selection (`.tool-versions` pins 3.12.13) |
+| `uv` | Package and environment management (`uv sync --all-extras`, `uv run …`); creates the project's `.venv/` |
 | `mcp` | Official Python MCP SDK (FastMCP, stdio transport) |
 | `jsonschema` | Tier 1 structural validation |
 | `ruff` | Linting and formatting |
