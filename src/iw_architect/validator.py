@@ -34,6 +34,7 @@ _KNOWN_EFFECT_TYPES = {
     "effectChangePCSkill",
     "effectChangeVictoryCondition",
     "effectChangeDefeatCondition",
+    "effectEndsGame",
     "effectModifyInstructionBlock",
     "effectModifyKeywordBlock",
     "effectSetTrackedItemValue",

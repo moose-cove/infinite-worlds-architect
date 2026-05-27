@@ -540,6 +540,10 @@
           "data": "{condition, text, alreadyFired}",
           "description": "Replace defeat condition (alreadyFired must be false)"
         },
+        "effectEndsGame": {
+          "data": "boolean",
+          "description": "End the game. data: true allows the player to continue playing (victory-style); data: false ends with no continuation (defeat-style). Pre-v2.1 worlds used a separate canContinueEndedGame field; in v2.1 that semantic is consolidated into this data boolean."
+        },
         "effectModifyInstructionBlock": {
           "data": "{id, content}",
           "description": "Modify an instruction block by ID"
