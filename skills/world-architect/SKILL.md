@@ -43,7 +43,7 @@ The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root.
   - `INTRODUCING_THE_STORY.md` — `title`, `description`, `background`, `firstInput`, `objective`
   - `MAIN_INSTRUCTIONS.md` — `instructions`, `instructionBlocks`, `authorStyle`, `designNotes`, content flags
   - `PLAYER_CHARACTERS.md` — `skills`, `possibleCharacters`, `allowChangeCharacter*` permissions
-  - `OTHER_CHARACTERS.md` — `NPCs` (the critical `one_liner` rule)
+  - `OTHER_CHARACTERS.md` — `NPCs` (Other Characters) — the critical `one_liner` rule
   - `TRACKED_ITEMS.md` — `trackedItems` (dataType / visibility choices, the 10,000-char limit, what NOT to track)
   - `TRIGGER_EVENTS.md` — `triggerEvents` (when to use which effect type)
   - `KEYWORD_INSTRUCTION_BLOCKS.md` — `loreBookEntries` (substring matching, the awareness paradox)

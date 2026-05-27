@@ -31,7 +31,7 @@ The AI sees several predefined values every turn alongside the world fields you'
 | Variable | What it holds |
 |---|---|
 | `playerAction` | The text the player just submitted |
-| `description` | The selected player character's `description` |
+| `description` | The selected player character's `possibleCharacters[*].description` field (not the world-level `description`, which is the user-facing world-browser blurb) |
 | `objective` | The world's current `objective` (mutable via `effectChangeObjective`) |
 | `background` | The world's current `background` (mutable via `effectChangeBackground`) |
 

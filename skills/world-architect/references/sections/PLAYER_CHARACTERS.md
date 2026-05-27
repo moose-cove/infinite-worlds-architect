@@ -33,7 +33,7 @@ A list of attributes the storyteller AI uses to evaluate player actions. The AI 
 
 **Naming tip.** Use clear, self-describing skill names the AI can interpret without extra context: `Persuasion`, `Stealth`, `Combat`, `Hacking`, `Empathy`. Avoid cryptic or world-specific names without explaining them in `instructions`.
 
-**Template-variable generation.** Each skill name automatically becomes a template variable: `Persuasion` → `<<skill_persuasion>>`, `Hacking` → `<<skill_hacking>>` (lowercase, spaces become underscores). Use these in `instructions` and trigger conditions to reference skill ratings.
+**Template-variable generation.** Each skill name automatically becomes a template variable: `Persuasion` → `<<skill_persuasion>>`, `Hacking` → `<<skill_hacking>>` (lowercase, spaces become underscores). Use these in `instructions` and trigger conditions to reference skill ratings. (For the full template-variable system including math operators and dice rolls, see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#9-template-variable-system) §9.)
 
 ---
 

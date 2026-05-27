@@ -39,6 +39,12 @@ A style descriptor string passed to the image model. Examples: `photo_beautiful`
 
 Four legacy wrapper fields wrap the AI-generated image subject description with author-supplied prefix/suffix text:
 
+**Wrap order.** The platform constructs the image prompt as:
+`<Pre field text> + <AI-generated subject text> + <Post field text>`. The
+Pre fields appear at the beginning of the image prompt; the Post fields at
+the end. Order accordingly when choosing what goes where (LoRA triggers
+typically work best toward the end).
+
 | Field | When used |
 |---|---|
 | `imageStyleCharacterPre` | Prepended before character image descriptions |

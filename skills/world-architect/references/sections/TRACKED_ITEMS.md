@@ -54,6 +54,8 @@ The v2.1 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 | `player_only` | Player (UI) only | Rare. Used when the player should track something the AI shouldn't reason about. |
 | `hidden` | Nobody automatically | Mechanical state only modified and read by trigger effects. The AI cannot auto-update items it cannot see. |
 
+**v2.1 rename.** Pre-v2.1 worlds used `nobody` for what is now `hidden`. If you encounter `nobody` in a legacy world, treat it as `hidden`. The plugin's validator preserves unrecognized values on round-trip, but new worlds should use the v2.1 enum.
+
 **The visibility trap.** Items with visibility `player_only` or `hidden` are **invisible to the AI**, which means the AI cannot auto-update them via `updateInstructions`. They can only be modified by trigger effects (`effectSetTrackedItemValue`). If you set `visibility: "hidden"` and then write detailed `updateInstructions`, those instructions are a no-op.
 
 ---

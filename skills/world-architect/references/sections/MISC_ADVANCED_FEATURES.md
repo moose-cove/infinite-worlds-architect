@@ -74,7 +74,7 @@ The Summary AI produces:
 
 - **The Summary AI cannot access `trackedItems`.** State tracked in tracked items is *invisible* to the Summary AI. For important state to survive summarization, write it to `secretInfo` via `descriptionRequest`, or fold it into NPC records the Summary AI maintains. This is the single most consequential limitation of the Summary system.
 - **Duplicate character names cause collisions.** If two characters share a name (or very similar names), the Summary AI may merge or confuse their records. The `names` field in `NPCs` helps — ensure character name uniqueness across the world, including alias variants.
-- **1,500-word soft limit** on the main summary. Beyond that, condensation kicks in. Guide the Summary AI explicitly on what to preserve versus what to condense.
+- **1,500-word limit** on the main summary. Beyond that, condensation kicks in. Guide the Summary AI explicitly on what to preserve versus what to condense.
 
 ### Anti-pattern
 
