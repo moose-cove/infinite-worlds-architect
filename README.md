@@ -15,7 +15,19 @@ This plugin assists an author who is building or editing such a world by talking
 
 The plugin has **no write tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write`. The plugin is the validator, analyst, and helper; the agent is the author.
 
-## Quick install
+## Install
+
+**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will silently fail without it.
+
+Add the plugin to Claude Code by pointing it at this repository:
+
+```
+https://github.com/moose-cove/infinite-worlds-architect
+```
+
+Once added, the MCP server starts automatically when Claude Code loads — no separate launch needed. Open any `world.json` and ask Claude to validate, scaffold, or edit it.
+
+## Development setup
 
 Requires Python 3.12.13 (pinned via [`.tool-versions`](./.tool-versions) for asdf users) and [`uv`](https://docs.astral.sh/uv/).
 
@@ -27,7 +39,11 @@ uv run pytest
 
 If you'd rather use stdlib `venv` + `pip`, see the legacy block in [`CLAUDE.md`](./CLAUDE.md#setup).
 
-The MCP server is spawned by Claude Code via [`.mcp.json`](./.mcp.json) when the plugin is loaded — no separate launch needed.
+The MCP server can also be started manually for debugging:
+
+```bash
+uv run python -m iw_architect.server
+```
 
 ## Where to read more
 
