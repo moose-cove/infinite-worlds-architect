@@ -83,6 +83,10 @@ uv run pytest                     # sanity-check the install
 
 The repo's pre-commit hooks are installed in the main repo's `.git/hooks/` and fire for every worktree, but their entries are relative paths (`.venv/bin/ruff` etc.). That's why each worktree needs its own `.venv/` — without it, `git commit` inside the worktree will fail with "ruff: not found". `uv sync` is the one-shot fix.
 
+### Dispatching an agent into a worktree
+
+When a subagent is going to implement a plan that lives in `claude-scratchpad/`, include the plan content **inline in the agent's prompt** rather than referencing the file path. Two reasons: (1) `claude-scratchpad/` is gitignored, so plan files do not appear in the worktree's checkout; (2) if the worktree's branch base predates a recent merge into the target branch, the agent will work from a stale view of the plan and may redo work that has already landed. As a defense, also rebase the worktree onto the latest target branch before the agent starts, so any post-branch-cut commits are visible.
+
 ## Pre-commit hook policy
 
 `.pre-commit-config.yaml` mirrors the GitHub Actions CI workflow exactly: every check that fails in CI will fail on commit, locally, with the same arguments. This is intentional — it shortens the feedback loop from "wait for CI" to "wait for `git commit`".
@@ -106,6 +110,7 @@ uv run python -m iw_architect.server
 3. **Pass-through preservation.** Unknown fields survive because the agent edits in place.
 4. **`schemaVersion` is load-bearing.** Read and write it on every world.
 5. **The validator enforces; the schema doc explains; the fixture is ground truth.**
+6. **The wiki can be stale.** [`infiniteworlds.mywikis.wiki`](https://infiniteworlds.mywikis.wiki/) documents some pre-v2.1 conventions that have since been consolidated or renamed (e.g., the wiki shows `canContinueEndedGame` as a standalone boolean; v2.1 actually folds that semantic into `effectEndsGame.data`). When the wiki and `world_v2.1.schema.json` / `example-world-schema-v2.1.json` disagree, the schema and fixture win — and flag the divergence so the docs can be updated.
 
 ## Design constraints
 
@@ -153,3 +158,12 @@ These are preserved verbatim and not validated beyond type-checking until a fixt
 | `ruff` | Linting and formatting |
 | `pytest` + `pytest-cov` | Testing (80% coverage threshold) |
 | `pre-commit` | Pre-commit hooks (lint + tests) |
+
+## Review agents
+
+Two read-only reviewers live alongside this repo — invoke whichever applies, sometimes both:
+
+- `iw-architect-reviewer` (project, `.claude/agents/`, opus) — IW domain correctness: does the change model real IW workflows? Are reference docs accurate to IW mechanics? Schema/fixture/doc/validator in sync? Also handles `world.json` review and IW platform-knowledge questions.
+- `plugin-dev-reviewer` (global, `~/.claude/agents/`, opus) — Claude Code plugin best practices: frontmatter, triggering examples, progressive disclosure, manifest correctness.
+
+A change that touches both dimensions (e.g., a new command — Claude Code structure AND IW workflow assumptions) warrants both. A pure structural edit (hook, agent file, manifest housekeeping) needs only `plugin-dev-reviewer`. A `world.json` edit or IW platform question needs only `iw-architect-reviewer`. Both produce severity-tagged findings; neither modifies files.

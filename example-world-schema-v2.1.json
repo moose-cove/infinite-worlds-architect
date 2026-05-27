@@ -474,10 +474,10 @@
           "category": "condition"
         },
         {
-          "category": "condition",
-          "type": "triggerOnEvent",
+          "id": "f15f3251-3175-568c-7b25-80ee1bff0428",
           "data": "The marmut eats the marmalade",
-          "id": "f15f3251-3175-568c-7b25-80ee1bff0428"
+          "type": "triggerOnEvent",
+          "category": "condition"
         }
       ],
       "canTriggerMoreThanOnce": true
@@ -492,9 +492,9 @@
           "type": "effectShowMessage"
         },
         {
-          "type": "effectGiveInfo",
+          "id": "5a1f4b34-27a5-3b97-63fe-3d8046faa468",
           "data": "This information will be given to the storytelling AI when the event is triggered by being appended to secretInfo. It will not be shown to the player, but can be used to give important background information to the AI. For example: \"The treasure the player has found belongs to Blackbeard, who will be likely to seek revenge.\"",
-          "id": "5a1f4b34-27a5-3b97-63fe-3d8046faa468"
+          "type": "effectGiveInfo"
         }
       ],
       "triggerConditions": [
@@ -508,6 +508,30 @@
         }
       ],
       "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "Sy07xqta",
+      "name": "End the Game on Turn 5",
+      "triggerConditions": [
+        {
+          "category": "condition",
+          "type": "triggerOnTurn",
+          "data": 5,
+          "id": "547d6832-1c42-7e8e-c41d-82825666a8f2"
+        }
+      ],
+      "triggerEffects": [
+        {
+          "type": "effectShowMessage",
+          "data": "This trigger is set to fire when turn number is at least this number. It will now end the game, but you can choose to continue if you want.\n\nThe \"end the game\" effect has the following description text: \"End the game. Generally used for alternative victory or defeat conditions.\"\n",
+          "id": "0715f088-8410-7183-cf93-203b8fb959ec"
+        },
+        {
+          "type": "effectEndsGame",
+          "data": true,
+          "id": "8a7e8696-b4e3-2099-8e02-11be75622151"
+        }
+      ]
     }
   ],
   "victoryCondition": {
@@ -634,6 +658,6 @@
     }
   ],
   "autoAdvanceVersion": true,
-  "version": "1.03",
+  "version": "1.04",
   "designNotes": "--- Original user world design prompt: ---\n\nThis adventure is meant to demonstrate a fully fleshed out world using all of the possible effects! It should have a cute, safe-for-work, easy to understand, and cohesive example story that's used as it's framework, but it should include all possible features Infinite Worlds can currently use: every type of trigger and trigger effect, every type of tracked item, every kind of custom instruction, etc. It should be a model for how these things work within Infinite Worlds."
 }
