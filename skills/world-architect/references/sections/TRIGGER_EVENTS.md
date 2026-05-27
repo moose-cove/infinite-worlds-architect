@@ -89,7 +89,15 @@ The reliability gradient is critical. Authors who use `effectGiveInfo` to enforc
 
 ### World-state replacement effects
 
-These fully replace the corresponding world field. Reverting requires another trigger.
+**Important: world-state replacement effects do not auto-revert.** Each of
+the effects below fully replaces the corresponding world field. Once fired,
+the original value is gone — to restore it later, you must explicitly
+author another trigger that re-installs the old value. This applies to
+`effectChangeBackground`, `effectChangeMainInstructions`,
+`effectChangeAuthorStyle`, `effectChangeDescriptionInstructions`,
+`effectChangeObjective`, and `effectChangeFirstAction`. Use them
+deliberately; one-shot "fire and forget" replacements leave the world
+permanently in the new state for the rest of the playthrough.
 
 | Effect | Replaces |
 |---|---|
