@@ -11,13 +11,13 @@ This plugin assists an author who is building or editing such a world by talking
 - Validates world JSON against the platform's schema before sending it live
 - Scaffolds new worlds from sane defaults
 - Audits quality (token budgets, trigger cycles, redundancy detection)
-- Provides four guided workflow skills (`world-architect`, `new-world`, `modify-world`, `spinoff-world`)
+- Provides one model-invoked skill (`world-architect`) and three guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`)
 
 The plugin has **no write tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write`. The plugin is the validator, analyst, and helper; the agent is the author.
 
 ## Install
 
-**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will silently fail without it.
+**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will fail to start without it. If tools are missing after install, check `/mcp` to confirm the `iw-json-tools` server is connected.
 
 Installing the plugin is a **two-step process** in Claude Code: first add this repository as a *marketplace*, then install the plugin from that marketplace.
 
@@ -37,7 +37,14 @@ Installing the plugin is a **two-step process** in Claude Code: first add this r
 
 3. **Reload Claude Code** when prompted. The MCP server (`iw-json-tools`) starts automatically — no separate launch needed.
 
-To update later, run `/plugin marketplace update iw-architect-marketplace` and re-install. To remove, `/plugin uninstall infinite-worlds-architect@iw-architect-marketplace`.
+To update later, run both:
+
+```
+/plugin marketplace update iw-architect-marketplace
+/plugin install infinite-worlds-architect@iw-architect-marketplace
+```
+
+To remove: `/plugin uninstall infinite-worlds-architect@iw-architect-marketplace`.
 
 ## Using the plugin
 
@@ -58,11 +65,11 @@ Once activated, Claude has on-demand access to the schema reference, per-field a
 
 | Command | Purpose | Argument |
 |---|---|---|
-| `/infinite-worlds-architect:new-world [output_path]` | Guided field-by-field creation of a brand-new world from scratch. | Path where the new `world.json` should be written. |
-| `/infinite-worlds-architect:modify-world [world_path]` | Guided field-by-field editing of an existing world, with per-change approval. | Path to the existing `world.json`. |
-| `/infinite-worlds-architect:spinoff-world [source_path] [target_path]` | Derive a divergent variant from an existing world, keeping the original intact. | Source path, then target path. |
+| `/infinite-worlds-architect:new-world <output_path>` | Guided field-by-field creation of a brand-new world from scratch. | Path where the new `world.json` should be written. |
+| `/infinite-worlds-architect:modify-world <world_path>` | Guided field-by-field editing of an existing world, with per-change approval. | Path to the existing `world.json`. |
+| `/infinite-worlds-architect:spinoff-world <source_path> <target_path>` | Derive a divergent variant from an existing world, keeping the original intact. | Source path, then target path. |
 
-Each command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md) (read before write, pass-through preservation, `schemaVersion` is load-bearing).
+Each command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md): read before write and pass-through preservation (which keeps `schemaVersion` and any unknown fields intact across edits).
 
 ### 3. MCP tools (callable by Claude)
 
@@ -78,8 +85,8 @@ The skill and commands have access to these tools — you generally won't call t
 | `get_schema_summary()` | Structured metadata about entity types, fields, and enum values. |
 | `mint_ids(kind, count)` | Generate platform-format IDs for new entities. |
 | `confirm_path(path)` | Resolve and verify a file path before acting on it. |
-| `compare_worlds(a, b)` | Structural diff between two worlds. |
-| `get_diff_summary(original, current)` | Human-readable narrative of what changed. |
+| `compare_worlds(world_path_a, world_path_b)` | Structural diff between two worlds. |
+| `get_diff_summary(original_path, current_path)` | Human-readable narrative of what changed. |
 
 ### Typical session
 
@@ -88,7 +95,8 @@ You:    /infinite-worlds-architect:new-world ./my-world.json
 Claude: <walks you through title, description, background, firstInput…>
         <calls scaffold_world, then validate_world after each edit>
 
-You:    Add a tracked item for the player's reputation, 0–100, hidden from AI.
+You:    Add a player-only number tracked item called "reputation",
+        with update instructions to keep it between 0 and 100.
 Claude: <invokes world-architect skill knowledge, edits world.json,
          calls validate_world to confirm>
 
