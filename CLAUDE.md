@@ -26,9 +26,9 @@ skills/
         └── world_v2.1.schema.json                   # JSON Schema artifact (Tier 1 validator)
 
 commands/
-├── new-world/          # /infinite-worlds-architect:new-world  — guided world creation
-├── modify-world/       # /infinite-worlds-architect:modify-world — edit existing world
-└── spinoff-world/      # /infinite-worlds-architect:spinoff-world — derive a variant
+├── new-world.md        # /infinite-worlds-architect:new-world  — guided world creation
+├── modify-world.md     # /infinite-worlds-architect:modify-world — edit existing world
+└── spinoff-world.md    # /infinite-worlds-architect:spinoff-world — derive a variant
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)
