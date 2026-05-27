@@ -31,11 +31,10 @@ commands/
 └── spinoff-world/      # /infinite-worlds-architect:spinoff-world — derive a variant
 
 .claude-plugin/
-├── plugin.json         # Plugin manifest
+├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)
 └── marketplace.json    # Marketplace index entry
 
 .github/workflows/ci.yml   # GitHub Actions: tests + version-bump check
-.mcp.json                  # MCP server spawn configuration
 ```
 
 ## Setup

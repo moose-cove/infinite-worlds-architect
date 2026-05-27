@@ -9,7 +9,20 @@
   "license": "MIT",
   "keywords": ["infinite-worlds", "world-building", "storytelling", "mcp", "json-schema"],
   "repository": "https://github.com/moose-cove/infinite-worlds-architect",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": {
+    "iw-json-tools": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}",
+        "python",
+        "-m",
+        "iw_architect.server"
+      ],
+      "env": {}
+    }
+  },
   "skills": "./skills/",
   "commands": "./commands/"
 }
