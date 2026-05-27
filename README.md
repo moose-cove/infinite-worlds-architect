@@ -1,17 +1,17 @@
 # Infinite Worlds Architect
 
-A Claude Code plugin for building and editing [Infinite Worlds](https://infiniteworlds.app) story worlds through conversation. The plugin exposes MCP tools that validate, scaffold, and analyze world JSON files, plus skills that guide field-by-field world creation and editing workflows.
+A Claude Code plugin for building and editing [Infinite Worlds](https://infiniteworlds.app) story worlds through conversation. The plugin exposes MCP tools that validate, scaffold, and analyze world JSON files, a `world-architect` agent that authors and debugs worlds end-to-end, and slash commands that walk authors through structured field-by-field workflows.
 
 ## What this is
 
-Infinite Worlds is a third-party storytelling platform where authors design **worlds** — collections of characters, NPCs, instructions, tracked state, and conditional triggers that the platform uses to run interactive stories. A world is persisted as a single JSON file conforming to the v2.1 schema documented in [`WORLD_JSON_SCHEMA_v2.1.md`](./WORLD_JSON_SCHEMA_v2.1.md).
+Infinite Worlds is a third-party storytelling platform where authors design **worlds** — collections of characters, NPCs, instructions, tracked state, and conditional triggers that the platform uses to run interactive stories. A world is persisted as a single JSON file conforming to the v2.1 schema documented in [`references/WORLD_JSON_SCHEMA_v2.1.md`](./references/WORLD_JSON_SCHEMA_v2.1.md).
 
 This plugin assists an author who is building or editing such a world by talking to Claude in a Claude Code session. The plugin:
 
 - Validates world JSON against the platform's schema before sending it live
 - Scaffolds new worlds from sane defaults
 - Audits quality (token budgets, trigger cycles, redundancy detection)
-- Provides one model-invoked skill (`world-architect`) and three guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`)
+- Provides one `world-architect` agent and three guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`)
 
 The plugin has **no write tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write`. The plugin is the validator, analyst, and helper; the agent is the author.
 
@@ -50,16 +50,16 @@ To remove: `/plugin uninstall infinite-worlds-architect@iw-architect-marketplace
 
 Once installed, the plugin contributes three things to your Claude Code session:
 
-### 1. The `world-architect` skill (auto-activated)
+### 1. The `world-architect` agent
 
-This is a **model-invoked skill** — you do not run it as a slash command. Claude loads it automatically when you say something like:
+This is an **autonomous subagent** that handles world authoring and debugging end-to-end. It knows the v2.1 schema deeply, can author new worlds, edit existing ones, debug trigger/tracked-item issues, and answer Infinite Worlds platform questions grounded in the schema → fixture → reference docs hierarchy. It will follow the edit-flow contract (read, plan, mint IDs, show diffs, edit, validate, audit) without being prompted for each step.
 
-- *"Help me build an Infinite Worlds world."*
-- *"I want to design a world for Infinite Worlds."*
-- *"What can the Infinite Worlds plugin do?"*
-- *"How do I use the world tools?"*
+The agent is reached two ways:
 
-Once activated, Claude has on-demand access to the schema reference, per-field authoring guidance (`INTRODUCING_THE_STORY.md`, `MAIN_INSTRUCTIONS.md`, `TRACKED_ITEMS.md`, `TRIGGER_EVENTS.md`, etc.), and the MCP tool surface listed below. Use this skill for **ad-hoc questions and free-form world editing** that don't fit the structured command workflows.
+- **Automatically as a subagent** when you describe authoring or debugging work in natural language — e.g. *"I want to build a noir detective world..."*, *"My trigger doesn't fire even though..."*, *"Add a wandering merchant NPC to my world..."*. Claude routes the task to the agent.
+- **Inline through a slash command** (`/new-world`, `/modify-world`, `/spinoff-world`). Each command `@`-references the agent file, so the main session adopts the agent's persona before walking you through that command's specific workflow — preserving the field-by-field approval loop that needs multi-turn user interaction.
+
+On-demand reference material lives at [`references/`](./references/) at the plugin root — the agent loads individual files as needed.
 
 ### 2. Slash commands (structured workflows)
 
@@ -73,7 +73,7 @@ Each command walks you through the relevant fields, validates after each change,
 
 ### 3. MCP tools (callable by Claude)
 
-The skill and commands have access to these tools — you generally won't call them directly, but knowing they exist helps when asking Claude for specific operations:
+The agent and commands have access to these tools — you generally won't call them directly, but knowing they exist helps when asking Claude for specific operations:
 
 | Tool | What it does |
 |---|---|
@@ -97,14 +97,14 @@ Claude: <walks you through title, description, background, firstInput…>
 
 You:    Add a number tracked item visible only to the AI called "reputation",
         with update instructions to keep it between 0 and 100 and modify it based on how other characters in town perceive the player.
-Claude: <invokes world-architect skill knowledge, edits world.json,
+Claude: <invokes the world-architect agent, edits world.json,
          calls validate_world to confirm>
 
 You:    /infinite-worlds-architect:spinoff-world ./my-world.json ./my-world-nsfw.json
 Claude: <copies, then guides edits for the variant>
 ```
 
-Open any `world.json` and ask Claude what's wrong, what could be tighter, or what to add next — the skill will pull the right reference file on demand.
+Open any `world.json` and ask Claude what's wrong, what could be tighter, or what to add next — the agent will pull the right reference file on demand.
 
 ## Development setup
 
@@ -130,7 +130,7 @@ uv run python -m iw_architect.server
 |---|---|
 | [`CLAUDE.md`](./CLAUDE.md) | Project conventions, file structure, pre-commit policy, and the workflow for adding a new platform feature. Loaded automatically into every Claude Code session in this repo. |
 | [`DESIGN_BRIEF_v2.md`](./DESIGN_BRIEF_v2.md) | The full design spec the implementation was built against. Architecture rationale, tool surface, validator check list, testing strategy. |
-| [`WORLD_JSON_SCHEMA_v2.1.md`](./WORLD_JSON_SCHEMA_v2.1.md) | Human-readable explanation of every field in the world JSON schema. The canonical JSON Schema artifact lives next to it at `skills/world-architect/references/world_v2.1.schema.json`. |
+| [`references/WORLD_JSON_SCHEMA_v2.1.md`](./references/WORLD_JSON_SCHEMA_v2.1.md) | Human-readable explanation of every field in the world JSON schema. The canonical JSON Schema artifact lives next to it at `references/world_v2.1.schema.json`. |
 | [`example-world-schema-v2.1.json`](./example-world-schema-v2.1.json) | The canonical fixture. Per design brief §3, this file is the ultimate source of truth — if `validate_world` rejects it, the validator is wrong. |
 
 ## License

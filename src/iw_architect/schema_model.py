@@ -2,7 +2,7 @@
 
 Per DESIGN_BRIEF_v2.md §7 milestone 2, schema knowledge lives in a single
 representation. The JSON Schema artifact at
-``skills/world-architect/references/world_v2.1.schema.json`` is the canonical
+``references/world_v2.1.schema.json`` is the canonical
 source; both the Tier 1 validator and ``get_schema_summary()`` consume it.
 
 This module derives the ``SCHEMA_SUMMARY`` dict at import time by translating
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 _PLUGIN_ROOT = Path(__file__).parent.parent.parent
-_SCHEMA_PATH = _PLUGIN_ROOT / "skills" / "world-architect" / "references" / "world_v2.1.schema.json"
+_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.1.schema.json"
 
 # Top-level array properties whose items are $ref into $defs become entityTypes entries.
 # The mapping connects the world-level field name (NPCs, trackedItems) with the $defs key.

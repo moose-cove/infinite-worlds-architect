@@ -5,13 +5,13 @@ argument-hint: "[world_path]"
 
 # Modify World
 
-@../../skills/world-architect/SKILL.md
+@${CLAUDE_PLUGIN_ROOT}/agents/world-architect.md
 
 You are helping an author edit an **existing** Infinite Worlds world JSON. Follow this workflow precisely.
 
 ## Recommended reading
 
-The references in `skills/world-architect/references/` cover authoring judgments worth consulting during modification:
+The references in `references/` cover authoring judgments worth consulting during modification:
 
 - **When refactoring poor field allocation** (the most common "improve this world" task) → read `references/FIELD_ALLOCATION_STRATEGY.md`. Typical refactors: moving NPC descriptions out of `background` into `NPCs`, lifting lore from `instructions` into `loreBookEntries`, hoisting state changes into `triggerEvents`. The anti-patterns section names the most common allocation mistakes.
 - **When editing any character field** → read `references/CHARACTER_AUTHORING_GUARDRAILS.md`. The temptation to "improve" a character by embellishing their dossier is the most common modify-world failure mode. Read the existing dossier first; confirm changes with the author; don't paraphrase away `<<template_variables>>` or details in `names`.
@@ -69,7 +69,7 @@ Once the author's requested changes are complete:
 
 ### Adding a new NPC
 
-> Reference: [`references/sections/OTHER_CHARACTERS.md`](../../skills/world-architect/references/sections/OTHER_CHARACTERS.md) — especially the `one_liner` rule and the `img_appearance`/`img_clothing` author-input requirement.
+> Reference: [`references/sections/OTHER_CHARACTERS.md`](../references/sections/OTHER_CHARACTERS.md) — especially the `one_liner` rule and the `img_appearance`/`img_clothing` author-input requirement.
 
 ```
 1. mint_ids("npc", 1)           → get the new ID
@@ -80,7 +80,7 @@ Once the author's requested changes are complete:
 
 ### Adding a tracked item
 
-> Reference: [`references/sections/TRACKED_ITEMS.md`](../../skills/world-architect/references/sections/TRACKED_ITEMS.md) — dataType / visibility choices, the 10,000-char limit, and what NOT to track.
+> Reference: [`references/sections/TRACKED_ITEMS.md`](../references/sections/TRACKED_ITEMS.md) — dataType / visibility choices, the 10,000-char limit, and what NOT to track.
 
 ```
 1. mint_ids("trackedItem", 1)
@@ -91,7 +91,7 @@ Once the author's requested changes are complete:
 
 ### Adding a trigger
 
-> Reference: [`references/sections/TRIGGER_EVENTS.md`](../../skills/world-architect/references/sections/TRIGGER_EVENTS.md) — when to use which condition and effect type, and the no-automatic-revert rule for world-state replacement effects.
+> Reference: [`references/sections/TRIGGER_EVENTS.md`](../references/sections/TRIGGER_EVENTS.md) — when to use which condition and effect type, and the no-automatic-revert rule for world-state replacement effects.
 
 ```
 1. mint_ids("triggerEvent", 1)           → trigger ID
@@ -114,4 +114,4 @@ Once the author's requested changes are complete:
 
 ---
 
-**Reminder**: Always use `Edit` (not full `Write`) when changing individual fields, to preserve unknown platform-managed fields. Always `Read` before `Edit`.
+Use `Edit` (not full `Write`) when changing individual fields, so unknown platform-managed fields survive. Always `Read` before `Edit`.
