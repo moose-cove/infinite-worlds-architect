@@ -5,7 +5,7 @@ argument-hint: "[source_path] [target_path]"
 
 # Spinoff World
 
-@../../agents/world-architect.md
+@${CLAUDE_PLUGIN_ROOT}/agents/world-architect.md
 
 You are helping an author create a **variant** of an existing Infinite Worlds world — keeping the original intact and producing a new divergent version.
 
@@ -79,4 +79,4 @@ Present the summary to the author. This serves as documentation of what makes th
 
 ---
 
-**Reminder**: The source world must never be modified. All edits go to the copy at the target path. Always use `Edit` on the target file to preserve platform-managed fields.
+Never modify the source world. All edits go to the copy at the target path. Use `Edit` (not full `Write`) on the target so platform-managed fields survive.

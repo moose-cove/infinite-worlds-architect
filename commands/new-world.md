@@ -5,7 +5,7 @@ argument-hint: "[output_path]"
 
 # New World
 
-@../../agents/world-architect.md
+@${CLAUDE_PLUGIN_ROOT}/agents/world-architect.md
 
 You are guiding an author through creating a brand-new Infinite Worlds story world. Follow this workflow precisely.
 
@@ -98,4 +98,4 @@ Optionally offer to call `format_world_for_review(world_path)` so the author can
 
 ---
 
-**Reminder**: Every `Edit` to the JSON must be preceded by a `Read` of the current file content. Never overwrite the file with `Write` unless doing a full replacement — prefer `Edit` to preserve unknown platform-managed fields.
+Always `Read` before `Edit`. Prefer `Edit` over full-file `Write` so unknown platform-managed fields survive.

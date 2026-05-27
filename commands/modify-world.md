@@ -5,7 +5,7 @@ argument-hint: "[world_path]"
 
 # Modify World
 
-@../../agents/world-architect.md
+@${CLAUDE_PLUGIN_ROOT}/agents/world-architect.md
 
 You are helping an author edit an **existing** Infinite Worlds world JSON. Follow this workflow precisely.
 
@@ -114,4 +114,4 @@ Once the author's requested changes are complete:
 
 ---
 
-**Reminder**: Always use `Edit` (not full `Write`) when changing individual fields, to preserve unknown platform-managed fields. Always `Read` before `Edit`.
+Use `Edit` (not full `Write`) when changing individual fields, so unknown platform-managed fields survive. Always `Read` before `Edit`.

@@ -7,7 +7,7 @@
     {
       "name": "infinite-worlds-architect",
       "source": "./",
-      "description": "MCP tools and skills for building and editing Infinite Worlds story worlds. Validates world JSON against the v2.1 schema, scaffolds new worlds, audits quality, and provides structured world-building workflows.",
+      "description": "MCP tools and an autonomous agent for building and editing Infinite Worlds story worlds. Validates world JSON against the v2.1 schema, scaffolds new worlds, audits quality, and provides structured world-building workflows.",
       "version": "0.2.0",
       "keywords": ["infinite-worlds", "world-building", "storytelling", "mcp", "json-schema"],
       "license": "MIT"

@@ -21,7 +21,5 @@
         "iw_architect.server"
       ]
     }
-  },
-  "agents": "./agents/",
-  "commands": "./commands/"
+  }
 }
