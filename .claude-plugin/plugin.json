@@ -19,8 +19,7 @@
         "python",
         "-m",
         "iw_architect.server"
-      ],
-      "env": {}
+      ]
     }
   },
   "skills": "./skills/",

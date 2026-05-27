@@ -264,6 +264,8 @@ Build in this order. Each milestone is a self-contained PR with its own tests pa
 
 ## 8. Repository conventions
 
+> **Update 2026-05-27:** The spawn config originally lived in a top-level `.mcp.json`. That file caused dual-loader warnings (project-scope MCP discovery also picked it up and tried to expand `${CLAUDE_PLUGIN_ROOT}` from Claude Code's own environment, where it is unset). The config is now declared inline in `.claude-plugin/plugin.json` under `mcpServers`; the standalone `.mcp.json` has been removed. References below to `.mcp.json` should be read as "the `mcpServers` block of `plugin.json`".
+
 - **Python**: 3.12.13. Pin via `.python-version` (pyenv) or the equivalent for your chosen environment manager.
 - **Plugin manifest**: `.claude-plugin/plugin.json` plus `.claude-plugin/marketplace.json`. Semver bump on every PR.
 - **MCP server**: stdio transport via the official `mcp` Python SDK (latest from PyPI). Tools are registered in the SDK's `list_tools` handler and ordered alphabetically by name.
