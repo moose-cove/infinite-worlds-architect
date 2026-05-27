@@ -105,6 +105,24 @@ These fully replace the corresponding world field. Reverting requires another tr
 
 Both pause gameplay until the player responds. Use sparingly — they break narrative flow.
 
+### End-game effects
+
+| Effect | Use for |
+|---|---|
+| `effectEndsGame` | End the game from inside a trigger. `data: true` → game ends and the player can choose to continue (victory-style). `data: false` → game ends with no continuation (defeat-style; restart only). Pair with `effectShowMessage` in the same trigger to explain the ending to the player. |
+
+Note: pre-v2.1 worlds used a separate `canContinueEndedGame` boolean field
+for the continuation control; in v2.1 the two have been folded into the
+single `data` boolean above. Authors familiar with the wiki's older
+documentation will not find `canContinueEndedGame` in v2.1 fixtures.
+
+Top-level `victoryCondition` and `defeatCondition` fields provide the
+built-in end-game system (victory auto-allows continuation; defeat does
+not). Use `effectEndsGame` for custom end conditions — multiple ending
+branches, conditional victory/defeat, or non-standard continuation
+behavior. See [`VICTORY_DEFEAT.md`](VICTORY_DEFEAT.md) for the full
+comparison.
+
 ---
 
 ## Key constraints
