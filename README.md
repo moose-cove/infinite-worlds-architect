@@ -17,7 +17,7 @@ The plugin has **no write tools** — Claude edits world JSON directly using its
 
 ## Install
 
-**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will fail to start without it. If tools are missing after install, check `/mcp` to confirm the `iw-json-tools` server is connected.
+**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will fail to start without it.
 
 Installing the plugin is a **two-step process** in Claude Code: first add this repository as a *marketplace*, then install the plugin from that marketplace.
 
@@ -95,8 +95,8 @@ You:    /infinite-worlds-architect:new-world ./my-world.json
 Claude: <walks you through title, description, background, firstInput…>
         <calls scaffold_world, then validate_world after each edit>
 
-You:    Add a player-only number tracked item called "reputation",
-        with update instructions to keep it between 0 and 100.
+You:    Add a number tracked item visible only to the AI called "reputation",
+        with update instructions to keep it between 0 and 100 and modify it based on how other characters in town perceive the player.
 Claude: <invokes world-architect skill knowledge, edits world.json,
          calls validate_world to confirm>
 
