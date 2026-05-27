@@ -86,7 +86,7 @@ Do not instruct the Summary AI to maintain detailed narrative prose. It is meant
 
 **Sent to the storyteller AI every turn. Overrides the default skill-check evaluation system.**
 
-When empty, the platform applies its default evaluation logic (the AI selects a relevant skill, estimates a DifficultyScore, compares against the PC's rating — see [`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#skill-evaluation-default-model) §4).
+When empty, the platform applies its default evaluation logic (the AI selects a relevant skill, estimates a DifficultyScore, compares against the PC's rating — see [`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#skill-evaluation-default-model) §5).
 
 Custom text *completely replaces* the default. The platform exposes template variables for use here: `<<skill_list>>`, `<<difficulty_list>>`, `<<skill_example>>`, `<<difficulty_example>>`, `<<skills_and_levels>>` — see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1.
 

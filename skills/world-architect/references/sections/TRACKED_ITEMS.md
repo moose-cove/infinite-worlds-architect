@@ -15,6 +15,19 @@ Tracked items are author-defined variables the storyteller AI monitors and updat
 - **There is an effective 10,000-character output limit per tracked item.** If a single item's value would exceed this, the AI's update will be truncated.
 - **Avoid tracking flavor.** If a variable doesn't gate a trigger, factor into a skill check, or surface in narrative via `<<var>>` interpolation, consider whether it needs to be tracked at all. Every tracked item costs tokens forever.
 
+**Update timing.** Auto-updates are written by the Storyteller AI *after*
+it has finished writing `outcomeDescription` and `secretInfo` for the turn
+(step 7 of the per-turn sequence — see
+[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+§3). The AI cannot read a tracked item's just-updated value during the
+same turn — it only sees the new value starting turn N+1.
+
+**Pitfall.** Don't write `updateInstructions` that the AI is supposed to
+obey *on the same turn the update happens*. If you need the AI to know X
+before writing turn N, X must be in the world before turn N — via
+`instructions`, via a tracked-item value updated on turn N-1, or by a
+trigger that fired on turn N-1.
+
 ---
 
 ## Choosing `dataType`

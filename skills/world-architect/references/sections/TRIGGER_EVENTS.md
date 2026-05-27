@@ -8,9 +8,34 @@ For the canonical list of v2.1 condition types and effect types with their `data
 
 ## How triggers work
 
-Triggers are evaluated at the **end of each turn**, in list order. All conditions on a single trigger evaluate with AND logic — every condition must be satisfied simultaneously for the trigger to fire. When the conditions are met, all of the trigger's effects execute.
+Triggers evaluate and fire **after the Storyteller AI has finished writing
+the turn's narrative** — they're step 9 of the per-turn sequence (see
+[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+§3 for the full lifecycle). This is the single most important fact about
+triggers — most authoring mistakes stem from forgetting it.
 
-**Default behavior.** A trigger fires at most **once per playthrough**. Set `canTriggerMoreThanOnce: true` to allow it to fire on every eligible turn.
+**The consequence.** Every trigger effect — narrative replacement,
+world-state change, tracked-item modification, KIB swap, character change —
+only becomes visible to the storyteller on the **next** turn. A trigger
+that fires on turn 5 has no influence on turn 5's narrative. The new state
+is what the storyteller sees on turn 6.
+
+The one exception is `effectShowMessage`, which appends text to the current
+turn's `outcomeDescription` after the AI is done writing — the appended
+text appears in the current turn's displayed output, but the surrounding
+narrative was written without it.
+
+See `AI_RUNTIME_MECHANICS.md` §3 (Turn lifecycle — Authoring pitfalls) for
+the concrete failure modes this causes.
+
+All conditions on a single trigger evaluate with AND logic — every
+condition must be satisfied simultaneously for the trigger to fire. When
+the conditions are met, all of the trigger's effects execute (in trigger-
+list order).
+
+**Default behavior.** A trigger fires at most **once per playthrough**.
+Set `canTriggerMoreThanOnce: true` to allow it to fire on every eligible
+turn.
 
 ---
 
