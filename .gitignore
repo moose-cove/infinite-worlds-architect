@@ -13,3 +13,5 @@ build/
 .coverage
 htmlcov/
 .pytest_cache/
+/.claude/worktrees/
+/.claude/settings.local.json
