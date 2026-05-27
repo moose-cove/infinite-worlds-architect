@@ -48,9 +48,18 @@ To remove: `/plugin uninstall infinite-worlds-architect@iw-architect-marketplace
 
 ## Using the plugin
 
-Once installed, the plugin contributes three things to your Claude Code session:
+Once installed, the plugin contributes four things to your Claude Code session:
 
-### 1. The `world-architect` skill (auto-activated)
+### 1. The `world-architect` agent
+
+This is an **autonomous subagent** that handles world authoring and debugging tasks. It knows the v2.1 schema deeply, can author new worlds, edit existing ones, debug trigger/tracked-item issues, and answer Infinite Worlds platform questions grounded in the schema → fixture → reference docs hierarchy. Invoke it when you need expert collaborative authoring — it will follow the edit-flow contract (read, plan, mint IDs, show diffs, edit, validate, audit) without being prompted for each step.
+
+Example triggers:
+- *"I want to build a noir detective world..."*
+- *"My trigger doesn't fire even though..."*
+- *"Add a wandering merchant NPC to my world..."*
+
+### 2. The `world-architect` skill (auto-activated)
 
 This is a **model-invoked skill** — you do not run it as a slash command. Claude loads it automatically when you say something like:
 
@@ -59,9 +68,9 @@ This is a **model-invoked skill** — you do not run it as a slash command. Clau
 - *"What can the Infinite Worlds plugin do?"*
 - *"How do I use the world tools?"*
 
-Once activated, Claude has on-demand access to the schema reference, per-field authoring guidance (`INTRODUCING_THE_STORY.md`, `MAIN_INSTRUCTIONS.md`, `TRACKED_ITEMS.md`, `TRIGGER_EVENTS.md`, etc.), and the MCP tool surface listed below. Use this skill for **ad-hoc questions and free-form world editing** that don't fit the structured command workflows.
+Once activated, Claude has on-demand access to the schema reference, per-field authoring guidance (`INTRODUCING_THE_STORY.md`, `MAIN_INSTRUCTIONS.md`, `TRACKED_ITEMS.md`, `TRIGGER_EVENTS.md`, etc.), and the MCP tool surface listed below. Use this skill for **ad-hoc questions and free-form world editing** that don't fit the structured command workflows. The `world-architect` agent (above) wraps this skill and several MCP tools into a cohesive authoring partner.
 
-### 2. Slash commands (structured workflows)
+### 3. Slash commands (structured workflows)
 
 | Command | Purpose | Argument |
 |---|---|---|
@@ -71,7 +80,7 @@ Once activated, Claude has on-demand access to the schema reference, per-field a
 
 Each command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md): read before write and pass-through preservation (which keeps `schemaVersion` and any unknown fields intact across edits).
 
-### 3. MCP tools (callable by Claude)
+### 4. MCP tools (callable by Claude)
 
 The skill and commands have access to these tools — you generally won't call them directly, but knowing they exist helps when asking Claude for specific operations:
 

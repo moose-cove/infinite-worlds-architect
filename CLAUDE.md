@@ -158,7 +158,13 @@ These are preserved verbatim and not validated beyond type-checking until a fixt
 | `pytest` + `pytest-cov` | Testing (80% coverage threshold) |
 | `pre-commit` | Pre-commit hooks (lint + tests) |
 
-## Review agents
+## Agents
+
+### Authoring agent
+
+- **`world-architect`** (plugin, `agents/world-architect.md`, color: magenta) — Autonomous expert for designing, building, editing, and debugging Infinite Worlds story worlds. Owns the full edit-flow contract: reads world JSON, follows the reference hierarchy (schema → fixture → references → wiki), mints proper IDs, shows diffs for approval, edits in place, validates, and audits. Invoked when the user wants to author or debug world content.
+
+### Review agents
 
 Two read-only reviewers live alongside this repo — invoke whichever applies, sometimes both:
 
@@ -166,3 +172,7 @@ Two read-only reviewers live alongside this repo — invoke whichever applies, s
 - `plugin-dev-reviewer` (global, `~/.claude/agents/`, opus) — Claude Code plugin best practices: frontmatter, triggering examples, progressive disclosure, manifest correctness.
 
 A change that touches both dimensions (e.g., a new command — Claude Code structure AND IW workflow assumptions) warrants both. A pure structural edit (hook, agent file, manifest housekeeping) needs only `plugin-dev-reviewer`. A `world.json` edit or IW platform question needs only `iw-architect-reviewer`. Both produce severity-tagged findings; neither modifies files.
+
+**Agent relationship:**
+- **`world-architect`** *makes the change* — authors/edits worlds, answers platform questions grounded in schema
+- **Review agents** *check the change* — one examines IW domain correctness, the other examines Claude Code plugin structure
