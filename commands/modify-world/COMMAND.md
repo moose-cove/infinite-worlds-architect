@@ -69,7 +69,7 @@ Once the author's requested changes are complete:
 
 ### Adding a new NPC
 
-> Read `references/sections/OTHER_CHARACTERS.md` before defining NPC fields.
+> Reference: [`references/sections/OTHER_CHARACTERS.md`](../../skills/world-architect/references/sections/OTHER_CHARACTERS.md) — especially the `one_liner` rule and the `img_appearance`/`img_clothing` author-input requirement.
 
 ```
 1. mint_ids("npc", 1)           → get the new ID
@@ -80,7 +80,7 @@ Once the author's requested changes are complete:
 
 ### Adding a tracked item
 
-> Read `references/sections/TRACKED_ITEMS.md` before defining item properties.
+> Reference: [`references/sections/TRACKED_ITEMS.md`](../../skills/world-architect/references/sections/TRACKED_ITEMS.md) — dataType / visibility choices, the 10,000-char limit, and what NOT to track.
 
 ```
 1. mint_ids("trackedItem", 1)
@@ -91,7 +91,7 @@ Once the author's requested changes are complete:
 
 ### Adding a trigger
 
-> Read `references/sections/TRIGGER_EVENTS.md` before authoring conditions and effects.
+> Reference: [`references/sections/TRIGGER_EVENTS.md`](../../skills/world-architect/references/sections/TRIGGER_EVENTS.md) — when to use which condition and effect type, and the no-automatic-revert rule for world-state replacement effects.
 
 ```
 1. mint_ids("triggerEvent", 1)           → trigger ID
@@ -102,6 +102,8 @@ Once the author's requested changes are complete:
 ```
 
 ### Modifying a text field
+
+> Reference: read the matching file in `references/sections/` for the field you're changing before proposing a new value.
 
 ```
 1. read_world_field(path, "fieldName")   → show current value

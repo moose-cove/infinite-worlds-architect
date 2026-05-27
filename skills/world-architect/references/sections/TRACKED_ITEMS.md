@@ -15,6 +15,19 @@ Tracked items are author-defined variables the storyteller AI monitors and updat
 - **There is an effective 10,000-character output limit per tracked item.** If a single item's value would exceed this, the AI's update will be truncated.
 - **Avoid tracking flavor.** If a variable doesn't gate a trigger, factor into a skill check, or surface in narrative via `<<var>>` interpolation, consider whether it needs to be tracked at all. Every tracked item costs tokens forever.
 
+**Update timing.** Auto-updates are written by the Storyteller AI *after*
+it has finished writing `outcomeDescription` and `secretInfo` for the turn
+(step 7 of the per-turn sequence — see
+[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+§3). The AI cannot read a tracked item's just-updated value during the
+same turn — it only sees the new value starting turn N+1.
+
+**Pitfall.** Don't write `updateInstructions` that the AI is supposed to
+obey *on the same turn the update happens*. If you need the AI to know X
+before writing turn N, X must be in the world before turn N — via
+`instructions`, via a tracked-item value updated on turn N-1, or by a
+trigger that fired on turn N-1.
+
 ---
 
 ## Choosing `dataType`
@@ -40,6 +53,8 @@ The v2.1 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 | `ai_only_boring` | AI only (every turn) | Equivalent to `ai_only` in current platform behavior — both forms appear in real exports. Accept whichever the input used and preserve it on round-trip. |
 | `player_only` | Player (UI) only | Rare. Used when the player should track something the AI shouldn't reason about. |
 | `hidden` | Nobody automatically | Mechanical state only modified and read by trigger effects. The AI cannot auto-update items it cannot see. |
+
+**v2.1 rename.** Pre-v2.1 worlds used `nobody` for what is now `hidden`. If you encounter `nobody` in a legacy world, treat it as `hidden`. The plugin's validator preserves unrecognized values on round-trip, but new worlds should use the v2.1 enum.
 
 **The visibility trap.** Items with visibility `player_only` or `hidden` are **invisible to the AI**, which means the AI cannot auto-update them via `updateInstructions`. They can only be modified by trigger effects (`effectSetTrackedItemValue`). If you set `visibility: "hidden"` and then write detailed `updateInstructions`, those instructions are a no-op.
 

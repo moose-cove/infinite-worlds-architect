@@ -4,6 +4,12 @@ This document explains what happens *at play time* when a player takes a turn in
 
 Read this before designing `instructions`, `authorStyle`, `descriptionRequest`, `evaluationRequest`, or any trigger effect that shapes AI output. If you don't understand what the AI emits, you can't usefully constrain it.
 
+> **Documentation status.** Infinite Worlds evolves over time, and specific
+> platform behaviors may shift between releases. This document describes the
+> *expected* behavior as of v2.1. If observed behavior contradicts what's
+> documented here, flag the discrepancy to the user rather than silently
+> working around it — surfacing drift is how the docs stay correct.
+
 ---
 
 ## 1. Instruction syntax
@@ -25,7 +31,7 @@ The AI sees several predefined values every turn alongside the world fields you'
 | Variable | What it holds |
 |---|---|
 | `playerAction` | The text the player just submitted |
-| `description` | The selected player character's `description` |
+| `description` | The selected player character's `possibleCharacters[*].description` field (not the world-level `description`, which is the user-facing world-browser blurb) |
 | `objective` | The world's current `objective` (mutable via `effectChangeObjective`) |
 | `background` | The world's current `background` (mutable via `effectChangeBackground`) |
 
@@ -66,7 +72,93 @@ The world's `imageStyleCharacterPre`/`Post` and `imageStyleNonCharacterPre`/`Pos
 
 ---
 
-## 3. How `instructions` interact with output
+## 3. Turn lifecycle (the order matters)
+
+A single turn proceeds as a tightly-ordered sequence. Most authoring
+confusion stems from misunderstanding this order.
+
+### What happens in turn N
+
+1. **Player submits an action** (`playerAction`).
+2. **The Storyteller AI receives**: world `instructions`, the player
+   action, the last 2–8 turns verbatim, and the Summary AI's running
+   summary of earlier turns.
+3. **The AI evaluates the action** against history and instructions
+   (producing the `evaluation` field).
+4. **The AI writes `outcomeDescription`** — the main narrative response,
+   following `descriptionRequest` rules. Image-prompt instructions are
+   processed in parallel here (filling the `illustr*` fields).
+5. **The AI generates suggested next actions** (`option1_text`,
+   `option2_text`, `option3_text`).
+6. **The AI writes `secretInfo`** — hidden context for future turns.
+7. **The AI fills `stateVariablesUpdates`** — proposed updates to tracked
+   items, per their `updateInstructions`.
+8. **The AI activates situation-based triggers** — emitted as the
+   `triggerEvents` letters field, indicating which triggers' conditions
+   it judges as satisfied this turn.
+9. **The platform applies the emitted output**: writes the new tracked
+   item values, evaluates all trigger conditions (including non-AI-judged
+   ones like `triggerOnTurn` and `triggerOnTrackedItem`), and executes the
+   effects of every trigger that fires.
+10. **Every 6 turns from turn 8**, the Summary AI runs immediately after,
+    updating the summary of the story so far per `summaryRequest`.
+
+### The consequence
+
+Steps 4–6 (the AI's narrative writing) happen *before* steps 7–9
+(tracked-item updates and trigger effects). Any change to world state
+introduced via tracked-item auto-update or trigger effect therefore
+**does NOT influence the current turn's narrative** — the AI has already
+written the turn by the time those changes occur. The earliest the AI
+can react is turn N+1, when it reads the now-updated world state.
+
+### Authoring pitfalls driven by turn lifecycle
+
+- **`effectChangeBackground`, `effectChangeMainInstructions`,
+  `effectChangeAuthorStyle`, `effectChangeObjective`, and
+  `effectChangeDescriptionInstructions` don't retroactively reshape the
+  current turn's narrative.** The AI wrote turn N using the *old* values.
+  The new values influence turn N+1 onward.
+- **`effectTellAIWhatToDo` is a *next-turn* directive.** Its description
+  specifies "one-turn instruction" — that's the *single turn after firing*,
+  not the turn during which the trigger fired.
+- **`effectShowMessage` *does* append to the current turn's
+  `outcomeDescription`** — the platform tacks the message on at end-of-turn.
+  But the surrounding narrative was written without knowledge of the
+  append, so the message will read as tacked-on, not woven in. For
+  narrative integration, set up the precondition in `instructions` or via
+  a previous-turn trigger so the AI knows to write toward the moment.
+- **`effectGiveInfo` adds to `secretInfo` for *future* turns.** The AI
+  already wrote turn N's `secretInfo` before this effect fired.
+- **`effectModifyKeywordBlock` won't fire for the current turn's
+  context.** Even if the new keywords would match recent narrative, the
+  block update happens after the AI is done — the new keywords/content
+  are eligible starting turn N+1.
+- **Tracked-item `updateInstructions` cannot make the AI follow new state
+  on the same turn.** The AI writes `stateVariablesUpdates` in step 7,
+  after `outcomeDescription` is locked. If you need the AI to know X
+  before writing turn N, X must be in the world before turn N — via
+  `instructions`, a tracked-item value set on turn N-1, or a trigger that
+  fired on turn N-1.
+- **Trigger chains don't collapse turns.** Trigger A → B via
+  `triggerPrereqs` works (A's firing satisfies B's prereq within the same
+  end-of-turn evaluation), but B's *effects* still won't influence the
+  narrative until turn N+1.
+
+### Documented behavior may evolve
+
+This document describes the *expected* behavior of Infinite Worlds as
+of v2.1. The platform updates over time, and specific behaviors may
+shift. If observed behavior contradicts what's documented here — a
+trigger firing on a different turn than expected, a tracked item not
+updating as described, a different evaluation order — flag the
+discrepancy to the user immediately rather than silently working around
+it. Documentation drift is normal; surfacing it is how the docs stay
+correct.
+
+---
+
+## 4. How `instructions` interact with output
 
 The world's `instructions` field is the primary lever for shaping the fields above. Concretely:
 
@@ -78,7 +170,7 @@ The world's `descriptionRequest` is a more surgical lever: it specifically overr
 
 ---
 
-## 4. System mechanics
+## 5. System mechanics
 
 ### Time tracking
 
@@ -118,7 +210,7 @@ When you override the skill system this aggressively, consider setting `hideSkil
 
 ---
 
-## 5. Author style guidelines
+## 6. Author style guidelines
 
 The `authorStyle` field is free-form prose that frames the AI's voice. Three principles:
 
@@ -128,7 +220,7 @@ The `authorStyle` field is free-form prose that frames the AI's voice. Three pri
 
 ---
 
-## 6. Cross-references
+## 7. Cross-references
 
 - **Trigger conditions and effects** — see `WORLD_JSON_SCHEMA_v2.1.md` §5 for the v2.1 canonical list. The set of effect/condition types is the source of truth there, not in this document.
 - **Template variables** — see `WORLD_JSON_SCHEMA_v2.1.md` §9 for the full `<<…>>` syntax.

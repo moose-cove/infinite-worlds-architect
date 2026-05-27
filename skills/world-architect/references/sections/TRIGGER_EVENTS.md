@@ -8,9 +8,34 @@ For the canonical list of v2.1 condition types and effect types with their `data
 
 ## How triggers work
 
-Triggers are evaluated at the **end of each turn**, in list order. All conditions on a single trigger evaluate with AND logic — every condition must be satisfied simultaneously for the trigger to fire. When the conditions are met, all of the trigger's effects execute.
+Triggers evaluate and fire **after the Storyteller AI has finished writing
+the turn's narrative** — they're step 9 of the per-turn sequence (see
+[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+§3 for the full lifecycle). This is the single most important fact about
+triggers — most authoring mistakes stem from forgetting it.
 
-**Default behavior.** A trigger fires at most **once per playthrough**. Set `canTriggerMoreThanOnce: true` to allow it to fire on every eligible turn.
+**The consequence.** Every trigger effect — narrative replacement,
+world-state change, tracked-item modification, KIB swap, character change —
+only becomes visible to the storyteller on the **next** turn. A trigger
+that fires on turn 5 has no influence on turn 5's narrative. The new state
+is what the storyteller sees on turn 6.
+
+The one exception is `effectShowMessage`, which appends text to the current
+turn's `outcomeDescription` after the AI is done writing — the appended
+text appears in the current turn's displayed output, but the surrounding
+narrative was written without it.
+
+See `AI_RUNTIME_MECHANICS.md` §3 (Turn lifecycle — Authoring pitfalls) for
+the concrete failure modes this causes.
+
+All conditions on a single trigger evaluate with AND logic — every
+condition must be satisfied simultaneously for the trigger to fire. When
+the conditions are met, all of the trigger's effects execute (in trigger-
+list order).
+
+**Default behavior.** A trigger fires at most **once per playthrough**.
+Set `canTriggerMoreThanOnce: true` to allow it to fire on every eligible
+turn.
 
 ---
 
@@ -64,7 +89,15 @@ The reliability gradient is critical. Authors who use `effectGiveInfo` to enforc
 
 ### World-state replacement effects
 
-These fully replace the corresponding world field. Reverting requires another trigger.
+**Important: world-state replacement effects do not auto-revert.** Each of
+the effects below fully replaces the corresponding world field. Once fired,
+the original value is gone — to restore it later, you must explicitly
+author another trigger that re-installs the old value. This applies to
+`effectChangeBackground`, `effectChangeMainInstructions`,
+`effectChangeAuthorStyle`, `effectChangeDescriptionInstructions`,
+`effectChangeObjective`, and `effectChangeFirstAction`. Use them
+deliberately; one-shot "fire and forget" replacements leave the world
+permanently in the new state for the rest of the playthrough.
 
 | Effect | Replaces |
 |---|---|
@@ -104,6 +137,24 @@ These fully replace the corresponding world field. Reverting requires another tr
 | `effectRequestInput` | Free-text input. Result written to `targetTrackedItemId`. |
 
 Both pause gameplay until the player responds. Use sparingly — they break narrative flow.
+
+### End-game effects
+
+| Effect | Use for |
+|---|---|
+| `effectEndsGame` | End the game from inside a trigger. `data: true` → game ends and the player can choose to continue (victory-style). `data: false` → game ends with no continuation (defeat-style; restart only). Pair with `effectShowMessage` in the same trigger to explain the ending to the player. |
+
+Note: pre-v2.1 worlds used a separate `canContinueEndedGame` boolean field
+for the continuation control; in v2.1 the two have been folded into the
+single `data` boolean above. Authors familiar with the wiki's older
+documentation will not find `canContinueEndedGame` in v2.1 fixtures.
+
+Top-level `victoryCondition` and `defeatCondition` fields provide the
+built-in end-game system (victory auto-allows continuation; defeat does
+not). Use `effectEndsGame` for custom end conditions — multiple ending
+branches, conditional victory/defeat, or non-standard continuation
+behavior. See [`VICTORY_DEFEAT.md`](VICTORY_DEFEAT.md) for the full
+comparison.
 
 ---
 

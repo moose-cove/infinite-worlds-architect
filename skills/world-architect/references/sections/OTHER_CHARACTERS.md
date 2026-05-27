@@ -53,6 +53,8 @@ The setting where the character should first appear. Guides the AI's initial pla
 
 ### `secret_info` (Secret Information)
 
+> **Note:** This NPC field is named `secret_info` (snake_case) and is part of the world's authored NPC dossier. It is distinct from the runtime output field `secretInfo` (camelCase) that the storyteller AI emits each turn. Both contribute to "info the player doesn't see," but they live in different fields with different lifecycles.
+
 **Carries less influence on the AI than the other sections.**
 
 Background details hidden from the player but available to the AI for story consistency. The Summary AI weights `secretInfo`-derived information heavily during summarization. Good for: hidden motivations, secret relationships, information the player may eventually discover.

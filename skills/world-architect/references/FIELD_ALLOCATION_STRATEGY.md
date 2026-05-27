@@ -103,6 +103,16 @@ For content that is only relevant in specific game phases, or that needs to swap
 
 For the full canonical list of v2.1 effect and condition types, see `WORLD_JSON_SCHEMA_v2.1.md` §5.
 
+**Latency implication.** Trigger effects and tracked-item auto-updates
+both happen at the end of the turn that triggers them — *after* the AI
+has already written the turn's narrative. They influence the AI's
+narrative starting on the *next* turn, not the current one. Anything that
+needs to take effect immediately must be in the world before the turn
+begins — you cannot use a trigger or tracked-item update to react within
+the current turn. See
+[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+§3 for the full turn lifecycle.
+
 ### Author-only (Tier 6)
 
 `designNotes` is **never sent to the AI**. Use it for:

@@ -1,12 +1,15 @@
 # Field Guide: Victory and Defeat Conditions
 
-Covers: `victoryCondition` and `defeatCondition` — each an object of shape `{condition: string, text: string, alreadyFired: boolean}`.
+Covers both end-game systems available in v2.1:
+- Top-level `victoryCondition` and `defeatCondition` fields (the built-in
+  end-game system).
+- Trigger-based end-game via the `effectEndsGame` effect.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1.
+For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1 (top-level conditions) and §5 (effect types).
 
 ---
 
-## Critical: The AI cannot see these conditions during play
+## Critical: the storyteller AI cannot see these conditions during play
 
 > "The storyteller AI does not receive these triggers with any special context, and therefore is not influenced by their contents in any way while writing outputs."
 
@@ -20,17 +23,9 @@ Victory and defeat conditions are evaluated by the **platform's game engine**, n
 
 ---
 
-## Field shape
+## System 1: Top-level `victoryCondition` / `defeatCondition`
 
-Both `victoryCondition` and `defeatCondition` are objects, not strings:
-
-```json
-{
-  "condition": "The player has escaped the island.",
-  "text": "Congratulations! You have been successful in your adventure.",
-  "alreadyFired": false
-}
-```
+The built-in end-game system. Each is an object of shape `{condition: string, text: string, alreadyFired: boolean}`.
 
 | Sub-field | Type | Notes |
 |---|---|---|
@@ -40,23 +35,28 @@ Both `victoryCondition` and `defeatCondition` are objects, not strings:
 
 Either field may be `null` if the world has no configured victory/defeat (some worlds disable the system entirely and rely on triggers).
 
----
-
-## Defaults
+### Defaults
 
 If `victoryCondition` is left at the platform default (with empty `condition`):
+- Default condition: "The player character has succeeded in their initial goals" (contextualised to the original world-design prompt at generation time).
+- Default `text`: "Congratulations! You have been successful in your adventure." (also contextualised to the original prompt when auto-generated).
 
-- Default condition: "The player character has succeeded in their initial goals" (contextualized by the platform at runtime).
-- Default `text`: "Congratulations! You have been successful in your adventure."
-
-If `defeatCondition` is left at the platform default (with empty `condition`):
-
+If `defeatCondition` is left at the platform default:
 - Default condition: "The player character has died."
 - Default `text`: "Your adventure ends here. Game over."
 
----
+### Continuation behavior
 
-## Authoring realities
+- **Victory automatically allows the player to continue playing.** The player is prompted; they can continue or restart.
+- **Defeat does not allow continuation.** The player can only restart.
+
+This continuation asymmetry is **hard-wired** for the top-level fields — there is no boolean to set on the top-level conditions. The asymmetry reflects the canonical "win = optional, lose = terminal" pattern. To get non-default continuation behavior (e.g., a defeat the player can continue past, or a victory that doesn't allow continuation), use System 2 instead.
+
+### Disabling
+
+Either field may be set to `null` to disable that ending type. The platform won't auto-fire the disabled ending — but custom trigger-based endings (System 2) still work.
+
+### Authoring realities
 
 **Many authors disable victory/defeat conditions entirely** because the engine's evaluation can fire too aggressively or at unintended moments. The defaults in particular have a reputation for over-firing — defeat can trigger on dark narrative content the author didn't intend as a death event.
 
@@ -64,13 +64,61 @@ If `defeatCondition` is left at the platform default (with empty `condition`):
 
 > "ONLY trigger victory if the player has EXPLICITLY and COMPLETELY achieved escape from the island AND has been confirmed safe in the rescue boat. Do not trigger for partial success. Do not trigger for implied success."
 
-**For precise victory/defeat control, modify conditions via triggers.** Use `effectChangeVictoryCondition` and `effectChangeDefeatCondition` to swap the active conditions at story phase transitions. Both effects take a `{condition, text, alreadyFired}` object as their data — always set `alreadyFired: false` when authoring; the platform sets `true` when the condition has fired.
+---
 
-This pattern is the v2.1-canonical alternative to ending the game from inside a trigger:
+## System 2: Trigger-based end-game (`effectEndsGame`)
 
-1. Start the world with permissive or null `victoryCondition`/`defeatCondition`.
-2. At the appropriate plot phase, fire a trigger that uses `effectChangeVictoryCondition` to install a condition the engine will then evaluate true on the next turn.
-3. The engine evaluates, the condition fires, the game ends.
+Triggers can end the game directly via the `effectEndsGame` effect type. This is the v2.1 path for custom end conditions — multiple endings, conditional victory/defeat, or end-game logic that doesn't fit a single `condition` string.
+
+### Basic pattern
+
+```json
+{
+  "id": "Sy07xqta",
+  "name": "End on Turn 5",
+  "triggerConditions": [
+    { "category": "condition", "type": "triggerOnTurn", "data": 5, "id": "..." }
+  ],
+  "triggerEffects": [
+    { "type": "effectShowMessage", "data": "Time runs out!", "id": "..." },
+    { "type": "effectEndsGame", "data": true, "id": "..." }
+  ]
+}
+```
+
+This pattern is demonstrated in the canonical fixture as the "End the Game on Turn 5" trigger.
+
+### Continuation control
+
+The `data` boolean on the `effectEndsGame` effect controls continuation directly:
+
+| `data` | Behavior |
+|---|---|
+| `true` | Game ends; player is prompted and may choose to continue playing (victory-style). |
+| `false` | Game ends; no continuation (defeat-style — restart only). |
+
+**v2.1 consolidation note.** Pre-v2.1 worlds used a separate boolean field `canContinueEndedGame` for this control. In v2.1 that field is gone — the `data` boolean above serves both roles. The Infinite Worlds wiki currently still documents `canContinueEndedGame` as a separate field; treat that documentation as pre-v2.1 and use `effectEndsGame.data` instead.
+
+### Don't confuse with `effectChangeVictoryCondition` / `effectChangeDefeatCondition`
+
+Those effects **modify the engine-evaluated condition** for later evaluation (e.g., installing a new condition the engine will then evaluate true on the next turn). `effectEndsGame` **ends the game now**.
+
+| Goal | Use |
+|---|---|
+| End the game right now | `effectEndsGame` |
+| Change what would *cause* the game to end (engine-evaluated, fires later) | `effectChangeVictoryCondition` / `effectChangeDefeatCondition` |
+
+---
+
+## When to use which system
+
+| Scenario | Use |
+|---|---|
+| Standard one-condition-each win/lose | Top-level `victoryCondition` / `defeatCondition` |
+| Multiple ending branches | Multiple triggers with `effectEndsGame`, gated by different conditions |
+| Conditional victory/defeat (depends on tracked-item state, character choice, prior triggers) | Triggers with `effectEndsGame` |
+| A defeat the player can continue past, or a victory that doesn't allow continuation | Trigger with `effectEndsGame` and explicit `data: true` or `data: false` |
+| Modifying win/lose mid-game without ending it now | `effectChangeVictoryCondition` / `effectChangeDefeatCondition` |
 
 ---
 
@@ -81,18 +129,3 @@ The `<<item_name>>` syntax works in the `text` field of both conditions. Use to 
 ```
 "Congratulations! You escaped with <<gold>> gold and <<companions>> companions."
 ```
-
----
-
-## When to use vs. disable
-
-**Use the fields when:**
-- The world has a single, simple, clearly-stated win/lose condition.
-- You're comfortable with the engine's interpretation latitude.
-- Example: `"The player has escaped the island"` / `"The player has been captured"`.
-
-**Disable (set to `null`) and rely on triggers when:**
-- The world has complex, multi-stage end conditions.
-- You need precise control over end timing.
-- The default conditions fire incorrectly during playtesting.
-- The world's "ending" is multi-branching (different effects per branch) — use `effectChangeVictoryCondition`/`effectChangeDefeatCondition` triggers to install the right ending for each branch.

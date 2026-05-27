@@ -36,14 +36,14 @@ The canonical fixture is at `example-world-schema-v2.1.json` in the plugin root.
 
 **Authoring guidance — read on demand based on the task:**
 
-- `references/AI_RUNTIME_MECHANICS.md` — what the AI produces each turn (`evaluation`, `whereWhen`, `outcomeDescription`, `secretInfo`, illustration fields), time tracking, the skill 0–5 scale, author-style discipline. Read when designing `instructions`, `authorStyle`, `descriptionRequest`, `evaluationRequest`, or any trigger effect that shapes AI output.
+- `references/AI_RUNTIME_MECHANICS.md` — runtime behavior: turn lifecycle (the per-turn ordering of AI writing, tracked-item updates, and trigger evaluation), AI output fields (`evaluation`, `whereWhen`, `outcomeDescription`, `secretInfo`, illustration fields), time tracking, the skill 0–5 scale, author-style discipline. Read when designing `instructions`, `authorStyle`, `descriptionRequest`, `evaluationRequest`, any trigger, or any tracked item — and especially before debugging "the trigger didn't work" / "the AI ignored the new value" symptoms.
 - `references/FIELD_ALLOCATION_STRATEGY.md` — where content belongs (always-on vs keyword-gated vs trigger-gated), the field assignment quick reference, and the anti-patterns list. Read before populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world.
 - `references/CHARACTER_AUTHORING_GUARDRAILS.md` — no-fabrication discipline for `possibleCharacters` and `NPCs`. The no-citation rule. Always ask the author for `img_appearance` and `img_clothing` — never invent them (see `references/CHARACTER_AUTHORING_GUARDRAILS.md` §2 for the canonical formulation). Read before writing any character.
 - `references/sections/*.md` — per-field authoring notes (judgments not in the schema doc):
   - `INTRODUCING_THE_STORY.md` — `title`, `description`, `background`, `firstInput`, `objective`
   - `MAIN_INSTRUCTIONS.md` — `instructions`, `instructionBlocks`, `authorStyle`, `designNotes`, content flags
   - `PLAYER_CHARACTERS.md` — `skills`, `possibleCharacters`, `allowChangeCharacter*` permissions
-  - `OTHER_CHARACTERS.md` — `NPCs` (the critical `one_liner` rule)
+  - `OTHER_CHARACTERS.md` — `NPCs` (Other Characters) — the critical `one_liner` rule
   - `TRACKED_ITEMS.md` — `trackedItems` (dataType / visibility choices, the 10,000-char limit, what NOT to track)
   - `TRIGGER_EVENTS.md` — `triggerEvents` (when to use which effect type)
   - `KEYWORD_INSTRUCTION_BLOCKS.md` — `loreBookEntries` (substring matching, the awareness paradox)

@@ -60,13 +60,11 @@ Follow the **modify-world** field-by-field approval loop on the target file:
 4. Edit
 5. Validate after each batch
 
-Key fields that usually diverge in a spinoff:
-- `title`, `description`, `background` — identify the variant clearly
-- `designNotes` — record why this variant exists (not sent to AI)
-- Character `name` and `description` if the protagonist changes
-  > Read `references/sections/OTHER_CHARACTERS.md` and `references/sections/PLAYER_CHARACTERS.md` before editing character fields.
-- Tracked item initial values if mechanics differ
-  > Read `references/sections/TRACKED_ITEMS.md` before modifying item definitions.
+Key fields that usually diverge in a spinoff (read the matching section file in `references/sections/` before drafting changes):
+- `title`, `description`, `background` (see [`references/sections/INTRODUCING_THE_STORY.md`](../../skills/world-architect/references/sections/INTRODUCING_THE_STORY.md)) — identify the variant clearly
+- `designNotes` (see [`references/sections/MAIN_INSTRUCTIONS.md`](../../skills/world-architect/references/sections/MAIN_INSTRUCTIONS.md)) — record why this variant exists (not sent to AI)
+- Character `name` and `description` (see [`references/sections/PLAYER_CHARACTERS.md`](../../skills/world-architect/references/sections/PLAYER_CHARACTERS.md) and [`references/CHARACTER_AUTHORING_GUARDRAILS.md`](../../skills/world-architect/references/CHARACTER_AUTHORING_GUARDRAILS.md)) — if the protagonist changes
+- Tracked item initial values (see [`references/sections/TRACKED_ITEMS.md`](../../skills/world-architect/references/sections/TRACKED_ITEMS.md)) — if mechanics differ
 
 ## Step 5 — Validate and audit the variant
 

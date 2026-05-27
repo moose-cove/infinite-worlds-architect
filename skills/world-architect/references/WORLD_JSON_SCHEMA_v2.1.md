@@ -192,6 +192,7 @@ Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level
 | `effectChangePCSkill` | `{name, amount, minmax, increase}` | — | `name`: skill name. `amount`: integer delta. `minmax`: cap (when increasing) or floor (when decreasing). `increase`: boolean direction. |
 | `effectChangeVictoryCondition` | `{condition, text, alreadyFired}` | — | Replaces world `victoryCondition` |
 | `effectChangeDefeatCondition` | `{condition, text, alreadyFired}` | — | Replaces world `defeatCondition` |
+| `effectEndsGame` | boolean | — | End the game. `data: true` allows player continuation (victory-style); `data: false` ends with no continuation (defeat-style). |
 | `effectModifyInstructionBlock` | `{id, content}` | — | Modifies an Extra Instruction Block by ID |
 | `effectModifyKeywordBlock` | `{id, content, keywords}` | — | Modifies a Keyword Instruction Block by ID — replaces both content AND keywords |
 | `effectSetTrackedItemValue` | `{action, newValue, replaceWith, trackedItemID}` | `trackedItemID` | `action` one of: `set`, `add` (append), `subtract` (remove if present), `replace` (string-replace). `replaceWith` is used only by `replace`. Both the data object AND the effect object carry `trackedItemID`. |
@@ -200,6 +201,12 @@ Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level
 | `effectRequestInput` | `{inputMode, requestText, requiresInput, targetTrackedItemId}` | — | Request free-text input from the player. `inputMode`: `"multi"` (multiline) or presumably `"single"`. `requiresInput`: boolean. Result is written to `targetTrackedItemId`. Blocking, same as `effectPresentChoice`. |
 
 **Forward compatibility**: the table above is the comprehensive set of effect types observed in v2.1 fixtures. Future schema versions may add new types. The validator must **warn** (not error) on unrecognized `type` values so unknown-but-platform-valid effects survive round-trips. The agent should refuse to emit unrecognized types until they appear in a verified fixture, but should leave existing unknown-type effects untouched when editing other fields of the world.
+
+**v2.1 consolidation.** Pre-v2.1 worlds used a separate boolean field
+`canContinueEndedGame` to control continuation behavior on an end-game
+trigger. In v2.1 that field is gone — the `data` boolean of `effectEndsGame`
+serves both roles. Authors familiar with the wiki's older documentation
+will not find `canContinueEndedGame` in v2.1 fixtures.
 
 ## 6 Instruction blocks
 
