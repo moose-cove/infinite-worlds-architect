@@ -94,7 +94,7 @@ After the author says they're done with a section:
 
 ## Step 5 — Review
 
-Optionally offer to call `format_world_for_review(world_path)` so the author can read a clean summary of the finished world.
+Optionally offer to call `format_world_for_review(world_path)`. It writes a `<world_stem>.review.md` file next to the world JSON and returns `{"success": "<path>"}`; point the author at that file rather than reading the markdown back into the conversation.
 
 ---
 

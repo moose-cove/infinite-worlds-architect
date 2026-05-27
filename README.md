@@ -81,7 +81,7 @@ The agent and commands have access to these tools — you generally won't call t
 | `audit_world(world_path)` | Quality analysis — token budgets, trigger cycles, redundancy detection. |
 | `scaffold_world(output_path, title, nsfw)` | Create a fresh, valid world JSON at the given path. |
 | `read_world_field(world_path, path)` | Read a single field using dot/bracket path syntax. |
-| `format_world_for_review(world_path)` | Render the world as human-readable Markdown for review. |
+| `format_world_for_review(world_path)` | Render the world as human-readable Markdown and write it to `<world_stem>.review.md` next to the input. Returns `{"success": "<path>"}` or `{"error": "<details>"}`. |
 | `get_schema_summary()` | Structured metadata about entity types, fields, and enum values. |
 | `mint_ids(kind, count)` | Generate platform-format IDs for new entities. |
 | `confirm_path(path)` | Resolve and verify a file path before acting on it. |

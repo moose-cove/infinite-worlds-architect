@@ -128,13 +128,8 @@ def _effect_summary(effect: dict) -> str:
     return f"- **{etype}**: {json.dumps(data, ensure_ascii=False)}"
 
 
-def format_world_for_review(world_path: str) -> str:
-    """Render the world as a human-readable Markdown document for the author to skim."""
-    try:
-        world = _load_world(world_path)
-    except (FileNotFoundError, json.JSONDecodeError) as exc:
-        return f"**Error**: {exc}"
-
+def _render_world_markdown(world: dict) -> str:
+    """Build the human-readable Markdown body for a loaded world dict."""
     parts: list[str] = []
 
     parts.append(f"# {world.get('title', '(Untitled)')}\n")
@@ -278,6 +273,35 @@ def format_world_for_review(world_path: str) -> str:
         parts.append(_section("Design Notes (not sent to AI)", notes))
 
     return "\n".join(parts)
+
+
+def format_world_for_review(world_path: str) -> str:
+    """Render the world as Markdown and write it to a sibling `.review.md` file.
+
+    Writes the rendered review to `<world_stem>.review.md` next to the input
+    world JSON, so the markdown does not flood the calling agent's context.
+
+    Returns a JSON envelope:
+      {"success": "<absolute path to .review.md>"} on success
+      {"error": "<details>"} on failure (missing file, invalid JSON, write error)
+    """
+    try:
+        world = _load_world(world_path)
+    except FileNotFoundError as exc:
+        return json.dumps({"error": str(exc)})
+    except json.JSONDecodeError as exc:
+        return json.dumps({"error": f"Invalid JSON in world file: {exc}"})
+    except OSError as exc:
+        return json.dumps({"error": f"Failed to read world file: {exc}"})
+
+    try:
+        markdown = _render_world_markdown(world)
+        output_path = Path(world_path).resolve().with_suffix(".review.md")
+        output_path.write_text(markdown, encoding="utf-8")
+    except OSError as exc:
+        return json.dumps({"error": f"Failed to write review file: {exc}"})
+
+    return json.dumps({"success": str(output_path)})
 
 
 def get_schema_summary() -> str:

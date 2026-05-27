@@ -113,7 +113,7 @@ All tools take absolute paths for filesystem arguments. All tools that read or w
 | Tool | Purpose |
 |---|---|
 | `read_world_field(worldPath, path)` | Read a single field by path. Path syntax supports dotted top-level (`"background"`), name-bracketed entity access (`"NPCs[name=Ada].location"`), and index-bracketed ordered access (`"triggerEvents[0].name"`). Returns the value as JSON-serialized text. |
-| `format_world_for_review(worldPath)` | Render the world as a human-readable Markdown document for the author to skim. One-way: the rendered Markdown is not a serialization the plugin reads back. |
+| `format_world_for_review(worldPath)` | Render the world as a human-readable Markdown document and write it to `<world_stem>.review.md` next to the input world JSON. Returns a JSON envelope: `{"success": "<absolute path>"}` on success, `{"error": "<details>"}` on failure. Writing to disk (instead of returning the markdown directly) keeps the rendered body — which can be thousands of lines on a mature world — out of the calling agent's context window. One-way: the rendered Markdown is not a serialization the plugin reads back. |
 | `get_schema_summary()` | Return the canonical schema as structured data — entity types, their fields, field types, allowed enum values. Used by the agent to introspect "what fields exist on a trigger event" without parsing the Markdown schema doc. |
 
 ### 4.2 Validation and analysis

@@ -63,14 +63,48 @@ def test_fixture_schema_version():
     assert fixture["schemaVersion"] == 2.1
 
 
-def test_format_world_for_review_runs(tmp_path):
-    """format_world_for_review must return a non-empty string for the fixture."""
+def test_format_world_for_review_writes_file(tmp_path):
+    """format_world_for_review writes a sibling .review.md file and returns its path."""
+    from iw_architect.tools.inspection import _render_world_markdown, format_world_for_review
+
+    # Copy the fixture into tmp_path so the sibling file lands in a writable dir
+    world_copy = tmp_path / "world.json"
+    world_copy.write_text(FIXTURE_PATH.read_text())
+
+    result = json.loads(format_world_for_review(str(world_copy)))
+    assert "success" in result, result
+    assert "error" not in result
+    review_path = Path(result["success"])
+    assert review_path == world_copy.with_suffix(".review.md")
+    assert review_path.exists()
+
+    body = review_path.read_text()
+    # Locks the file contents to the exact renderer output — guards against
+    # silent truncation or formatter drift slipping past coarse heuristics.
+    expected = _render_world_markdown(json.loads(world_copy.read_text()))
+    assert body == expected
+    assert "Enchanted Bake-Off" in body  # fixture title
+
+
+def test_format_world_for_review_missing_file(tmp_path):
+    """Missing file returns an error envelope, not a raised exception."""
     from iw_architect.tools.inspection import format_world_for_review
 
-    result = format_world_for_review(str(FIXTURE_PATH))
-    assert isinstance(result, str)
-    assert "Enchanted Bake-Off" in result  # fixture title
-    assert len(result) > 500
+    result = json.loads(format_world_for_review(str(tmp_path / "nope.json")))
+    assert "error" in result
+    assert "success" not in result
+
+
+def test_format_world_for_review_invalid_json(tmp_path):
+    """Invalid JSON in the world file returns an error envelope."""
+    from iw_architect.tools.inspection import format_world_for_review
+
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not valid json")
+    result = json.loads(format_world_for_review(str(bad)))
+    assert "error" in result
+    assert "success" not in result
+    assert "Invalid JSON" in result["error"]
 
 
 def test_scaffold_passes_validator(tmp_path):

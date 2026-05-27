@@ -27,7 +27,7 @@ Call `confirm_path(path)` with the resolved path. Present the resolved path and 
 ## Step 2 — Summarize the current world
 
 1. Call `Read` on the world JSON to load it into context.
-2. Call `format_world_for_review(world_path)` and present a concise summary to the author.
+2. Call `format_world_for_review(world_path)` — it writes the rendered review to `<world_stem>.review.md` and returns `{"success": "<path>"}`. `Read` that file only if you need its content; otherwise just point the author at the path. Do not paste the full markdown back into the conversation.
 3. Ask: "What would you like to change?"
 
 ## Step 3 — Plan the change
