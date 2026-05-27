@@ -5,13 +5,13 @@ argument-hint: "[source_path] [target_path]"
 
 # Spinoff World
 
-@../../skills/world-architect/SKILL.md
+@../../agents/world-architect.md
 
 You are helping an author create a **variant** of an existing Infinite Worlds world — keeping the original intact and producing a new divergent version.
 
 ## Recommended reading
 
-The references in `skills/world-architect/references/` cover authoring judgments specific to spinoffs:
+The references in `references/` cover authoring judgments specific to spinoffs:
 
 - **Before changing any character** → read `references/CHARACTER_AUTHORING_GUARDRAILS.md`. Spinoffs especially benefit from the no-fabrication rule because the temptation is to "complete" thinly-sketched source characters by inventing detail. The source dossier is the floor, not a starting point to embellish. Premise changes don't license character changes — ask the author what carries forward and what doesn't.
 - **When deciding whether to keep or restructure source content** → read `references/FIELD_ALLOCATION_STRATEGY.md`. A spinoff with a different premise often needs content reallocated (e.g., the original's `background` describes the wrong setting; some of its `instructionBlocks` become irrelevant). Use the allocation rules to decide what to keep, what to move, and what to drop.
@@ -61,10 +61,10 @@ Follow the **modify-world** field-by-field approval loop on the target file:
 5. Validate after each batch
 
 Key fields that usually diverge in a spinoff (read the matching section file in `references/sections/` before drafting changes):
-- `title`, `description`, `background` (see [`references/sections/INTRODUCING_THE_STORY.md`](../../skills/world-architect/references/sections/INTRODUCING_THE_STORY.md)) — identify the variant clearly
-- `designNotes` (see [`references/sections/MAIN_INSTRUCTIONS.md`](../../skills/world-architect/references/sections/MAIN_INSTRUCTIONS.md)) — record why this variant exists (not sent to AI)
-- Character `name` and `description` (see [`references/sections/PLAYER_CHARACTERS.md`](../../skills/world-architect/references/sections/PLAYER_CHARACTERS.md) and [`references/CHARACTER_AUTHORING_GUARDRAILS.md`](../../skills/world-architect/references/CHARACTER_AUTHORING_GUARDRAILS.md)) — if the protagonist changes
-- Tracked item initial values (see [`references/sections/TRACKED_ITEMS.md`](../../skills/world-architect/references/sections/TRACKED_ITEMS.md)) — if mechanics differ
+- `title`, `description`, `background` (see [`references/sections/INTRODUCING_THE_STORY.md`](../references/sections/INTRODUCING_THE_STORY.md)) — identify the variant clearly
+- `designNotes` (see [`references/sections/MAIN_INSTRUCTIONS.md`](../references/sections/MAIN_INSTRUCTIONS.md)) — record why this variant exists (not sent to AI)
+- Character `name` and `description` (see [`references/sections/PLAYER_CHARACTERS.md`](../references/sections/PLAYER_CHARACTERS.md) and [`references/CHARACTER_AUTHORING_GUARDRAILS.md`](../references/CHARACTER_AUTHORING_GUARDRAILS.md)) — if the protagonist changes
+- Tracked item initial values (see [`references/sections/TRACKED_ITEMS.md`](../references/sections/TRACKED_ITEMS.md)) — if mechanics differ
 
 ## Step 5 — Validate and audit the variant
 

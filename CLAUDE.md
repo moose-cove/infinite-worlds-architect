@@ -19,11 +19,18 @@ tests/
 ├── test_validator.py   # Negative tests for every error class in §4.6
 └── test_analysis.py    # Tests for audit_world, compare_worlds, get_diff_summary
 
-skills/
-└── world-architect/                                 # Top-level discovery skill (model-invoked)
-    └── references/
-        ├── WORLD_JSON_SCHEMA_v2.1.md                # Human-readable schema reference
-        └── world_v2.1.schema.json                   # JSON Schema artifact (Tier 1 validator)
+references/                                          # On-demand authoring + schema references
+├── README.md                                        # Index, authoring-intent lookup, ID-format table
+├── WORLD_JSON_SCHEMA_v2.1.md                        # Human-readable schema reference
+├── world_v2.1.schema.json                           # JSON Schema artifact (Tier 1 validator)
+├── AI_RUNTIME_MECHANICS.md                          # Runtime/turn-lifecycle behavior
+├── FIELD_ALLOCATION_STRATEGY.md                     # Where content belongs
+├── CHARACTER_AUTHORING_GUARDRAILS.md                # No-fabrication discipline
+└── sections/                                        # Per-field authoring judgment notes
+    └── *.md                                         # INTRODUCING_THE_STORY, TRIGGER_EVENTS, etc.
+
+agents/
+└── world-architect.md                               # Autonomous + command-loaded agent
 
 commands/
 ├── new-world.md        # /infinite-worlds-architect:new-world  — guided world creation
@@ -114,14 +121,14 @@ uv run python -m iw_architect.server
 ## Design constraints
 
 - **No write tools.** The plugin has no add/modify/remove MCP tools. The agent edits `world.json` directly with Claude Code's native `Read`, `Edit`, `Write` tools.
-- **Single source of schema truth.** `skills/world-architect/references/world_v2.1.schema.json` is the canonical schema artifact. `validator.py` enforces it (Tier 1 jsonschema + Tier 2 custom checks). `schema_model.py` derives `SCHEMA_SUMMARY` from it at import time for the LLM-facing summary. When the platform schema evolves, edit the JSON Schema — the rest follows.
+- **Single source of schema truth.** `references/world_v2.1.schema.json` is the canonical schema artifact. `validator.py` enforces it (Tier 1 jsonschema + Tier 2 custom checks). `schema_model.py` derives `SCHEMA_SUMMARY` from it at import time for the LLM-facing summary. When the platform schema evolves, edit the JSON Schema — the rest follows.
 - **Warn, don't error** on unknown top-level keys, unknown effect types, and future schema versions — the platform may add fields the validator doesn't know about. Build-time strictness is enforced separately by `test_fixture_schema_coverage_nested` in `tests/test_round_trip.py`.
 
 ## Adding a new platform feature
 
 The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it automatically, so there is no second place to update.
 
-1. **Edit the JSON Schema** at `skills/world-architect/references/world_v2.1.schema.json`:
+1. **Edit the JSON Schema** at `references/world_v2.1.schema.json`:
    - For a new top-level field: add an entry to `properties` with `description`, `x-iw-category`, optionally `default`, `x-iw-note`, `enum`.
    - For a new entity field: add it under the relevant `$defs.<entity>.properties`. If required, also add the field name to that `$defs.<entity>.required` array.
    - For a new effect/condition type: add an entry to `$defs.triggerEffect.x-iw-effect-types` or `$defs.triggerCondition.x-iw-condition-types`. Register the type in `validator.py`'s `_KNOWN_EFFECT_TYPES` / `_KNOWN_CONDITION_TYPES` set so it stops warning as "unknown".
@@ -133,7 +140,7 @@ The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it au
 
 ## Reference file naming convention
 
-Markdown reference files in `skills/world-architect/references/` (and `references/sections/`) use **UPPER_SNAKE_CASE** (e.g., `FIELD_ALLOCATION_STRATEGY.md`, `TRIGGER_EVENTS.md`). This matches the repo's existing `.md` convention (CLAUDE.md, DESIGN_BRIEF_v2.md, etc.). Do not rename files to kebab-case.
+Markdown reference files in `references/` (and `references/sections/`) use **UPPER_SNAKE_CASE** (e.g., `FIELD_ALLOCATION_STRATEGY.md`, `TRIGGER_EVENTS.md`). This matches the repo's existing `.md` convention (CLAUDE.md, DESIGN_BRIEF_v2.md, etc.). Do not rename files to kebab-case.
 
 ## Open questions (from DESIGN_BRIEF_v2.md §9)
 

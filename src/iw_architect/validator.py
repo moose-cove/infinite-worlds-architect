@@ -16,7 +16,7 @@ import jsonschema
 from iw_architect import KNOWN_SCHEMA_VERSION
 
 _PLUGIN_ROOT = Path(__file__).parent.parent.parent  # src/iw_architect/ → src/ → repo root
-_SCHEMA_PATH = _PLUGIN_ROOT / "skills" / "world-architect" / "references" / "world_v2.1.schema.json"
+_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.1.schema.json"
 _SCHEMA: dict | None = None
 
 _KNOWN_EFFECT_TYPES = {

@@ -5,13 +5,13 @@ argument-hint: "[output_path]"
 
 # New World
 
-@../../skills/world-architect/SKILL.md
+@../../agents/world-architect.md
 
 You are guiding an author through creating a brand-new Infinite Worlds story world. Follow this workflow precisely.
 
 ## Recommended reading before drafting
 
-The references in `skills/world-architect/references/` cover authoring judgments that affect every step below. Read each on demand, not all upfront:
+The references in `references/` cover authoring judgments that affect every step below. Read each on demand, not all upfront:
 
 - **Before drafting `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`** → read `references/FIELD_ALLOCATION_STRATEGY.md`. The most common new-world mistake is packing always-on fields with content that belongs in keyword blocks or trigger effects.
 - **Before drafting any character** → read `references/CHARACTER_AUTHORING_GUARDRAILS.md`. New-world authoring has the highest temptation to invent characters to "fill out" the world before the author has decided who they are. Don't — ask the author for every detail and leave blanks where they don't have answers. Always ask for `img_appearance` and `img_clothing` explicitly; never invent them.
@@ -46,42 +46,42 @@ For **each field or entity**, follow this loop:
 
 ### Suggested field order for a new world
 
-**Core narrative** (do first — see [`references/sections/INTRODUCING_THE_STORY.md`](../../skills/world-architect/references/sections/INTRODUCING_THE_STORY.md) and [`references/sections/MAIN_INSTRUCTIONS.md`](../../skills/world-architect/references/sections/MAIN_INSTRUCTIONS.md)):
+**Core narrative** (do first — see [`references/sections/INTRODUCING_THE_STORY.md`](../references/sections/INTRODUCING_THE_STORY.md) and [`references/sections/MAIN_INSTRUCTIONS.md`](../references/sections/MAIN_INSTRUCTIONS.md)):
 - `title`, `description`, `background`, `instructions`, `authorStyle`
 - `objective`, `firstInput`
 
-**Maturity and warnings** (see [`references/sections/MAIN_INSTRUCTIONS.md`](../../skills/world-architect/references/sections/MAIN_INSTRUCTIONS.md)):
+**Maturity and warnings** (see [`references/sections/MAIN_INSTRUCTIONS.md`](../references/sections/MAIN_INSTRUCTIONS.md)):
 - `mature`, `nsfw`, `contentWarnings`
 
-**Skills** (see [`references/sections/PLAYER_CHARACTERS.md`](../../skills/world-architect/references/sections/PLAYER_CHARACTERS.md) — affects character creation and tracked items):
+**Skills** (see [`references/sections/PLAYER_CHARACTERS.md`](../references/sections/PLAYER_CHARACTERS.md) — affects character creation and tracked items):
 - `skills` — agree the list before defining characters or tracked items
 
-**Player characters** (`possibleCharacters`) (see [`references/sections/PLAYER_CHARACTERS.md`](../../skills/world-architect/references/sections/PLAYER_CHARACTERS.md)):
+**Player characters** (`possibleCharacters`) (see [`references/sections/PLAYER_CHARACTERS.md`](../references/sections/PLAYER_CHARACTERS.md)):
 - For each character: `name`, `description`, `skills` object
 - Mint a `characterId` with `mint_ids("character", 1)`
 
-**NPCs** (see [`references/sections/OTHER_CHARACTERS.md`](../../skills/world-architect/references/sections/OTHER_CHARACTERS.md)):
+**NPCs** (see [`references/sections/OTHER_CHARACTERS.md`](../references/sections/OTHER_CHARACTERS.md)):
 - For each NPC: `name`, `one_liner`, `detail`, `appearance`, `location`, `secret_info`, `names`, `img_appearance`, `img_clothing`
 - Mint an `id` with `mint_ids("npc", 1)`, assign `positionInList` sequentially
 
-**Tracked items** (see [`references/sections/TRACKED_ITEMS.md`](../../skills/world-architect/references/sections/TRACKED_ITEMS.md)):
+**Tracked items** (see [`references/sections/TRACKED_ITEMS.md`](../references/sections/TRACKED_ITEMS.md)):
 - For each item: `name`, `dataType`, `visibility`, `description`, `updateInstructions`, `initialValue`, `initialValueBasedOnPC`, `autoUpdate`
 - Mint an `id` with `mint_ids("trackedItem", 1)`, assign `positionInList` sequentially
 
-**Triggers** (see [`references/sections/TRIGGER_EVENTS.md`](../../skills/world-architect/references/sections/TRIGGER_EVENTS.md)):
+**Triggers** (see [`references/sections/TRIGGER_EVENTS.md`](../references/sections/TRIGGER_EVENTS.md)):
 - For each trigger: `name`, `canTriggerMoreThanOnce`, `advancedLogic`, `triggerOnStartOfGame`, then define conditions and effects
 - Mint a trigger `id` with `mint_ids("triggerEvent", 1)`
 - Mint condition/effect `id`s with `mint_ids("triggerStep", n)`
 
-**Instruction and lore blocks** (see [`references/sections/MAIN_INSTRUCTIONS.md`](../../skills/world-architect/references/sections/MAIN_INSTRUCTIONS.md) for `instructionBlocks` and [`references/sections/KEYWORD_INSTRUCTION_BLOCKS.md`](../../skills/world-architect/references/sections/KEYWORD_INSTRUCTION_BLOCKS.md) for `loreBookEntries`):
+**Instruction and lore blocks** (see [`references/sections/MAIN_INSTRUCTIONS.md`](../references/sections/MAIN_INSTRUCTIONS.md) for `instructionBlocks` and [`references/sections/KEYWORD_INSTRUCTION_BLOCKS.md`](../references/sections/KEYWORD_INSTRUCTION_BLOCKS.md) for `loreBookEntries`):
 - For each: `name`, `content`, and `keywords` (lore only)
 - Mint `id`s with `mint_ids("instructionBlock", 1)` or `mint_ids("loreBookEntry", 1)`
 
-**Permissions** (see [`references/sections/PLAYER_CHARACTERS.md`](../../skills/world-architect/references/sections/PLAYER_CHARACTERS.md) — optional, defaults are usually fine):
+**Permissions** (see [`references/sections/PLAYER_CHARACTERS.md`](../references/sections/PLAYER_CHARACTERS.md) — optional, defaults are usually fine):
 - `allowChangeCharacter*` fields
 - `permissionsOnceShared`
 
-**Victory and defeat conditions** (see [`references/sections/VICTORY_DEFEAT.md`](../../skills/world-architect/references/sections/VICTORY_DEFEAT.md)):
+**Victory and defeat conditions** (see [`references/sections/VICTORY_DEFEAT.md`](../references/sections/VICTORY_DEFEAT.md)):
 - `victoryCondition`, `defeatCondition`
 
 ## Step 4 — Final validation and audit
