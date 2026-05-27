@@ -37,6 +37,8 @@ jobs:
 
   version-bump:
     name: Version bump check
+    # Verifies plugin.json and pyproject.toml versions are bumped vs base and equal to each other.
+    # See CLAUDE.md "Versioning policy" for the human-facing rules.
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -44,30 +46,46 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify version bumped vs base branch
+      - name: Verify plugin.json and pyproject.toml versions bumped and match
         run: |
           set -euo pipefail
           base_ref="origin/${{ github.base_ref }}"
           git fetch origin "${{ github.base_ref }}" --depth=1
 
-          current_version=$(python -c "
-          import re, pathlib
-          text = pathlib.Path('pyproject.toml').read_text()
-          m = re.search(r'^version\s*=\s*\"([^\"]+)\"', text, re.MULTILINE)
-          print(m.group(1))
-          ")
-
-          base_version=$(git show "${base_ref}:pyproject.toml" | python -c "
+          extract_pyproject() {
+            python -c "
           import re, sys
           text = sys.stdin.read()
           m = re.search(r'^version\s*=\s*\"([^\"]+)\"', text, re.MULTILINE)
           print(m.group(1) if m else '')
-          ")
+          "
+          }
 
-          echo "Base version:    ${base_version}"
-          echo "Current version: ${current_version}"
+          extract_plugin() {
+            python -c "import json, sys; print(json.load(sys.stdin).get('version', ''))"
+          }
 
-          if [ "${current_version}" = "${base_version}" ]; then
-            echo "::error::pyproject.toml version was not bumped. Please bump the version before merging."
-            exit 1
+          cur_py=$(cat pyproject.toml | extract_pyproject)
+          cur_plugin=$(cat .claude-plugin/plugin.json | extract_plugin)
+          base_py=$(git show "${base_ref}:pyproject.toml" | extract_pyproject)
+          base_plugin=$(git show "${base_ref}:.claude-plugin/plugin.json" | extract_plugin)
+
+          echo "Base    pyproject.toml: ${base_py}"
+          echo "Current pyproject.toml: ${cur_py}"
+          echo "Base    plugin.json:    ${base_plugin}"
+          echo "Current plugin.json:    ${cur_plugin}"
+
+          fail=0
+          if [ "${cur_py}" = "${base_py}" ]; then
+            echo "::error::pyproject.toml version was not bumped vs base. See CLAUDE.md 'Versioning policy'."
+            fail=1
           fi
+          if [ "${cur_plugin}" = "${base_plugin}" ]; then
+            echo "::error::.claude-plugin/plugin.json version was not bumped vs base. See CLAUDE.md 'Versioning policy'."
+            fail=1
+          fi
+          if [ "${cur_py}" != "${cur_plugin}" ]; then
+            echo "::error::pyproject.toml (${cur_py}) and plugin.json (${cur_plugin}) versions must match."
+            fail=1
+          fi
+          exit "${fail}"

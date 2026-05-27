@@ -101,6 +101,34 @@ When a subagent is going to implement a plan that lives in `claude-scratchpad/`,
 
 The only legitimate reason to change the hook config is to keep it in sync with `.github/workflows/ci.yml` when CI changes; the two must stay aligned.
 
+## Versioning policy
+
+Every PR that changes runtime, schema, or user-visible plugin behavior must bump the version in **both** files in lockstep:
+
+- `.claude-plugin/plugin.json` — `version` field
+- `pyproject.toml` — `version` field
+
+The two versions must be **equal** at all times. CI's `version-bump` job fails the PR if either file's version is unchanged vs. base, or if the two values disagree.
+
+**When to bump which component (semver):**
+
+- **Patch (`0.2.0` → `0.2.1`)** — bug fixes, doc-only changes, internal refactors, CI/test/chore changes, new negative tests. Anything that doesn't change what a world author or plugin user observes.
+- **Minor (`0.2.0` → `0.3.0`)** — new commands, new MCP tools, new optional schema fields, new validator warnings, new skill content. Additive, backwards-compatible.
+- **Major (`0.2.0` → `1.0.0`)** — schema breaking changes (renamed/removed fields, stricter required-ness), removed commands or tools, renamed MCP tool surfaces, anything that would force a world author to edit existing `world.json` files.
+
+**Workflow:**
+
+1. When starting a branch, decide the bump level based on the planned change. If you don't know yet, default to patch and revisit before opening the PR.
+2. Bump both `plugin.json` and `pyproject.toml` in the same commit as the change that warrants the bump — not in a separate "version bump" commit at the end. That way `git blame` on the version line points at the change, not at bookkeeping.
+3. Fill in the "Version bump" section of the PR template with the from→to and the reason (which semver tier and why).
+
+**Don't:**
+
+- Don't open a PR without bumping. CI will fail it, and rerunning CI after pushing the bump wastes a cycle.
+- Don't bump only one file. CI will fail it.
+- Don't bump in a trailing "chore: bump version" commit. Bundle it with the substantive change.
+- Don't skip the bump for "trivial" doc tweaks. The bump is what guarantees every merge to `main` is a distinct, addressable version — useful for bisecting and for `/plugin` users who want to know whether they've already pulled a given change.
+
 ## Running the MCP server
 
 ```bash
