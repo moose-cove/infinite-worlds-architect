@@ -19,13 +19,84 @@ The plugin has **no write tools** — Claude edits world JSON directly using its
 
 **Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will silently fail without it.
 
-Add the plugin to Claude Code by pointing it at this repository:
+Installing the plugin is a **two-step process** in Claude Code: first add this repository as a *marketplace*, then install the plugin from that marketplace.
 
-```
-https://github.com/moose-cove/infinite-worlds-architect
+1. **Add the marketplace** (run inside any Claude Code session):
+
+   ```
+   /plugin marketplace add moose-cove/infinite-worlds-architect
+   ```
+
+   This registers the marketplace defined in [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) under the name `iw-architect-marketplace`.
+
+2. **Install the plugin from the marketplace:**
+
+   ```
+   /plugin install infinite-worlds-architect@iw-architect-marketplace
+   ```
+
+3. **Reload Claude Code** when prompted. The MCP server (`iw-json-tools`) starts automatically — no separate launch needed.
+
+To update later, run `/plugin marketplace update iw-architect-marketplace` and re-install. To remove, `/plugin uninstall infinite-worlds-architect@iw-architect-marketplace`.
+
+## Using the plugin
+
+Once installed, the plugin contributes three things to your Claude Code session:
+
+### 1. The `world-architect` skill (auto-activated)
+
+This is a **model-invoked skill** — you do not run it as a slash command. Claude loads it automatically when you say something like:
+
+- *"Help me build an Infinite Worlds world."*
+- *"I want to design a world for Infinite Worlds."*
+- *"What can the Infinite Worlds plugin do?"*
+- *"How do I use the world tools?"*
+
+Once activated, Claude has on-demand access to the schema reference, per-field authoring guidance (`INTRODUCING_THE_STORY.md`, `MAIN_INSTRUCTIONS.md`, `TRACKED_ITEMS.md`, `TRIGGER_EVENTS.md`, etc.), and the MCP tool surface listed below. Use this skill for **ad-hoc questions and free-form world editing** that don't fit the structured command workflows.
+
+### 2. Slash commands (structured workflows)
+
+| Command | Purpose | Argument |
+|---|---|---|
+| `/infinite-worlds-architect:new-world [output_path]` | Guided field-by-field creation of a brand-new world from scratch. | Path where the new `world.json` should be written. |
+| `/infinite-worlds-architect:modify-world [world_path]` | Guided field-by-field editing of an existing world, with per-change approval. | Path to the existing `world.json`. |
+| `/infinite-worlds-architect:spinoff-world [source_path] [target_path]` | Derive a divergent variant from an existing world, keeping the original intact. | Source path, then target path. |
+
+Each command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md) (read before write, pass-through preservation, `schemaVersion` is load-bearing).
+
+### 3. MCP tools (callable by Claude)
+
+The skill and commands have access to these tools — you generally won't call them directly, but knowing they exist helps when asking Claude for specific operations:
+
+| Tool | What it does |
+|---|---|
+| `validate_world(world_path)` | Strict schema check — reports every error that would cause the platform to reject the world. |
+| `audit_world(world_path)` | Quality analysis — token budgets, trigger cycles, redundancy detection. |
+| `scaffold_world(output_path, title, nsfw)` | Create a fresh, valid world JSON at the given path. |
+| `read_world_field(world_path, path)` | Read a single field using dot/bracket path syntax. |
+| `format_world_for_review(world_path)` | Render the world as human-readable Markdown for review. |
+| `get_schema_summary()` | Structured metadata about entity types, fields, and enum values. |
+| `mint_ids(kind, count)` | Generate platform-format IDs for new entities. |
+| `confirm_path(path)` | Resolve and verify a file path before acting on it. |
+| `compare_worlds(a, b)` | Structural diff between two worlds. |
+| `get_diff_summary(original, current)` | Human-readable narrative of what changed. |
+
+### Typical session
+
+```text
+You:    /infinite-worlds-architect:new-world ./my-world.json
+Claude: <walks you through title, description, background, firstInput…>
+        <calls scaffold_world, then validate_world after each edit>
+
+You:    Add a tracked item for the player's reputation, 0–100, hidden from AI.
+Claude: <invokes world-architect skill knowledge, edits world.json,
+         calls validate_world to confirm>
+
+You:    /infinite-worlds-architect:spinoff-world ./my-world.json ./my-world-nsfw.json
+Claude: <copies, then guides edits for the variant>
 ```
 
-Once added, the MCP server starts automatically when Claude Code loads — no separate launch needed. Open any `world.json` and ask Claude to validate, scaffold, or edit it.
+Open any `world.json` and ask Claude what's wrong, what could be tighter, or what to add next — the skill will pull the right reference file on demand.
 
 ## Development setup
 
