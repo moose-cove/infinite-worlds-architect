@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import secrets
@@ -123,7 +124,10 @@ def scaffold_world(
     if not path.parent.exists():
         return json.dumps({"error": f"Parent directory does not exist: {path.parent}"})
 
-    world = dict(_DEFAULT_SCAFFOLD)
+    # deepcopy, not dict(): _DEFAULT_SCAFFOLD holds nested mutable containers
+    # (lists, the permissions dict) that a shallow copy would alias back to the
+    # module-level constant. See rules/common/coding-style.md (immutability).
+    world = copy.deepcopy(_DEFAULT_SCAFFOLD)
     world["title"] = title
     if nsfw:
         world["nsfw"] = True

@@ -731,3 +731,95 @@ def test_validate_trigger_on_tracked_item_skill_ref_is_ok(tmp_path):
         assert result["valid"]
     finally:
         Path(path).unlink(missing_ok=True)
+
+
+# ── diff fidelity: id-less entities must not be silently dropped ───────────────
+
+
+def test_compare_worlds_idless_entity_not_dropped(tmp_path):
+    """An entity added without the chosen id key must still surface in the diff.
+
+    Regression: when the representative element has an 'id', _diff_value keyed the
+    whole list by 'id' and silently dropped any entity lacking that key — so adding
+    an id-less NPC produced zero changes.
+    """
+    from iw_architect.tools.analysis import compare_worlds
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    scaffold_world(str(a))
+    scaffold_world(str(b))
+
+    keyed_npc = {"id": "NPC000001", "name": "Bob", "positionInList": 0}
+    world_a = json.loads(a.read_text())
+    world_a["NPCs"] = [keyed_npc]
+    a.write_text(json.dumps(world_a))
+
+    world_b = json.loads(b.read_text())
+    # Alice has a name but no 'id' — the old code dropped her from the keyed map.
+    world_b["NPCs"] = [keyed_npc, {"name": "Alice", "positionInList": 1}]
+    b.write_text(json.dumps(world_b))
+
+    result = json.loads(compare_worlds(str(a), str(b)))
+    assert result["total_changes"] > 0
+    assert any("NPCs" in c["path"] for c in result["changes"])
+
+
+def test_get_diff_summary_idless_entity_surfaced(tmp_path):
+    """The narrative summary must report the id-less entity change too."""
+    from iw_architect.tools.analysis import get_diff_summary
+    from iw_architect.tools.helpers import scaffold_world
+
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    scaffold_world(str(a))
+    scaffold_world(str(b))
+
+    keyed = {"id": "NPC000001", "name": "Bob", "positionInList": 0}
+    world_a = json.loads(a.read_text())
+    world_a["NPCs"] = [keyed]
+    a.write_text(json.dumps(world_a))
+
+    world_b = json.loads(b.read_text())
+    world_b["NPCs"] = [keyed, {"name": "Alice", "positionInList": 1}]
+    b.write_text(json.dumps(world_b))
+
+    result = get_diff_summary(str(a), str(b))
+    assert "No differences" not in result
+
+
+def test_audit_per_character_overrides_present_ok(tmp_path):
+    """When every per-character tracked item has an override, no finding fires.
+
+    Locks the behavior of audit_world's per-character check ahead of refactoring.
+    """
+    from iw_architect.tools.analysis import audit_world
+
+    world = _base()
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+            "initialValueBasedOnPC": "character",
+        }
+    ]
+    world["possibleCharacters"] = [
+        {
+            "name": "Alice",
+            "characterId": "CHAR0001",
+            "skills": {},
+            "initialTrackedItemValues": [{"id": "ITEM00001", "value": "10"}],
+        }
+    ]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        missing = [f for f in result["findings"] if f["type"] == "missing_per_character_overrides"]
+        assert missing == []
+    finally:
+        Path(path).unlink(missing_ok=True)
