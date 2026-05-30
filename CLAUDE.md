@@ -2,6 +2,27 @@
 
 Claude Code plugin for building and editing [Infinite Worlds](https://infiniteworlds.app) story worlds.
 
+## Worktree & branch discipline (read first)
+
+**Default to working in a git worktree on a feature branch. Never make edits in the primary
+working directory or directly on `main` unless the user explicitly instructs you to.**
+
+Before making *any* change to this repository:
+
+1. Create and enter a worktree with the `EnterWorktree` tool (it branches from `origin/HEAD`
+   onto a new `worktree-<name>` branch and switches the session into it). Do **not** hand-roll
+   this with `git worktree add` — see the global worktree rules.
+2. Make your edits, commit them on that branch, and open a PR from it.
+3. Leave the worktree with `ExitWorktree` when done.
+
+The only times it is acceptable to edit the primary checkout / `main` directly are when the
+user says so in plain terms (e.g. "just edit it in place", "commit straight to main", "don't
+bother with a worktree"). Approval for one change does not carry over to the next — if in
+doubt, branch.
+
+This protects `main` as a always-shippable, last-known-good state and keeps every change
+reviewable in isolation.
+
 ## Project structure
 
 ```
