@@ -29,12 +29,7 @@ If `$ARGUMENTS` contains two paths (source then target, space-separated), use th
 
 ## Step 2 — Copy the source
 
-Use the Bash tool or `Read` + `Write` to copy the source world JSON to the target path:
-
-```python
-# Pseudo-code for the copy step
-target.write_text(source.read_text())
-```
+Use `Read` on the source path, then `Write` the content to the target path. Do not use Bash for this copy — shell escaping in heredocs corrupts JSON.
 
 Then call `validate_world(target_path)` to confirm the copy is clean.
 

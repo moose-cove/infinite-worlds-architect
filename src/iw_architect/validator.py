@@ -160,6 +160,27 @@ def _check_position_in_list(world: dict, errors: list[str], warnings: list[str])
     _check_array(world.get("trackedItems", []), "trackedItems")
 
 
+# Recommended default for imageStyle, the one image field the schema allows to be
+# null. Null is tolerated but discouraged; this is the value the scaffold seeds and
+# the warning recommends. The sibling image fields stay string-only — a null there
+# is a Tier 1 error, and "" is the correct "unset" value.
+_IMAGE_STYLE_DEFAULT = "photo_1"
+
+
+def _check_null_image_fields(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """Warn when imageStyle is explicitly null.
+
+    The schema permits null for imageStyle (pass-through tolerance) but it is not
+    recommended — prefer a style preset such as "photo_1". The sibling image fields
+    are string-only; null there is caught as a Tier 1 error, not warned here.
+    """
+    if world.get("imageStyle", "") is None:
+        warnings.append(
+            f"imageStyle is null — not recommended; set a style preset "
+            f"(plugin default: {_IMAGE_STYLE_DEFAULT!r})"
+        )
+
+
 def _check_cross_field_invariants(world: dict, errors: list[str], warnings: list[str]) -> None:
     if world.get("nsfw") and not world.get("mature"):
         errors.append("nsfw: true requires mature: true")
@@ -426,6 +447,7 @@ def validate_world(world_path: str) -> str:
     _check_schema_version(world, errors, warnings)
     _check_duplicate_ids(world, errors, warnings)
     _check_position_in_list(world, errors, warnings)
+    _check_null_image_fields(world, errors, warnings)
     _check_cross_field_invariants(world, errors, warnings)
     _check_logic_conditions(world, errors, warnings)
     _check_cross_references(world, errors, warnings)

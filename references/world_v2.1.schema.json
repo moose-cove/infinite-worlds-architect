@@ -89,8 +89,8 @@
       "x-iw-category": "editable"
     },
     "imageStyle": {
-      "type": "string",
-      "description": "Image style preset identifier.",
+      "type": ["string", "null"],
+      "description": "Image style preset identifier. Null is tolerated but not recommended; prefer a string value.",
       "x-iw-category": "editable"
     },
     "imageStyleCharacterPre": {

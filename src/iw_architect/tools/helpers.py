@@ -81,9 +81,12 @@ _DEFAULT_SCAFFOLD: dict[str, Any] = {
     "hideSkillSystem": False,
     "imageModel": "manticore",
     "imageStyle": "photo_1",
-    "imageStyleCharacterPre": "",
-    "imageStyleCharacterPost": "",
-    "imageStyleNonCharacterPre": "",
+    "imageStyleCharacterPre": "A beautiful medium shot photographic portrait of",
+    "imageStyleCharacterPost": (
+        "The focus is razor-sharp on the texture of the face, showing every pore. "
+        "IWBeautiful IWUpscaleFace"
+    ),
+    "imageStyleNonCharacterPre": "A beautiful photograph of",
     "imageStyleNonCharacterPost": "",
     "illustrationStyleCharacterLowPriority": "",
     "illustrationStyleCharacterHighPriority": "",
