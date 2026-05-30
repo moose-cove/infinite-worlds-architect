@@ -27,7 +27,7 @@ Call `confirm_path(path)` with the resolved path. Present the resolved path and 
 ## Step 2 — Summarize the current world
 
 1. Call `Read` on the world JSON to load it into context.
-2. Call `format_world_for_review(world_path)` — it writes the rendered review to `<world_stem>.review.md` and returns `{"success": "<path>"}`. `Read` that file only if you need its content; otherwise just point the author at the path. Do not paste the full markdown back into the conversation.
+2. Call `format_world_for_review(world_path)` — it writes the rendered review to `<world_stem>.review.md` and returns `{"success": "<path>"}`. Point the author at the path; do not paste the full markdown into the conversation. Call `format_world_for_review` **once at session start** and **once at session end** if the author wants a final summary. For mid-session field inspection, use `read_world_field` instead of re-rendering the full world.
 3. Ask: "What would you like to change?"
 
 ## Step 3 — Plan the change
@@ -94,12 +94,14 @@ Once the author's requested changes are complete:
 > Reference: [`references/sections/TRIGGER_EVENTS.md`](../references/sections/TRIGGER_EVENTS.md) — when to use which condition and effect type, and the no-automatic-revert rule for world-state replacement effects.
 
 ```
-1. mint_ids("triggerEvent", 1)           → trigger ID
-2. mint_ids("triggerStep", n)            → IDs for conditions and effects
+1. mint_ids("triggerEvent", 1)               → trigger ID
+2. mint_ids("triggerStep", <conds + effects>) → one distinct UUID per condition AND per effect
 3. Build the trigger object
 4. Edit: append to triggerEvents array
 5. validate_world
 ```
+
+> `triggerStep` is a synthetic kind that yields UUIDs (the format required for condition/effect `id` fields). Every condition and every effect needs its own distinct UUID — duplicate IDs within the conditions array (or within the effects array) fail validation, and any reused ID makes runtime references ambiguous. Mint one fresh UUID per step.
 
 ### Modifying a text field
 

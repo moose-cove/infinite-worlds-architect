@@ -43,6 +43,28 @@ def _base_world(**overrides) -> dict:
     return world
 
 
+# ── Null image fields ────────────────────────────────────────────────────────
+
+
+def test_null_image_style_warns_but_is_valid():
+    # imageStyle is the one image field the schema tolerates as null: it warns
+    # (not recommended) but does not error.
+    world = _base_world(imageStyle=None)
+    result = _validate(world)
+    assert any("imageStyle" in w and "null" in w for w in result["warnings"])
+    assert not any("imageStyle" in e for e in result["errors"])
+    assert result["valid"]
+
+
+def test_null_image_model_errors():
+    # Sibling image fields stay string-only: null is a Tier 1 error, not a warning.
+    world = _base_world(imageModel=None)
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("imageModel" in e for e in result["errors"])
+    assert not any("imageModel" in w for w in result["warnings"])
+
+
 # ── Type errors ───────────────────────────────────────────────────────────────
 
 

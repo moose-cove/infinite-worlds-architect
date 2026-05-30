@@ -37,8 +37,8 @@ jobs:
 
   version-bump:
     name: Version bump check
-    # Verifies plugin.json and pyproject.toml versions are bumped vs base and equal to each other.
-    # See CLAUDE.md "Versioning policy" for the human-facing rules.
+    # Verifies plugin.json, pyproject.toml, and marketplace.json versions are bumped vs base
+    # and equal to each other. See CLAUDE.md "Versioning policy" for the human-facing rules.
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -46,7 +46,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify plugin.json and pyproject.toml versions bumped and match
+      - name: Verify plugin.json, pyproject.toml, and marketplace.json versions bumped and match
         run: |
           set -euo pipefail
           base_ref="origin/${{ github.base_ref }}"
@@ -65,15 +65,23 @@ jobs:
             python -c "import json, sys; print(json.load(sys.stdin).get('version', ''))"
           }
 
+          extract_marketplace() {
+            python -c "import json, sys; d = json.load(sys.stdin); print(d.get('plugins', [{}])[0].get('version', ''))"
+          }
+
           cur_py=$(cat pyproject.toml | extract_pyproject)
           cur_plugin=$(cat .claude-plugin/plugin.json | extract_plugin)
+          cur_market=$(cat .claude-plugin/marketplace.json | extract_marketplace)
           base_py=$(git show "${base_ref}:pyproject.toml" | extract_pyproject)
           base_plugin=$(git show "${base_ref}:.claude-plugin/plugin.json" | extract_plugin)
+          base_market=$(git show "${base_ref}:.claude-plugin/marketplace.json" | extract_marketplace)
 
-          echo "Base    pyproject.toml: ${base_py}"
-          echo "Current pyproject.toml: ${cur_py}"
-          echo "Base    plugin.json:    ${base_plugin}"
-          echo "Current plugin.json:    ${cur_plugin}"
+          echo "Base    pyproject.toml:   ${base_py}"
+          echo "Current pyproject.toml:   ${cur_py}"
+          echo "Base    plugin.json:      ${base_plugin}"
+          echo "Current plugin.json:      ${cur_plugin}"
+          echo "Base    marketplace.json: ${base_market}"
+          echo "Current marketplace.json: ${cur_market}"
 
           fail=0
           if [ "${cur_py}" = "${base_py}" ]; then
@@ -84,8 +92,12 @@ jobs:
             echo "::error::.claude-plugin/plugin.json version was not bumped vs base. See CLAUDE.md 'Versioning policy'."
             fail=1
           fi
-          if [ "${cur_py}" != "${cur_plugin}" ]; then
-            echo "::error::pyproject.toml (${cur_py}) and plugin.json (${cur_plugin}) versions must match."
+          if [ "${cur_market}" = "${base_market}" ]; then
+            echo "::error::.claude-plugin/marketplace.json version was not bumped vs base. See CLAUDE.md 'Versioning policy'."
+            fail=1
+          fi
+          if [ "${cur_py}" != "${cur_plugin}" ] || [ "${cur_py}" != "${cur_market}" ]; then
+            echo "::error::Version mismatch: pyproject.toml=${cur_py}, plugin.json=${cur_plugin}, marketplace.json=${cur_market}. All three must match."
             fail=1
           fi
           exit "${fail}"

@@ -1,1 +1,1 @@
-skills/world-architect/references/WORLD_JSON_SCHEMA_v2.1.md
+references/WORLD_JSON_SCHEMA_v2.1.md

@@ -111,7 +111,7 @@ Follow every step:
 2. **Plan** the edit. Call `get_schema_summary()` for any field shape you're unsure about. Load the matching `references/sections/*.md` file if the field has authoring judgments.
 3. **Mint IDs** for any new entities via `mint_ids(kind, count)`. **Never** invent IDs by hand — formats are entity-specific (see the ID-format table in `references/README.md`).
 4. **Show the user the diff field-by-field and wait for approval** before editing. For each change: current value → proposed value → "approved?".
-5. **Edit** with `Edit` (preferred — preserves unknown fields) or `Write` (only for full-file replacement, e.g. scaffold output).
+5. **Edit** with `Edit` (preferred — preserves unknown fields) or `Write` (only for full-file replacement, e.g. scaffold output). **All Edit/Write calls on the same world JSON must be sequential, never parallel** — parallel edits to the same file will fail with "File has not been read yet" errors and lose changes.
 6. **Validate** with `validate_world(world_path)`. Fix every error. Re-validate until clean.
 7. **Audit** with `audit_world(world_path)` on any non-trivial change. Surface token-budget warnings, trigger cycles, and redundancy findings to the user.
 
@@ -156,5 +156,7 @@ When the user reports a world misbehaving on the IW platform:
 - **`schemaVersion` is missing or unfamiliar:** read and preserve it. Don't downgrade or strip it. Warn if it's beyond v2.1 — the platform may have added fields you don't know about.
 - **The user asks you to skip validation:** push back. The pre-commit hook in this repo mirrors CI exactly; the same discipline applies to worlds. If they insist after pushback, document the skip explicitly in your final summary.
 - **The user wants you to invent character appearance:** refuse and ask for the details. This is the single most common authoring mistake and the guardrail is non-negotiable.
+- **Image fields: prefer the plugin defaults; `""` is the unset value, not `null`.** `imageStyle` may be `null` (the schema tolerates it and `validate_world` only warns), but it's not recommended — default it to `"photo_1"`. The sibling image fields (`imageModel`, `imageStyle*Pre/Post`, `illustrationStyle*`) are string-only: a `null` there is a hard validation error, so use `""` to leave one unset. When you scaffold a world these defaults are seeded for you. When you **import or modify** a world whose image fields are `null` or missing, offer to set the plugin defaults (the same values `scaffold_world` uses) — unless the world already has non-null values or the author declines.
+- **Don't use inline Python via Bash for JSON edits.** Shell metacharacter escaping in Bash heredocs causes `SyntaxError` bugs (e.g., `\!` in f-strings). Use `Read` + `Edit`/`Write` — they handle encoding correctly and are the right tools for world JSON surgery.
 
 You are the author's expert partner on Infinite Worlds. Be rigorous about the schema, generous with authoring judgment, and skeptical about the wiki.
