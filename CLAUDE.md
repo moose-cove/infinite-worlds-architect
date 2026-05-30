@@ -2,6 +2,27 @@
 
 Claude Code plugin for building and editing [Infinite Worlds](https://infiniteworlds.app) story worlds.
 
+## Worktree & branch discipline (read first)
+
+**Default to working in a git worktree on a feature branch. Never make edits in the primary
+working directory or directly on `main` unless the user explicitly instructs you to.**
+
+Before making *any* change to this repository:
+
+1. Create and enter a worktree with the `EnterWorktree` tool (it branches from `origin/HEAD`
+   onto a new `worktree-<name>` branch and switches the session into it). Do **not** hand-roll
+   this with `git worktree add` — see the global worktree rules.
+2. Make your edits, commit them on that branch, and open a PR from it.
+3. Leave the worktree with `ExitWorktree` when done.
+
+The only times it is acceptable to edit the primary checkout / `main` directly are when the
+user says so in plain terms (e.g. "just edit it in place", "commit straight to main", "don't
+bother with a worktree"). Approval for one change does not carry over to the next — if in
+doubt, branch.
+
+This protects `main` as a always-shippable, last-known-good state and keeps every change
+reviewable in isolation.
+
 ## Project structure
 
 ```
@@ -97,18 +118,21 @@ When a subagent is going to implement a plan that lives in `claude-scratchpad/`,
 
 `.pre-commit-config.yaml` mirrors the GitHub Actions CI workflow exactly: every check that fails in CI will fail on commit, locally, with the same arguments. This is intentional — it shortens the feedback loop from "wait for CI" to "wait for `git commit`".
 
+**One deliberate, mirrored optimization:** the `pytest` step is gated on whether any Python or JSON (including JSON Schema) files changed. A docs-only commit skips the suite in *both* places — the pre-commit hook uses `files: \.(py|json)$`, and CI's `test` job runs a "Detect Python/JSON changes" step and guards the pytest step with `if: steps.changes.outputs.code == 'true'`. CI's job still runs (so the required "Tests" status check keeps reporting); only the pytest step is skipped. Because the same `.py`/`.json` trigger governs both, the mirror is preserved: for any given set of staged changes, local and CI make the identical run/skip decision. If you change one side's gate, change the other in the same commit.
+
 **Never bypass the pre-commit hook.** Do not run `git commit --no-verify`, do not set `SKIP=...`, do not edit `.pre-commit-config.yaml` to silence checks rather than fix them, and do not delete `.git/hooks/pre-commit`. If the hook is failing, fix the underlying issue — the failure is the system working as designed.
 
 The only legitimate reason to change the hook config is to keep it in sync with `.github/workflows/ci.yml` when CI changes; the two must stay aligned.
 
 ## Versioning policy
 
-Every PR that changes runtime, schema, or user-visible plugin behavior must bump the version in **both** files in lockstep:
+Every PR that changes runtime, schema, or user-visible plugin behavior must bump the version in **all three** files in lockstep:
 
 - `.claude-plugin/plugin.json` — `version` field
 - `pyproject.toml` — `version` field
+- `.claude-plugin/marketplace.json` — `plugins[0].version` field
 
-The two versions must be **equal** at all times. CI's `version-bump` job fails the PR if either file's version is unchanged vs. base, or if the two values disagree.
+The three versions must be **equal** at all times. CI's `version-bump` job fails the PR if any of the three is unchanged vs. base, or if the values disagree.
 
 **When to bump which component (semver):**
 
@@ -119,13 +143,13 @@ The two versions must be **equal** at all times. CI's `version-bump` job fails t
 **Workflow:**
 
 1. When starting a branch, decide the bump level based on the planned change. If you don't know yet, default to patch and revisit before opening the PR.
-2. Bump both `plugin.json` and `pyproject.toml` in the same commit as the change that warrants the bump — not in a separate "version bump" commit at the end. That way `git blame` on the version line points at the change, not at bookkeeping.
+2. Bump `plugin.json`, `pyproject.toml`, and `marketplace.json` in the same commit as the change that warrants the bump — not in a separate "version bump" commit at the end. That way `git blame` on the version line points at the change, not at bookkeeping. (`pyproject.toml` also pins the project version in `uv.lock`; run `uv lock` so the lock matches, or CI's `uv sync --locked` will fail on drift.)
 3. Fill in the "Version bump" section of the PR template with the from→to and the reason (which semver tier and why).
 
 **Don't:**
 
 - Don't open a PR without bumping. CI will fail it, and rerunning CI after pushing the bump wastes a cycle.
-- Don't bump only one file. CI will fail it.
+- Don't bump only some of the files. All three (`plugin.json`, `pyproject.toml`, `marketplace.json`) must move together, and `uv.lock` must be refreshed. CI will fail it otherwise.
 - Don't bump in a trailing "chore: bump version" commit. Bundle it with the substantive change.
 - Don't skip the bump for "trivial" doc tweaks. The bump is what guarantees every merge to `main` is a distinct, addressable version — useful for bisecting and for `/plugin` users who want to know whether they've already pulled a given change.
 

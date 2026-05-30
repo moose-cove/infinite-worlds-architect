@@ -12,6 +12,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Mirror the pre-commit pytest gate: only run the suite when Python or
+      # JSON (incl. JSON Schema) files changed vs. base. The job itself always
+      # runs so the required "Tests" status check still reports — only the
+      # pytest step below is skipped on docs-only changes.
+      - name: Detect Python/JSON changes
+        id: changes
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            range="origin/${{ github.base_ref }}...HEAD"
+          else
+            before="${{ github.event.before }}"
+            if [ -z "${before}" ] || [ "${before}" = "0000000000000000000000000000000000000000" ]; then
+              range=""
+            else
+              range="${before}..${{ github.sha }}"
+            fi
+          fi
+          if [ -z "${range}" ]; then
+            changed="true"   # no comparison point (e.g. new branch) — run to be safe
+          elif git diff --name-only "${range}" | grep -qE '\.(py|json)$'; then
+            changed="true"
+          else
+            changed="false"
+          fi
+          echo "Python/JSON changed: ${changed}"
+          echo "code=${changed}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,6 +64,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Run pytest with coverage
+        if: steps.changes.outputs.code == 'true'
         run: uv run pytest --no-header
 
   version-bump:
