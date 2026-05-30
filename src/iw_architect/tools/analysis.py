@@ -244,28 +244,20 @@ def audit_world(world_path: str) -> str:
             }
         )
 
-    # Characters with no tracked item overrides when items use initialValueBasedOnPC="character"
-    per_char_items = [
-        ti.get("name")
+    # Characters with no tracked item overrides when items use initialValueBasedOnPC="character".
+    # Build the per-character item id→name map once, then check each character against it.
+    per_char_items = {
+        ti.get("id"): ti.get("name", ti.get("id"))
         for ti in world.get("trackedItems", [])
         if ti.get("initialValueBasedOnPC") == "character"
-    ]
+    }
     if per_char_items:
+        per_char_ids = set(per_char_items)
         for ch in world.get("possibleCharacters", []):
             override_ids = {itv.get("id") for itv in ch.get("initialTrackedItemValues", [])}
-            item_ids = {
-                ti.get("id")
-                for ti in world.get("trackedItems", [])
-                if ti.get("initialValueBasedOnPC") == "character"
-            }
-            missing = item_ids - override_ids
+            missing = per_char_ids - override_ids
             if missing:
-                missing_names = [
-                    ti.get("name", tid)
-                    for tid in missing
-                    for ti in world.get("trackedItems", [])
-                    if ti.get("id") == tid
-                ]
+                missing_names = [per_char_items[tid] for tid in missing]
                 findings.append(
                     {
                         "type": "missing_per_character_overrides",
@@ -314,16 +306,27 @@ def _diff_value(a: Any, b: Any, path: str, changes: list[dict]) -> None:
             _rep is not None and isinstance(_rep, dict) and ("id" in _rep or "name" in _rep)
         )
         if is_entity_list:
-            id_key = "id" if ("id" in (a[0] if a else b[0])) else "name"
-            a_map = {item.get(id_key): item for item in a if item.get(id_key)}
-            b_map = {item.get(id_key): item for item in b if item.get(id_key)}
-            for key in sorted(set(a_map.keys()) | set(b_map.keys())):
+            id_key = "id" if "id" in _rep else "name"
+
+            def _has_key(item: Any) -> bool:
+                return isinstance(item, dict) and id_key in item
+
+            a_map = {item[id_key]: item for item in a if _has_key(item)}
+            b_map = {item[id_key]: item for item in b if _has_key(item)}
+            for key in sorted(set(a_map.keys()) | set(b_map.keys()), key=str):
                 if key not in a_map:
                     changes.append({"path": f"{path}[{id_key}={key}]", "type": "added"})
                 elif key not in b_map:
                     changes.append({"path": f"{path}[{id_key}={key}]", "type": "removed"})
                 else:
                     _diff_value(a_map[key], b_map[key], f"{path}[{id_key}={key}]", changes)
+
+            # Entities lacking the chosen key can't be matched by id — compare them
+            # positionally so they aren't silently dropped from the diff.
+            a_rest = [item for item in a if not _has_key(item)]
+            b_rest = [item for item in b if not _has_key(item)]
+            if a_rest != b_rest:
+                _diff_value(a_rest, b_rest, f"{path}[unkeyed]", changes)
         elif a != b:
             changes.append({"path": path, "type": "changed", "from": a, "to": b})
     else:
