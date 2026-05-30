@@ -51,7 +51,6 @@ my-world/
 ├── world_v1.8.review.md            # format_world_for_review output for v1.8
 ├── world_v1.9_draft.json           # next version, in progress
 ├── feature-x_proposal.md           # design doc written BEFORE implementing a big change
-├── illustrationInstructions.txt    # image-prompt text maintained alongside the world
 └── older_versions/
     ├── world_v1.7.json
     ├── world_v1.6.json
@@ -62,18 +61,15 @@ my-world/
 
 1. Write a `*_proposal.md` first for any substantial feature (a new NPC, a plot twist, a
    mechanics change). This is a design discussion you and Claude lock down *before* touching
-   JSON, so the edit pass is mechanical rather than exploratory.
-2. Edit (or copy-then-edit) the `world.json` to the next version:
-   ```text
-   /infinite-worlds-architect:modify-world ./my-world/world_v1.9_draft.json
-   ```
-3. Render a review document so you can read the whole world as prose and catch problems the
-   raw JSON hides:
+   JSON, so the edit pass is mechanical rather than exploratory. You can write the proposal or Claude can write the proposal for you.
+2. Review the proposal and make any changes you want to it.
+3. When ready, instruct Claude (using the world-architect agent) to implement the changes. Claude will then implement the changes in a copy of your world.json, leaving the original unchanged (hopefully - be explicit in your instructions if you're unsure).
+4. If you want to review the changes for the draft world more easily, you can ask Claude to make your draft world into a markdown document for easier reviewing.
    ```text
    Claude, run format_world_for_review on ./my-world/world_v1.9_draft.json
    ```
    This writes `world_v1.9_draft.review.md` next to the JSON. Read *that*, not the JSON.
-4. When the draft is good, drop the `_draft` suffix to promote it, and move the prior version
+5. When the draft is good, import the draft JSON into Infinite Worlds, and move the prior version
    into `older_versions/`.
 
 **Why the paired `.review.md` matters:** the JSON is dense and easy to misread; the review
@@ -123,58 +119,16 @@ Claude, run get_diff_summary on
 
 ---
 
-## Pattern C — Script-Assisted Optimization
-
-**Best for:** large, mechanically-dense worlds (deeply nested instruction blocks, many triggers,
-big XML-ish text fields) where you want **deterministic** extraction and verification instead of
-asking an LLM to parse a huge blob by hand — which risks hallucination and "plot-drift."
-
-```text
-my-world/
-├── orig-world.json            # the starting point you're optimizing
-├── new-world-1.json           # intermediate
-├── new-world-2.json           # current candidate
-├── draft_world.md             # human-editable working draft, compiled back to JSON
-├── walkthrough.md             # what the optimization did + audit results
-├── check_nulls.py             # finds null/empty fields recursively
-├── compare_keys.py            # diffs the key sets of two world files
-├── check_scripted.py          # inspects triggerEffects of a given type
-└── find_missing_data.py       # flags fields that lost data during a transform
-```
-
-**The idea:** when you need to flatten a 28,000-character nested instruction block into targeted
-Keyword Instruction Blocks (a real token-budget win), you don't hand the JSON to an LLM and hope.
-You write a tiny throwaway Python script that parses the exact strings, transform locally, then
-compile back. The scripts are deterministic; the LLM only does the judgment work (which keywords,
-which categories).
-
-**Verify the win with `audit_world`:**
-
-```text
-Claude, run audit_world on ./my-world/new-world-2.json
-```
-
-`audit_world` reports token budgets per field, cost tier, trigger cycles, and redundancy — so you
-can prove an optimization actually dropped the always-on context load instead of just *looking*
-smaller. Record the before/after numbers in `walkthrough.md`.
-
-> **Tip:** wrap any helper-script invocations in a short `timeout` (e.g. `timeout 5s python
-> check_nulls.py`) so a malformed file can't hang the run.
-
----
-
 ## Cross-cutting conventions
 
 These show up across all three patterns; mix and match.
 
 | Convention | What & why |
 |---|---|
-| **Review renders** | `format_world_for_review` → `<stem>.review.md`. Read the render, not the raw JSON. |
+| **Review renders** | `format_world_for_review` → `<stem>.review.md`. Easier sometimes to read the render, not the raw JSON. |
 | **Archive, don't delete** | `old_files/` or `older_versions/` for superseded versions — cheap insurance against regressions. |
 | **Proposals before big edits** | A `*_proposal.md` / `*_plan.md` locks design *before* JSON changes, so editing is mechanical. |
 | **Lessons docs** | `docs_vX_lessons.md` records *what changed and why* so nobody re-diffs huge files by hand. |
-| **Separate illustration text** | Image-prompt instructions live in their own `.txt` files alongside the world, versioned independently. |
-| **Helper scripts for big mechanical edits** | Deterministic Python beats LLM-parsing a 30 KB blob when you care about exactness. |
 | **Validate after every change** | `validate_world` is the gate: if it fails, the platform would reject the world. |
 
 ---
@@ -202,5 +156,4 @@ last-known-good world. (This mirrors the discipline the plugin repo itself follo
 |---|---|
 | Iterate heavily on prose and want to *read* each version before trusting it | **Pattern A** (Draft → Review → Finalize) |
 | Maintain a world over many sessions and want a clean numbered trail | **Pattern B** (Semantic Version History) |
-| Are optimizing a large, mechanically-dense world and need exactness | **Pattern C** (Script-Assisted Optimization) |
-| Are just starting | One `world.json` + `validate_world`. Add structure when it hurts not to. |
+| Are just starting | One `world.json` + `validate_world`. Add structure only when you need it. |
