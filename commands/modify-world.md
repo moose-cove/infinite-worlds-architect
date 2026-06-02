@@ -41,11 +41,12 @@ Call `confirm_path(path)` with the resolved path. Present the resolved path and 
 
 From here on, **every** `Read`, `Edit`, `validate_world`, and `audit_world` call targets the **draft path**. The original source file is never touched again — it stays as the diff baseline.
 
-## Step 3 — Summarize the current world
+## Step 3 — Load the draft and ask what to change
 
 1. Call `Read` on the **draft** JSON to load it into context.
-2. Call `format_world_for_review(draft_path)` — it writes the rendered review to `<world_stem>.review.md` and returns `{"success": "<path>"}`. Point the author at the path; do not paste the full markdown into the conversation. Call `format_world_for_review` **once at session start** and **once at session end** if the author wants a final summary. For mid-session field inspection, use `read_world_field` instead of re-rendering the full world.
-3. Ask: "What would you like to change?"
+2. Ask: "What would you like to change?"
+
+For inspecting a specific field mid-session, use `read_world_field` rather than re-rendering the whole world. Only call `format_world_for_review(draft_path)` if the author explicitly asks for a rendered overview — it is **not** a default step.
 
 ## Step 4 — Plan the change
 

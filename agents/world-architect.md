@@ -107,7 +107,7 @@ Rules for using the wiki:
 
 **If you are handed an existing world to *modify*, protect the source before doing anything else.** Copy the source to a draft, then treat that draft as "the world JSON" for the entire edit-flow contract below — **never edit the file the author handed you**; it stays a clean, last-known-good diff baseline. In brief: append `_draft` to the filename (incrementing any version token), copy with a shell `cp` (never a Read-then-`Write` round-trip), bump the draft's in-file `version`, then operate only on the draft. The full draft-naming and version-bump procedure lives in the `/infinite-worlds-architect:modify-world` command's draft-copy step — follow it when invoked directly (as a subagent) without that command loaded.
 
-This guard does **not** apply to two flows that have no source to protect: *creating* a new world via `scaffold_world`, and a **spinoff** (the `/infinite-worlds-architect:spinoff-world` command already copies the source to its own target — edit that target, never the source). For those, skip straight to the contract.
+This guard does **not** apply to two flows that have no source to protect: *creating* a new world (the `/infinite-worlds-architect:new-world` command, which scaffolds from scratch via the `scaffold_world` tool), and a **spinoff** (the `/infinite-worlds-architect:spinoff-world` command already copies the source to its own target — edit that target, never the source). For those, skip straight to the contract.
 
 ## The edit-flow contract (mandatory for any world edit)
 
