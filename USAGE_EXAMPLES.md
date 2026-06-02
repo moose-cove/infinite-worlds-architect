@@ -26,7 +26,7 @@ Before the layouts, a quick refresher on what you're invoking (see the
 - **The `world-architect` agent** — reached automatically when you describe authoring/debugging
   work in natural language ("add a wandering merchant NPC", "my trigger won't fire").
 - **MCP tools** — `validate_world`, `audit_world`, `format_world_for_review`, `compare_worlds`,
-  `get_diff_summary`, `scaffold_world`, `mint_ids`, etc. You rarely call these directly; the
+  `get_diff_summary`, `create_new_world_json`, `mint_ids`, etc. You rarely call these directly; the
   agent and commands do. But knowing they exist helps you ask for specific operations.
 
 The minimal viable layout is just:
@@ -90,7 +90,7 @@ my-world/
 ├── my_world_v1.17.1.json           # patch-level fix on top of v1.17
 ├── docs_v1.14_lessons.md           # "what changed and why" for a version range
 ├── feature_plan.md                 # forward-looking plan for an upcoming feature
-├── scaffold_world_manual_add.json  # scratch artifacts from a scaffold/merge step
+├── create_new_world_json_manual_add.json  # scratch artifacts from a scaffold/merge step
 └── old_files/
     ├── my_world_v1.04.json
     ├── my_world_v1.05.json

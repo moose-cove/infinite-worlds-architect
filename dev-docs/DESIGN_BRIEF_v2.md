@@ -75,7 +75,7 @@ A small set of MCP tools (`audit_world`, `compare_worlds`, `get_diff_summary`) t
 
 ### Helper
 
-A few utilities (`scaffold_world`, `mint_ids`, `read_world_field`, `format_world_for_review`, `get_schema_summary`, `confirm_path`) that perform small computations the agent shouldn't reproduce by hand each time.
+A few utilities (`create_new_world_json`, `mint_ids`, `read_world_field`, `format_world_for_review`, `get_schema_summary`, `confirm_path`) that perform small computations the agent shouldn't reproduce by hand each time.
 
 **Writes are not mediated by MCP tools.** The agent edits `world.json` directly using Claude Code's native `Read`, `Edit`, and `Write` tools. The plugin exposes no write tools. This architecture:
 
@@ -94,7 +94,7 @@ These rules govern every design decision in the plugin. They are non-negotiable.
 
 1. **The fixture is the schema.** `example-world-schema-v2.1.json` is authoritative. `WORLD_JSON_SCHEMA_v2.1.md` is a derived artifact and must be verified against the fixture (and any future fixtures) via the round-trip test in §6.1.
 
-2. **Read before writing.** When the agent edits an existing world, it reads the JSON first and pattern-matches from what's there. When it scaffolds a new world, it uses `scaffold_world` to produce a known-good starting structure. The agent does not invent field shapes from memory.
+2. **Read before writing.** When the agent edits an existing world, it reads the JSON first and pattern-matches from what's there. When it scaffolds a new world, it uses `create_new_world_json` to produce a known-good starting structure. The agent does not invent field shapes from memory.
 
 3. **Pass-through preservation by default.** Any field the schema doesn't recognize but the platform produces must be preserved exactly when the world is round-tripped. The agent's in-place edit workflow (`Read` then `Edit`) achieves this naturally; the validator's job is to *warn* about unknown fields, not strip them.
 
@@ -129,7 +129,7 @@ All tools take absolute paths for filesystem arguments. All tools that read or w
 
 | Tool | Purpose |
 |---|---|
-| `scaffold_world(outputPath, options)` | Create a fresh world JSON at the given path, populated with sane defaults and an empty-but-validation-passing structure. The single case where the plugin emits schema-shaped content from code. `options` covers things like initial title, NSFW flag, target schema version. |
+| `create_new_world_json(outputPath, options)` | Create a fresh world JSON at the given path, populated with sane defaults and an empty-but-validation-passing structure. The single case where the plugin emits schema-shaped content from code. `options` covers things like initial title, NSFW flag, target schema version. |
 | `mint_ids(kind, count)` | Generate IDs in the format the platform expects for a given entity kind. `kind` is one of `character`, `npc`, `trackedItem`, `triggerEvent`, `triggerStep` (for trigger conditions/effects), `instructionBlock`. Returns an array of `count` IDs. Format (length, character set, uniqueness scope) is determined by inspecting the canonical fixture — the fixture is the source of truth for what the platform expects. |
 | `confirm_path(path)` | Resolve a user-supplied path to an absolute path, verify it exists (or its parent does), and surface it back for confirmation before the agent acts on it. |
 
@@ -184,7 +184,7 @@ Top-level discovery skill. Lists the plugin's capabilities, summarizes the schem
 Create a new world from scratch. Workflow:
 
 1. Confirm the output directory and filename with the user (via `confirm_path`)
-2. Call `scaffold_world` to produce a starter JSON
+2. Call `create_new_world_json` to produce a starter JSON
 3. Iterate field-by-field with the user — for each field, show the current value, propose changes, wait for approval, then `Edit` the JSON
 4. Run `validate_world` after every batch of related edits; fix any reported issues
 5. Run `audit_world` before declaring the world done
@@ -255,7 +255,7 @@ Build in this order. Each milestone is a self-contained PR with its own tests pa
 
 1. **Schema model + validator** — Author the JSON Schema document for the world (`world_v2.1.schema.json`, mirroring `WORLD_JSON_SCHEMA_v2.1.md`) and implement `validate_world` as a two-tier validator. **Tier 1** uses `jsonschema` for structural checks the schema can express declaratively: types, required fields, enum values, basic shape. **Tier 2** is custom Python functions for the constraints `jsonschema` cannot express: cross-references between IDs, undeclared template-variable references, cross-field invariants (e.g., `nsfw → mature`, `editing → sharing`), `schemaVersion` drift detection, and `positionInList` uniqueness. Write the fixture round-trip test (§6.1) and a negative test for each error class. Iterate until the fixture passes with zero errors.
 2. **Read tools** — `read_world_field`, `format_world_for_review`, `get_schema_summary`. The schema summary is derived from the same internal representation the validator uses (single source of schema knowledge per §2). Tests against the fixture.
-3. **Helper tools** — `scaffold_world`, `mint_ids`, `confirm_path`. Test that scaffolded output passes the validator and that minted IDs match the fixture's ID format.
+3. **Helper tools** — `create_new_world_json`, `mint_ids`, `confirm_path`. Test that scaffolded output passes the validator and that minted IDs match the fixture's ID format.
 4. **Analysis tools** — `audit_world`, `compare_worlds`, `get_diff_summary`. The audit check list can grow over time; start with token budgets and trigger-graph cycles.
 5. **Skills** — Author `world-architect`, `new-world`, `modify-world`, `spinoff-world` as Markdown prompts wired to the tool surface and the edit-flow contract.
 6. **Plugin packaging** — `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, MCP server entry point. Version 0.1.0.

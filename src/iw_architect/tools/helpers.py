@@ -1,4 +1,4 @@
-"""Helper tools: scaffold_world, mint_ids, confirm_path."""
+"""Helper tools: create_new_world_json, mint_ids, confirm_path."""
 
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ _DEFAULT_SCAFFOLD: dict[str, Any] = {
 }
 
 
-def scaffold_world(
+def create_new_world_json(
     output_path: str,
     title: str = "Untitled World",
     nsfw: bool = False,
@@ -141,7 +141,7 @@ def scaffold_world(
         {
             "status": "created",
             "path": str(path.resolve()),
-            "message": f"World '{title}' scaffolded at {path}. Run validate_world to confirm.",
+            "message": f"World '{title}' created at {path}. Run validate_world to confirm.",
         }
     )
 
