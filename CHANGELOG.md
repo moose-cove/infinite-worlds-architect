@@ -10,7 +10,7 @@ lockstep with the change that warrants it.
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-06-02
+## [0.7.0] - 2026-06-02
 
 ### Changed
 
