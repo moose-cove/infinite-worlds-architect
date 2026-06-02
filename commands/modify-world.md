@@ -24,13 +24,30 @@ If `$ARGUMENTS` is non-empty, use it directly as the world path. Otherwise, ask 
 
 Call `confirm_path(path)` with the resolved path. Present the resolved path and confirm the file exists before proceeding.
 
-## Step 2 — Summarize the current world
+## Step 2 — Make a working draft copy (never edit the source)
 
-1. Call `Read` on the world JSON to load it into context.
-2. Call `format_world_for_review(world_path)` — it writes the rendered review to `<world_stem>.review.md` and returns `{"success": "<path>"}`. Point the author at the path; do not paste the full markdown into the conversation. Call `format_world_for_review` **once at session start** and **once at session end** if the author wants a final summary. For mid-session field inspection, use `read_world_field` instead of re-rendering the full world.
+**The source world JSON the author handed you is sacrosanct — never edit it.** It is the clean baseline you will diff your changes against. The *first* thing you do with any existing world is copy it to a new draft file, and all subsequent work happens on that draft.
+
+1. **Derive the draft path** from the confirmed source path:
+   - **Always** append `_draft` before the `.json` extension.
+   - If the filename already carries a version token (e.g. `_v1.21`), **increment its trailing dot-separated numeric group by 1 as an integer**, preserving any zero-pad width: `world_v1.21.json` → `world_v1.22_draft.json`; `world_v2.09.json` → `world_v2.10_draft.json`; `world_v1.99.json` → `world_v1.100_draft.json`. If there is no version token, just append `_draft`: `world.json` → `world_draft.json`.
+2. **Copy with a shell copy command** — **never** by reading the whole file into context and writing it back out:
+   ```
+   cp "<source_path>" "<draft_path>"
+   ```
+   A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, and any unknown platform-managed fields exactly, and costs no tokens. (`cp` takes no JSON *content* on the command line, so the heredoc-escaping hazard that otherwise bans Bash for JSON surgery does not apply.)
+3. **Bump the in-file `version` attribute on the draft.** Read the draft's current `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving zero-padding. If the world has no `version` field, skip this.
+4. Call `validate_world(draft_path)` to confirm the copy is clean.
+
+From here on, **every** `Read`, `Edit`, `validate_world`, and `audit_world` call targets the **draft path**. The original source file is never touched again — it stays as the diff baseline.
+
+## Step 3 — Summarize the current world
+
+1. Call `Read` on the **draft** JSON to load it into context.
+2. Call `format_world_for_review(draft_path)` — it writes the rendered review to `<world_stem>.review.md` and returns `{"success": "<path>"}`. Point the author at the path; do not paste the full markdown into the conversation. Call `format_world_for_review` **once at session start** and **once at session end** if the author wants a final summary. For mid-session field inspection, use `read_world_field` instead of re-rendering the full world.
 3. Ask: "What would you like to change?"
 
-## Step 3 — Plan the change
+## Step 4 — Plan the change
 
 Before touching any file:
 
@@ -39,33 +56,35 @@ Before touching any file:
 - If unsure about a field's shape, call `get_schema_summary()` or `read_world_field` to inspect the current value.
 - Show the author your plan and wait for approval.
 
-## Step 4 — Edit field-by-field
+## Step 5 — Edit field-by-field
 
-For **each individual change**:
+For **each individual change** (all edits target the **draft**, never the source):
 
 1. **Show** the current value (`read_world_field` or quote from the loaded JSON)
 2. **Propose** the new value explicitly
 3. **Wait** for the author to approve or revise
-4. **Edit** the JSON with the `Edit` tool — target the specific field, not a full rewrite
+4. **Edit** the **draft** JSON with the `Edit` tool — target the specific field, not a full rewrite
 
-## Step 5 — Validate after each batch
+## Step 6 — Validate after each batch
 
 After every 3–5 related edits (or immediately after any structural change like adding an entity):
 
-1. Call `validate_world(world_path)`
+1. Call `validate_world(draft_path)`
 2. If there are errors, fix them before continuing and re-validate
 3. Never leave the world in an invalid state at the end of a session
 
-## Step 6 — Audit before finishing
+## Step 7 — Audit before finishing
 
 Once the author's requested changes are complete:
 
-1. Call `audit_world(world_path)` and share the findings.
+1. Call `audit_world(draft_path)` and share the findings.
 2. Offer to address any warnings the author considers important.
 
 ---
 
 ## Common change patterns
+
+> All recipes below operate on the **draft path** from Step 2 — `validate_world`, `Edit`, etc. target the draft, never the source.
 
 ### Adding a new NPC
 
@@ -116,4 +135,4 @@ Once the author's requested changes are complete:
 
 ---
 
-Use `Edit` (not full `Write`) when changing individual fields, so unknown platform-managed fields survive. Always `Read` before `Edit`.
+Use `Edit` (not full `Write`) when changing individual fields, so unknown platform-managed fields survive. Always `Read` before `Edit`, and remember every edit targets the **draft copy** from Step 2 — never the source.
