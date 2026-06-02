@@ -27,11 +27,20 @@ If `$ARGUMENTS` contains two paths (source then target, space-separated), use th
 3. Call `confirm_path` on the target path. Its parent must exist; warn if the file already exists.
 4. Present both resolved paths and wait for confirmation before proceeding.
 
-## Step 2 — Copy the source
+## Step 2 — Copy the source (with a copy command, never Read + Write)
 
-Use `Read` on the source path, then `Write` the content to the target path. Do not use Bash for this copy — shell escaping in heredocs corrupts JSON.
+**Never modify the source world.** Duplicate it to the target path with a shell **copy** command — do **not** read the whole file into context and write it back out:
 
-Then call `validate_world(target_path)` to confirm the copy is clean.
+```
+cp "<source_path>" "<target_path>"
+```
+
+A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, and any unknown platform-managed fields exactly, and costs no tokens. (`cp` takes no JSON *content* on the command line, so the heredoc-escaping hazard that otherwise bans Bash for JSON surgery does not apply here — the ban is on shell heredocs and inline scripts that manipulate JSON *content*, not on a plain file copy.)
+
+Then:
+
+1. **Bump the `version` attribute on the copy.** Read the target's `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving any zero-padding. Skip if the world has no `version` field.
+2. Call `validate_world(target_path)` to confirm the copy is clean.
 
 ## Step 3 — Suggest variant directions
 
