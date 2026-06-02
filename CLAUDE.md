@@ -138,7 +138,7 @@ The three versions must be **equal** at all times. CI's `version-bump` job fails
 
 - **Patch (`0.2.0` → `0.2.1`)** — bug fixes, doc-only changes, internal refactors, CI/test/chore changes, new negative tests. Anything that doesn't change what a world author or plugin user observes.
 - **Minor (`0.2.0` → `0.3.0`)** — new commands, new MCP tools, new optional schema fields, new validator warnings, new skill content. Additive, backwards-compatible.
-- **Major (`0.2.0` → `1.0.0`)** — schema breaking changes (renamed/removed fields, stricter required-ness), removed commands or tools, renamed MCP tool surfaces, anything that would force a world author to edit existing `world.json` files.
+- **Major (`0.2.0` → `1.0.0`)** — schema breaking changes (renamed/removed fields, stricter required-ness), removed commands or tools, renamed MCP tool surfaces, anything that would force a world author to edit existing `world.json` files. **Pre-1.0 exception:** while the project is still pre-1.0, renamed MCP tool surfaces are treated as **minor** bumps rather than major — pre-1.0 semver conventionally allows breaking changes in minor increments.
 
 **Workflow:**
 
