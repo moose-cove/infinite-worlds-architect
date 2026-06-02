@@ -36,7 +36,7 @@ Call `confirm_path(path)` with the resolved path. Present the resolved path and 
    cp "<source_path>" "<draft_path>"
    ```
    A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, and any unknown platform-managed fields exactly, and costs no tokens. (`cp` takes no JSON *content* on the command line, so the heredoc-escaping hazard that otherwise bans Bash for JSON surgery does not apply.)
-3. **Bump the in-file `version` attribute on the draft.** Read the draft's current `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving zero-padding. If the world has no `version` field, skip this.
+3. **Bump the in-file `version` attribute on the draft** — a *separate* bump from the filename version token in sub-step 1. Read the draft's current `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving zero-padding. If the world has no `version` field, skip this.
 4. Call `validate_world(draft_path)` to confirm the copy is clean.
 
 From here on, **every** `Read`, `Edit`, `validate_world`, and `audit_world` call targets the **draft path**. The original source file is never touched again — it stays as the diff baseline.
