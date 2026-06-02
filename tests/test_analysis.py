@@ -17,10 +17,10 @@ def _write(world: dict) -> str:
 
 
 def _base() -> dict:
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     tmp = tempfile.mktemp(suffix=".json")
-    scaffold_world(tmp, title="Test")
+    create_new_world_json(tmp, title="Test")
     world = json.loads(Path(tmp).read_text())
     Path(tmp).unlink(missing_ok=True)
     return world
@@ -261,12 +261,12 @@ def test_audit_file_not_found():
 
 def test_compare_worlds_scalar_change(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
     b = tmp_path / "b.json"
-    scaffold_world(str(a), title="Original")
-    scaffold_world(str(b), title="Modified")
+    create_new_world_json(str(a), title="Original")
+    create_new_world_json(str(b), title="Modified")
 
     result = json.loads(compare_worlds(str(a), str(b)))
     assert result["total_changes"] > 0
@@ -276,12 +276,12 @@ def test_compare_worlds_scalar_change(tmp_path):
 
 def test_compare_worlds_entity_added(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
     b = tmp_path / "b.json"
-    scaffold_world(str(a))
-    scaffold_world(str(b))
+    create_new_world_json(str(a))
+    create_new_world_json(str(b))
 
     world_b = json.loads(b.read_text())
     world_b["NPCs"] = [{"id": "NPC000001", "name": "Bob", "positionInList": 0}]
@@ -293,20 +293,20 @@ def test_compare_worlds_entity_added(tmp_path):
 
 def test_compare_worlds_missing_file_a(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     b = tmp_path / "b.json"
-    scaffold_world(str(b))
+    create_new_world_json(str(b))
     result = json.loads(compare_worlds("/nonexistent.json", str(b)))
     assert "error" in result
 
 
 def test_compare_worlds_missing_file_b(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
-    scaffold_world(str(a))
+    create_new_world_json(str(a))
     result = json.loads(compare_worlds(str(a), "/nonexistent.json"))
     assert "error" in result
 
@@ -316,22 +316,22 @@ def test_compare_worlds_missing_file_b(tmp_path):
 
 def test_get_diff_summary_no_changes(tmp_path):
     from iw_architect.tools.analysis import get_diff_summary
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
-    scaffold_world(str(a), title="Same")
+    create_new_world_json(str(a), title="Same")
     result = get_diff_summary(str(a), str(a))
     assert "No differences" in result
 
 
 def test_get_diff_summary_with_changes(tmp_path):
     from iw_architect.tools.analysis import get_diff_summary
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
     b = tmp_path / "b.json"
-    scaffold_world(str(a), title="Original")
-    scaffold_world(str(b), title="Changed")
+    create_new_world_json(str(a), title="Original")
+    create_new_world_json(str(b), title="Changed")
 
     result = get_diff_summary(str(a), str(b))
     assert "## Changes" in result
@@ -340,32 +340,32 @@ def test_get_diff_summary_with_changes(tmp_path):
 
 def test_get_diff_summary_missing_original(tmp_path):
     from iw_architect.tools.analysis import get_diff_summary
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     b = tmp_path / "b.json"
-    scaffold_world(str(b))
+    create_new_world_json(str(b))
     result = get_diff_summary("/nonexistent.json", str(b))
     assert "Error" in result
 
 
 def test_get_diff_summary_missing_current(tmp_path):
     from iw_architect.tools.analysis import get_diff_summary
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
-    scaffold_world(str(a))
+    create_new_world_json(str(a))
     result = get_diff_summary(str(a), "/nonexistent.json")
     assert "Error" in result
 
 
 def test_get_diff_summary_entity_added(tmp_path):
     from iw_architect.tools.analysis import get_diff_summary
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
     b = tmp_path / "b.json"
-    scaffold_world(str(a))
-    scaffold_world(str(b))
+    create_new_world_json(str(a))
+    create_new_world_json(str(b))
 
     world_b = json.loads(b.read_text())
     world_b["NPCs"] = [{"id": "NPC000001", "name": "Bob", "positionInList": 0}]
@@ -744,12 +744,12 @@ def test_compare_worlds_idless_entity_not_dropped(tmp_path):
     an id-less NPC produced zero changes.
     """
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
     b = tmp_path / "b.json"
-    scaffold_world(str(a))
-    scaffold_world(str(b))
+    create_new_world_json(str(a))
+    create_new_world_json(str(b))
 
     keyed_npc = {"id": "NPC000001", "name": "Bob", "positionInList": 0}
     world_a = json.loads(a.read_text())
@@ -769,12 +769,12 @@ def test_compare_worlds_idless_entity_not_dropped(tmp_path):
 def test_get_diff_summary_idless_entity_surfaced(tmp_path):
     """The narrative summary must report the id-less entity change too."""
     from iw_architect.tools.analysis import get_diff_summary
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     a = tmp_path / "a.json"
     b = tmp_path / "b.json"
-    scaffold_world(str(a))
-    scaffold_world(str(b))
+    create_new_world_json(str(a))
+    create_new_world_json(str(b))
 
     keyed = {"id": "NPC000001", "name": "Bob", "positionInList": 0}
     world_a = json.loads(a.read_text())

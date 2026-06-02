@@ -79,7 +79,7 @@ The agent and commands have access to these tools — you generally won't call t
 |---|---|
 | `validate_world(world_path)` | Strict schema check — reports every error that would cause the platform to reject the world. |
 | `audit_world(world_path)` | Quality analysis — token budgets, trigger cycles, redundancy detection. |
-| `scaffold_world(output_path, title, nsfw)` | Create a fresh, valid world JSON at the given path. |
+| `create_new_world_json(output_path, title, nsfw)` | Create a fresh, valid world JSON at the given path. |
 | `read_world_field(world_path, path)` | Read a single field using dot/bracket path syntax. |
 | `format_world_for_review(world_path)` | Render the world as human-readable Markdown and write it to `<world_stem>.review.md` next to the input. Returns `{"success": "<path>"}` or `{"error": "<details>"}`. |
 | `get_schema_summary()` | Structured metadata about entity types, fields, and enum values. |
@@ -93,7 +93,7 @@ The agent and commands have access to these tools — you generally won't call t
 ```text
 You:    /infinite-worlds-architect:new-world ./my-world.json
 Claude: <walks you through title, description, background, firstInput…>
-        <calls scaffold_world, then validate_world after each edit>
+        <calls create_new_world_json, then validate_world after each edit>
 
 You:    Add a number tracked item visible only to the AI called "reputation",
         with update instructions to keep it between 0 and 100 and modify it based on how other characters in town perceive the player.

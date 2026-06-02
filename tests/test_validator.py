@@ -33,10 +33,10 @@ def _base_world(**overrides) -> dict:
     """Minimal valid world scaffold for test mutations."""
     import tempfile
 
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     tmp = tempfile.mktemp(suffix=".json")
-    scaffold_world(tmp, title="Test World")
+    create_new_world_json(tmp, title="Test World")
     world = json.loads(Path(tmp).read_text())
     Path(tmp).unlink(missing_ok=True)
     world.update(overrides)
@@ -553,23 +553,23 @@ def test_audit_world_fixture():
 
 def test_compare_worlds_no_changes(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     path_a = tmp_path / "a.json"
     path_b = tmp_path / "b.json"
-    scaffold_world(str(path_a), title="World A")
-    scaffold_world(str(path_b), title="World A")
+    create_new_world_json(str(path_a), title="World A")
+    create_new_world_json(str(path_b), title="World A")
     result = json.loads(compare_worlds(str(path_a), str(path_b)))
     assert result["total_changes"] == 0
 
 
 def test_compare_worlds_detects_change(tmp_path):
     from iw_architect.tools.analysis import compare_worlds
-    from iw_architect.tools.helpers import scaffold_world
+    from iw_architect.tools.helpers import create_new_world_json
 
     path_a = tmp_path / "a.json"
     path_b = tmp_path / "b.json"
-    scaffold_world(str(path_a), title="World A")
-    scaffold_world(str(path_b), title="World B")  # different title
+    create_new_world_json(str(path_a), title="World A")
+    create_new_world_json(str(path_b), title="World B")  # different title
     result = json.loads(compare_worlds(str(path_a), str(path_b)))
     assert result["total_changes"] > 0

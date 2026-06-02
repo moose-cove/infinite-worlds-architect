@@ -30,7 +30,7 @@ Call `confirm_path` with the resolved path.
 
 ## Step 2 — Scaffold the world
 
-Call `scaffold_world(output_path, title)` with the confirmed path and the user's intended title.
+Call `create_new_world_json(output_path, title)` with the confirmed path and the user's intended title.
 
 Confirm success, then call `validate_world` to verify the scaffold is clean.
 

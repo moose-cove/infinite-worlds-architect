@@ -232,7 +232,7 @@ Two distinct arrays, both editable. They differ by keyword presence:
 
 ## 7 Player permissions
 
-All six are top-level boolean fields. Platform defaults (used by `scaffold_world`):
+All six are top-level boolean fields. Platform defaults (used by `create_new_world_json`):
 
 | Field | Default | Purpose |
 |---|---|---|

@@ -10,6 +10,12 @@ lockstep with the change that warrants it.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-02
+
+### Changed
+
+- **`scaffold_world` renamed to `create_new_world_json`.** The MCP tool surface now uses a name that makes its intent unambiguous without context. All internal references, tests, commands, and documentation updated. (`src/iw_architect/tools/helpers.py`, `src/iw_architect/server.py`)
+
 ## [0.6.0] - 2026-05-30
 
 ### Added
@@ -23,7 +29,7 @@ lockstep with the change that warrants it.
 
 ### Changed
 
-- **`scaffold_world` seeds richer image-prompt defaults.** `imageStyleCharacterPre`,
+- **`create_new_world_json` seeds richer image-prompt defaults.** `imageStyleCharacterPre`,
   `imageStyleCharacterPost`, and `imageStyleNonCharacterPre` now carry sensible
   default prompt text instead of empty strings (`imageModel: "manticore"`,
   `imageStyle: "photo_1"` unchanged). (`src/iw_architect/tools/helpers.py`)
@@ -67,7 +73,7 @@ lockstep with the change that warrants it.
 
 ### Changed
 
-- **`scaffold_world` deep-copies its default template.** The scaffold previously
+- **`create_new_world_json` deep-copies its default template.** The scaffold previously
   used a shallow `dict()` copy, leaving nested containers (lists, the
   `permissionsOnceShared` dict) aliased to the module-level constant. Switched to
   `copy.deepcopy` to honor the project's immutability rule and remove the

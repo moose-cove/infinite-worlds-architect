@@ -108,17 +108,17 @@ def test_format_world_for_review_invalid_json(tmp_path):
 
 
 def test_scaffold_passes_validator(tmp_path):
-    """scaffold_world must produce a world that passes validate_world with zero errors."""
-    from iw_architect.tools.helpers import scaffold_world
+    """create_new_world_json must produce a world that passes validate_world with zero errors."""
+    from iw_architect.tools.helpers import create_new_world_json
     from iw_architect.validator import validate_world
 
     output = tmp_path / "scaffold_test.json"
-    scaffold_result = json.loads(scaffold_world(str(output), title="Test World"))
+    scaffold_result = json.loads(create_new_world_json(str(output), title="Test World"))
     assert scaffold_result["status"] == "created"
 
     validate_result = json.loads(validate_world(str(output)))
     assert validate_result["errors"] == [], (
-        "scaffold_world produced an invalid world:\n"
+        "create_new_world_json produced an invalid world:\n"
         + "\n".join(f"  - {e}" for e in validate_result["errors"])
     )
 
