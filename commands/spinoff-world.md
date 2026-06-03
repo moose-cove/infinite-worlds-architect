@@ -20,9 +20,11 @@ The references in `references/` cover authoring judgments specific to spinoffs:
 
 ## Step 1 — Confirm paths
 
-If `$ARGUMENTS` contains two paths (source then target, space-separated), use them directly. Otherwise, ask the user for each path in turn.
+If `$ARGUMENTS` contains two paths (source then target, space-separated), use them. Otherwise, ask the user for each path in turn.
 
-1. Call `confirm_path` on the **source** world path. It must exist.
+**Resolve every path to an absolute path before calling `confirm_path`.** The tool runs in a separate MCP server process whose working directory is *not* your session's, so it rejects relative paths (a relative path can't be resolved to the file the author means). If the user gave you a relative path, join it with your session's current working directory first — e.g. run `realpath -m "<path>"` (the `-m` resolves the not-yet-created target path; or just take `pwd` and prepend it). A leading `~` is fine; `confirm_path` expands it.
+
+1. Call `confirm_path` on the **source** world path (absolute). It must exist.
 2. Ask the user for the **target** output path for the variant (if not supplied via arguments).
 3. Call `confirm_path` on the target path. Its parent must exist; warn if the file already exists.
 4. Present both resolved paths and wait for confirmation before proceeding.

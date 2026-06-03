@@ -14,6 +14,7 @@ from typing import Any
 import jsonschema
 
 from iw_architect import KNOWN_SCHEMA_VERSION
+from iw_architect.paths import RelativePathError, require_absolute
 
 _PLUGIN_ROOT = Path(__file__).parent.parent.parent  # src/iw_architect/ → src/ → repo root
 _SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.1.schema.json"
@@ -422,7 +423,10 @@ def validate_world(world_path: str) -> str:
     """Strict schema check. Reports every error that would cause the platform to
     reject or misinterpret the world. Returns JSON with 'valid', 'errors', and 'warnings'.
     """
-    path = Path(world_path)
+    try:
+        path = require_absolute(world_path)
+    except RelativePathError as exc:
+        return json.dumps({"valid": False, "errors": [str(exc)], "warnings": []})
     if not path.exists():
         return json.dumps(
             {"valid": False, "errors": [f"File not found: {world_path}"], "warnings": []}

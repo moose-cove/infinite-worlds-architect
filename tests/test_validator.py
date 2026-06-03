@@ -532,6 +532,59 @@ def test_confirm_path_new_file(tmp_path):
     assert result["status"] == "ok"
 
 
+def test_confirm_path_relative_rejected():
+    """A relative path is rejected with an actionable error rather than silently
+    resolved against the server process's (wrong) working directory."""
+    from iw_architect.tools.helpers import confirm_path
+
+    result = json.loads(confirm_path("worlds/foo.json"))
+    assert result["status"] == "error"
+    assert result["is_absolute"] is False
+    assert result["input_path"] == "worlds/foo.json"
+    assert "relative" in result["message"].lower()
+
+
+def test_confirm_path_tilde_is_absolute(tmp_path, monkeypatch):
+    """A leading ``~`` expands to an absolute path, so it is accepted (not rejected
+    as relative)."""
+    from iw_architect.tools.helpers import confirm_path
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    result = json.loads(confirm_path("~/probe_world.json"))
+    assert result["status"] == "ok"
+    assert result["resolved_path"] == str(tmp_path / "probe_world.json")
+
+
+def test_validate_world_relative_rejected():
+    """The same absolute-path guard applies to validate_world, not just confirm_path."""
+    from iw_architect.validator import validate_world
+
+    result = json.loads(validate_world("worlds/foo.json"))
+    assert result["valid"] is False
+    assert any("relative" in e.lower() for e in result["errors"])
+
+
+def test_read_world_field_relative_rejected():
+    from iw_architect.tools.inspection import read_world_field
+
+    result = json.loads(read_world_field("worlds/foo.json", "title"))
+    assert "relative" in result["error"].lower()
+
+
+def test_audit_world_relative_rejected():
+    from iw_architect.tools.analysis import audit_world
+
+    result = json.loads(audit_world("worlds/foo.json"))
+    assert "relative" in result["error"].lower()
+
+
+def test_create_new_world_json_relative_rejected():
+    from iw_architect.tools.helpers import create_new_world_json
+
+    result = json.loads(create_new_world_json("worlds/foo.json"))
+    assert "relative" in result["error"].lower()
+
+
 def test_get_schema_summary():
     from iw_architect.tools.inspection import get_schema_summary
 

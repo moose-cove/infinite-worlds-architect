@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from iw_architect import KNOWN_SCHEMA_VERSION
+from iw_architect.paths import RelativePathError, relative_path_message, require_absolute
 
 # Platform ID formats derived from the v2.1 fixture samples:
 #   8-char: characters, triggers       — base64 character set (A-Za-z0-9+/)
@@ -123,7 +124,10 @@ def create_new_world_json(
     title: initial title for the world
     nsfw: if true, sets both nsfw and mature to true
     """
-    path = Path(output_path)
+    try:
+        path = require_absolute(output_path)
+    except RelativePathError as exc:
+        return json.dumps({"error": str(exc)})
     if not path.parent.exists():
         return json.dumps({"error": f"Parent directory does not exist: {path.parent}"})
 
@@ -147,12 +151,29 @@ def create_new_world_json(
 
 
 def confirm_path(path: str) -> str:
-    """Resolve a user-supplied path to an absolute path and verify it exists (or its parent does).
+    """Verify an absolute path exists (or its parent does) and echo it back for confirmation.
 
-    Returns the resolved absolute path for the agent to present to the user for confirmation
-    before acting on it. Does not modify any files.
+    Requires an **absolute** path (a leading ``~`` is expanded to the home directory first).
+    Relative paths are rejected with an actionable error: this tool runs inside the MCP server
+    process, whose working directory is not your session's, so a relative path cannot be
+    resolved to the file the author means. Resolve the path to an absolute path in your session
+    first (e.g. join it with your current working directory), then call this. Does not modify
+    any files.
     """
-    resolved = Path(os.path.expanduser(path)).resolve()
+    expanded = Path(os.path.expanduser(path))
+    if not expanded.is_absolute():
+        return json.dumps(
+            {
+                "input_path": path,
+                "resolved_path": None,
+                "is_absolute": False,
+                "server_cwd": os.getcwd(),
+                "status": "error",
+                "message": relative_path_message(path),
+            }
+        )
+
+    resolved = expanded.resolve()
     exists = resolved.exists()
     parent_exists = resolved.parent.exists()
 

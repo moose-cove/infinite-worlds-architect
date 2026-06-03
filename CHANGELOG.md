@@ -10,6 +10,12 @@ lockstep with the change that warrants it.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-06-03
+
+### Fixed
+
+- **Path-taking MCP tools now reject relative paths with an actionable error instead of silently resolving them against the wrong directory.** The MCP server runs as a separate process whose working directory is not the agent's session directory, so `Path(...).resolve()` on a relative path produced a bogus absolute path and a confusing "file/parent does not exist" error. A shared guard (`src/iw_architect/paths.py`) now requires an absolute path (a leading `~` is still expanded) across `confirm_path`, `validate_world`, `read_world_field`, `format_world_for_review`, `audit_world`, `compare_worlds`, `get_diff_summary`, and `create_new_world_json`; the error names the server's working directory and tells the caller to resolve to absolute first. The `new-world`, `modify-world`, and `spinoff-world` commands and the `world-architect` agent now instruct the agent to resolve paths to absolute (`realpath -m`) before calling these tools. (`src/iw_architect/paths.py`, `src/iw_architect/tools/helpers.py`, `src/iw_architect/tools/inspection.py`, `src/iw_architect/tools/analysis.py`, `src/iw_architect/validator.py`, `commands/*.md`, `agents/world-architect.md`)
+
 ## [0.7.0] - 2026-06-02
 
 ### Changed
