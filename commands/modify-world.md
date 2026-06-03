@@ -22,7 +22,7 @@ The references in `references/` cover authoring judgments worth consulting durin
 
 If `$ARGUMENTS` is non-empty, use it as the world path. Otherwise, ask the user for the path.
 
-**Resolve the path to an absolute path before calling `confirm_path`.** The tool runs in a separate MCP server process whose working directory is *not* your session's, so it rejects relative paths (a relative path can't be resolved to the file the author means). If the user gave you a relative path, join it with your session's current working directory first — e.g. run `realpath -m "<path>"` (the `-m` resolves paths that don't exist yet; or just take `pwd` and prepend it). A leading `~` is fine; `confirm_path` expands it.
+**Resolve the path to an absolute path before passing it to any MCP world tool** (`confirm_path`, `validate_world`, `read_world_field`, `audit_world`, …). These tools run in a separate MCP server process whose working directory is *not* your session's, so they reject relative paths (a relative path can't be resolved to the file the author means). If the user gave you a relative path, join it with your session's current working directory first — e.g. run `realpath -m "<path>"` (the `-m` resolves paths that don't exist yet; or just take `pwd` and prepend it). A leading `~` is fine; the tools expand it.
 
 Call `confirm_path(path)` with that absolute path. Present the resolved path and confirm the file exists before proceeding.
 
