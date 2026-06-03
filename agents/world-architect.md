@@ -113,7 +113,7 @@ This guard does **not** apply to two flows that have no source to protect: *crea
 
 Follow every step (when modifying an existing world, "the world JSON" means the draft from the guard above):
 
-1. **Read** the world JSON file with `Read` (or `confirm_path` + `Read` if the path is uncertain).
+1. **Read** the world JSON file with `Read` (or `confirm_path` + `Read` if the path is uncertain). Every MCP world tool that takes a file path (`confirm_path`, `validate_world`, `read_world_field`, `audit_world`, …) requires an **absolute** path — they run in a separate MCP process and reject relative paths. Resolve a relative path against your session's working directory first (`realpath -m "<path>"`, or prepend `pwd`); `~` is expanded for you.
 2. **Plan** the edit. Call `get_schema_summary()` for any field shape you're unsure about. Load the matching `references/sections/*.md` file if the field has authoring judgments.
 3. **Mint IDs** for any new entities via `mint_ids(kind, count)`. **Never** invent IDs by hand — formats are entity-specific (see the ID-format table in `references/README.md`).
 4. **Show the user the diff field-by-field and wait for approval** before editing. For each change: current value → proposed value → "approved?".

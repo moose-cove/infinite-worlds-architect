@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
+
+from iw_architect.paths import require_absolute
 
 
 def _load_world(world_path: str) -> dict:
-    path = Path(world_path)
+    path = require_absolute(world_path)
     if not path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
     return json.loads(path.read_text())

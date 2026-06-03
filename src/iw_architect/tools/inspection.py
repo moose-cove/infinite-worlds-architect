@@ -7,11 +7,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+from iw_architect.paths import require_absolute
 from iw_architect.schema_model import SCHEMA_SUMMARY
 
 
 def _load_world(world_path: str) -> dict:
-    path = Path(world_path)
+    path = require_absolute(world_path)
     if not path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
     return json.loads(path.read_text())
