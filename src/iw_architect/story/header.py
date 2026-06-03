@@ -61,19 +61,20 @@ def parse_header(header_text: str) -> dict:
     ``name``, ``background``, ``skills``, ``startingTrackedItems``).
     The caller must set ``objective = None``.
     """
-    # Extract title.
+    # Extract title (absent → None per §3 "string|null").
     title_match = _TITLE_RE.search(header_text)
-    title = title_match.group(1).strip() if title_match else ""
+    title = title_match.group(1).strip() if title_match else None
 
-    # Extract story background.
-    story_background = _extract_block(header_text, "Story Background") or ""
+    # Extract story background (absent → None).
+    story_background = _extract_block(header_text, "Story Background")
 
-    # Extract character block.
+    # Extract character block. Keep "" here only so sub-section parsing is safe
+    # when the block is absent — the individual sub-fields below stay None.
     char_block = _extract_block(header_text, "Character") or ""
 
-    char_name = _extract_subsection(char_block, "Name") or ""
-    char_background = _extract_subsection(char_block, "Background") or ""
-    char_skills = _extract_subsection(char_block, "Skills") or ""
+    char_name = _extract_subsection(char_block, "Name")
+    char_background = _extract_subsection(char_block, "Background")
+    char_skills = _extract_subsection(char_block, "Skills")
 
     # Starting Tracked Items is optional.
     starting_raw = _extract_subsection(char_block, "Starting Tracked Items")

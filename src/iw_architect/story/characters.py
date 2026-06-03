@@ -64,11 +64,12 @@ def index_characters(
 
     warnings: list[str] = []
     characters: dict[str, dict] = {}
+    patterns: dict[str, re.Pattern] = {}
 
     for char_def in character_list:
         name = char_def["name"]
         aliases = char_def.get("aliases", [])
-        pattern = _build_pattern(name, aliases)
+        patterns[name] = _build_pattern(name, aliases)
         characters[name] = {"name": name, "aliases": aliases, "mentions": []}
 
     for turn in parsed_turns:
@@ -85,9 +86,7 @@ def index_characters(
             line_number = idx + 1  # 1-indexed
             for char_def in character_list:
                 name = char_def["name"]
-                aliases = char_def.get("aliases", [])
-                pattern = _build_pattern(name, aliases)
-                if pattern.search(line_text):
+                if patterns[name].search(line_text):
                     context = line_text[:100]
                     characters[name]["mentions"].append(
                         {"turn": turn_number, "line": line_number, "context": context}

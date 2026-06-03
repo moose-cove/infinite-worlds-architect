@@ -92,8 +92,10 @@ def combine(file_paths: list[str]) -> dict:
         with open(path, encoding="utf-8") as fh:
             raw = fh.read()
         header, turns = _split_turns(raw, path, mtime)
-        # Header from newest file (last in sorted order).
-        header_text = header
+        # Header from newest file (last in sorted order), but never let a
+        # header-less re-export clobber a real header from an older file.
+        if header.strip():
+            header_text = header
         for t in turns:
             existing = all_turns.get(t["number"])
             if existing is None or t["mtime"] >= existing["mtime"]:

@@ -10,7 +10,9 @@ Writes up to 5 files atomically into ``extraction_dir``:
 Atomic write: temp file ``extraction_dir/.tmp-<name>.json`` → ``os.replace``
 (same filesystem, so the replace is atomic on POSIX and on Windows Vista+).
 
-Returns a manifest-summary dict (the same shape written to ``manifest.json``).
+Returns a camelCase summary dict; ``manifest.json`` on disk mirrors it plus a
+snake ``total_turns`` key (used by ``query_story_data`` to resolve ``"last"``)
+and a ``sources`` provenance list (spec §3).
 
 Re-run is idempotent — previous output files are overwritten.
 """
@@ -36,10 +38,6 @@ def _atomic_write(extraction_dir: str, name: str, data: object) -> None:
     os.replace(tmp_path, final_path)
 
 
-def _count_lines(text: str) -> list[str]:
-    return text.split("\n")
-
-
 def extract_story_data(
     input_paths: list[str],
     extraction_dir: str,
@@ -52,15 +50,21 @@ def extract_story_data(
     input_paths:
         One or more paths to story-export ``.txt`` files.
     extraction_dir:
-        Directory in which to write output files (must exist or be created
-        by the caller before this function is invoked).
+        Directory in which to write output files (created automatically if
+        absent).
     character_list:
         Optional list of ``{"name": str, "aliases": [str]}`` dicts for
         character indexing.
 
     Returns
     -------
-    Manifest-summary dict (same content as ``manifest.json``).
+    camelCase summary dict per spec §3 (``manifest.json`` on disk mirrors it
+    plus snake ``total_turns`` and ``sources``).
+
+    Notes
+    -----
+    Each ``turn_index`` entry's ``lineRange`` is 1-indexed inclusive and
+    **marker-inclusive**: it starts at the ``-- Turn N --`` marker line itself.
 
     Raises
     ------
@@ -162,20 +166,39 @@ def extract_story_data(
         char_index, char_warnings = index_characters(parsed_turns, source_text, character_list)
     warnings.extend(char_warnings)
 
-    # Build manifest.
+    # Build the written-files list (camelCase per spec §3).
     files_written: list[str] = ["manifest.json", "metadata.json", "turn_index.json"]
     if tracked_state is not None:
         files_written.append("tracked_state.json")
     if char_index is not None:
         files_written.append("character_index.json")
 
-    manifest = {
-        "input_paths": [os.path.abspath(p) for p in input_paths],
-        "extraction_dir": os.path.abspath(extraction_dir),
-        "total_turns": len(parsed_turns),
-        "files_written": files_written,
+    # Derive summary fields (spec §3 contract).
+    numbers = [t["number"] for t in parsed_turns]
+    turn_range = {"min": min(numbers), "max": max(numbers)}
+    has_tracked_items = any(t["trackedItems"] is not None for t in parsed_turns)
+    has_hidden_items = any(t["hiddenTrackedItems"] is not None for t in parsed_turns)
+
+    # Provenance: group turn numbers by source file (first-appearance order).
+    sources_map: dict[str, list[int]] = {}
+    for t in parsed_turns:
+        sources_map.setdefault(t["source"], []).append(t["number"])
+    sources = [{"path": src, "turns": sorted(nums)} for src, nums in sources_map.items()]
+
+    # Return dict: camelCase API shape, NO `success` key (failure is signalled by
+    # the MCP wrapper's bare {"error": ...}).
+    summary = {
+        "totalTurns": len(parsed_turns),
+        "turnRange": turn_range,
+        "inputFilesProcessed": len(input_paths),
+        "hasTrackedItems": has_tracked_items,
+        "hasHiddenTrackedItems": has_hidden_items,
+        "filesWritten": files_written,
         "warnings": warnings,
     }
+    # On-disk manifest mirrors the summary plus snake `total_turns` (for the
+    # query "last" lookup) and `sources` provenance.
+    manifest = {**summary, "total_turns": len(parsed_turns), "sources": sources}
 
     # Write files atomically.
     _atomic_write(extraction_dir, "manifest", manifest)
@@ -186,4 +209,4 @@ def extract_story_data(
     if char_index is not None:
         _atomic_write(extraction_dir, "character_index", char_index)
 
-    return manifest
+    return summary

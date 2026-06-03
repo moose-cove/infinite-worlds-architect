@@ -15,15 +15,40 @@ def fixture(name: str) -> str:
 
 
 class TestExtractBasic:
-    def test_returns_manifest_dict(self, tmp_path):
-        manifest = extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
-        assert isinstance(manifest, dict)
-        assert "total_turns" in manifest
-        assert "files_written" in manifest
+    def test_returns_summary_dict_s3_contract(self, tmp_path):
+        summary = extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
+        assert isinstance(summary, dict)
+        # §3 camelCase return contract — exact key set, NO `success` key.
+        assert set(summary) == {
+            "totalTurns",
+            "turnRange",
+            "inputFilesProcessed",
+            "hasTrackedItems",
+            "hasHiddenTrackedItems",
+            "filesWritten",
+            "warnings",
+        }
+        assert "success" not in summary
+        assert summary["turnRange"] == {"min": 1, "max": 5}
+        assert summary["inputFilesProcessed"] == 1
+        assert summary["hasTrackedItems"] is True
+        assert summary["hasHiddenTrackedItems"] is True
 
     def test_total_turns_is_five(self, tmp_path):
-        manifest = extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
+        summary = extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
+        assert summary["totalTurns"] == 5
+
+    def test_manifest_json_has_snake_total_turns_and_sources(self, tmp_path):
+        extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
+        with open(tmp_path / "manifest.json") as f:
+            manifest = json.load(f)
+        # On-disk manifest mirrors the camelCase summary PLUS snake total_turns
+        # (query "last" lookup) PLUS sources provenance.
         assert manifest["total_turns"] == 5
+        assert manifest["filesWritten"]  # camelCase mirror present
+        assert isinstance(manifest["sources"], list)
+        assert manifest["sources"][0]["turns"] == [1, 2, 3, 4, 5]
+        assert os.path.isabs(manifest["sources"][0]["path"])
 
     def test_manifest_json_written(self, tmp_path):
         extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
@@ -52,11 +77,11 @@ class TestExtractBasic:
             character_list=[{"name": "Petra Voss", "aliases": []}],
         )
         assert (tmp_path / "character_index.json").exists()
-        assert len(manifest["files_written"]) == 5
+        assert len(manifest["filesWritten"]) == 5
 
     def test_four_files_no_character_list(self, tmp_path):
         manifest = extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
-        assert len(manifest["files_written"]) == 4
+        assert len(manifest["filesWritten"]) == 4
 
     def test_three_files_no_tracked_no_character(self, tmp_path):
         # no_hidden.txt has tracked items but no hidden; tracked_state should still be written
@@ -73,7 +98,7 @@ class TestExtractBasic:
             encoding="utf-8",
         )
         manifest = extract_story_data([str(src)], str(tmp_path / "out"))
-        assert len(manifest["files_written"]) == 3
+        assert len(manifest["filesWritten"]) == 3
         assert not (tmp_path / "out" / "tracked_state.json").exists()
 
 

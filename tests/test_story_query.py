@@ -40,7 +40,7 @@ class TestQueryManifest:
 
     def test_files_written_listed(self, extracted):
         result = query_story_data(extracted, "manifest")
-        assert "manifest.json" in result["files_written"]
+        assert "manifest.json" in result["filesWritten"]
 
 
 class TestQueryMetadata:

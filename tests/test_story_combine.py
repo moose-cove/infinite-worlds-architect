@@ -139,6 +139,25 @@ class TestCombineMultiFile:
         # merge_b has the same title but is newer — header should come from it.
         assert "The Clockwork Vault" in result["header"]
 
+    def test_newest_file_without_header_keeps_older_header(self, tmp_path):
+        older = tmp_path / "older.txt"
+        newer = tmp_path / "newer.txt"
+        older.write_text(
+            "== Original World ==\n\n-- Story Background --\n\nBG.\n\n"
+            "-- Turn 1 --\n\nOutcome\n-------\nStart.\n\n",
+            encoding="utf-8",
+        )
+        # Newer re-export begins directly with a turn marker — no header.
+        newer.write_text(
+            "-- Turn 2 --\n\nAction\n------\nGo.\n\nOutcome\n-------\nGone.\n\n",
+            encoding="utf-8",
+        )
+        os.utime(str(older), (1_000_000, 1_000_000))
+        os.utime(str(newer), (2_000_000, 2_000_000))
+        result = combine([str(older), str(newer)])
+        # The header-less newest file must NOT clobber the older real header.
+        assert "Original World" in result["header"]
+
     def test_empty_paths_raises(self):
         with pytest.raises(ValueError):
             combine([])
