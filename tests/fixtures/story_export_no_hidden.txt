@@ -1,0 +1,69 @@
+== The Simple Journey ==
+
+
+-- Story Background --
+
+A traveler walks a road with no secrets.
+
+
+-- Character --
+
+Name
+----
+Fen
+
+Background
+----------
+A wanderer with light pockets and a good memory.
+
+Skills
+------
+Navigation: 3 (Competent)
+Endurance: 2 (Unskilled)
+
+
+-- Turn 1 --
+
+Outcome
+-------
+You set off down the road.
+
+- - - - -
+
+Your objective: Reach the coast by nightfall.
+
+- - - - -
+
+Secret Information
+------------------
+A storm is coming from the west.
+
+Tracked Items
+-------------
+Miles Walked:
+0
+
+Food Rations:
+3
+
+-- Turn 2 --
+
+Action
+------
+Walk for several hours.
+
+Outcome
+-------
+You reach a crossroads.
+
+Secret Information
+------------------
+The left road is shorter but floods easily.
+
+Tracked Items
+-------------
+Miles Walked:
+12
+
+Food Rations:
+2

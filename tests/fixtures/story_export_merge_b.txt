@@ -1,0 +1,67 @@
+== The Clockwork Vault ==
+
+
+-- Story Background --
+
+A mechanical puzzle-box the size of a building.
+
+
+-- Character --
+
+Name
+----
+Sable Wren
+
+Background
+----------
+A former clockmaker with a grudge against puzzles she cannot solve.
+
+Skills
+------
+Mechanics: 4 (Highly skilled)
+Patience: 1 (Novice)
+
+
+-- Turn 2 --
+
+Action
+------
+Insert the first gear key.
+
+Outcome
+-------
+Version B: A door swings open with a loud clang.
+
+Secret Information
+------------------
+This is the newer re-export of turn 2.
+
+Tracked Items
+-------------
+Gear Keys:
+2
+
+Wound Springs:
+1
+
+-- Turn 3 --
+
+Action
+------
+Step through the door.
+
+Outcome
+-------
+The inner chamber glitters with brass and crystal.
+
+Secret Information
+------------------
+The prize is a self-winding heart.
+
+Tracked Items
+-------------
+Gear Keys:
+2
+
+Wound Springs:
+1

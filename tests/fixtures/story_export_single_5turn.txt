@@ -1,0 +1,170 @@
+== The Iron Gate ==
+
+
+-- Story Background --
+
+A locked estate holds secrets its last owner took to the grave.
+
+
+-- Character --
+
+Name
+----
+Petra Voss
+
+Background
+----------
+A sharp-tongued archivist who never met a locked door she couldn't open — eventually.
+
+Skills
+------
+Research: 4 (Highly skilled)
+Lockpicking: 3 (Competent)
+Charisma: 2 (Unskilled)
+
+Starting Tracked Items
+----------------------
+Gold Coins:
+10
+
+Notes:
+
+
+-- Turn 1 --
+
+Outcome
+-------
+You push open the gate and step inside.
+
+- - - - -
+
+Your objective: Find the missing will before the estate goes to auction.
+
+- - - - -
+
+Secret Information
+------------------
+The will is hidden behind the third painting in the east wing.
+
+Tracked Items
+-------------
+Gold Coins:
+10
+
+Notes:
+
+Hidden Tracked Items
+--------------------
+Estate Lock State:
+unlocked
+
+-- Turn 2 --
+
+Action
+------
+Search the entrance hall for clues.
+
+Outcome
+-------
+You find a torn scrap of paper with a room number.
+
+Secret Information
+------------------
+The paper was planted by a rival.
+
+Tracked Items
+-------------
+Gold Coins:
+10
+
+Notes:
+Scrap of paper found.
+
+Hidden Tracked Items
+--------------------
+Estate Lock State:
+unlocked
+
+-- Turn 3 --
+
+Action
+------
+Go to the east wing.
+
+Outcome
+-------
+The east wing is dark and smells of old paper. Three paintings hang on the far wall.
+
+Secret Information
+------------------
+The rival is watching from the shadows.
+
+Tracked Items
+-------------
+Gold Coins:
+8
+
+Notes:
+Scrap of paper found.
+Bought a candle from a vendor outside.
+
+Hidden Tracked Items
+--------------------
+Estate Lock State:
+relocked
+
+-- Turn 4 --
+
+Action
+------
+Examine the third painting.
+
+Outcome
+-------
+Behind it: an envelope sealed with red wax.
+
+Secret Information
+------------------
+The envelope contains both the will and a second letter implicating the rival.
+
+Tracked Items
+-------------
+Gold Coins:
+8
+
+Notes:
+Scrap of paper found.
+Bought a candle from a vendor outside.
+
+Hidden Tracked Items
+--------------------
+Estate Lock State:
+relocked
+
+-- Turn 5 --
+
+Action
+------
+Open the envelope.
+
+Outcome
+-------
+The will names you as the sole heir. The estate is yours.
+
+Secret Information
+------------------
+The rival has fled. Case closed.
+
+Tracked Items
+-------------
+Gold Coins:
+8
+
+Notes:
+Scrap of paper found.
+Bought a candle from a vendor outside.
+
+Hidden Tracked Items
+--------------------
+Estate Lock State:
+relocked
