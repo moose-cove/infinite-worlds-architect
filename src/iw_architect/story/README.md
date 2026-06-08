@@ -18,7 +18,7 @@ and file I/O. The MCP wrappers that surface these functions as tools are added i
 | Module | Role |
 |---|---|
 | `combine` | Reads and merges one or more export `.txt` files into a single `CombineResult`, resolving duplicate turns by file mtime (newest wins) and flagging gaps in the turn sequence. |
-| `header` | Parses the preamble section of an export (world title, story background, starting character, starting tracked items) into a `HeaderData` dict. |
+| `header` | Parses the preamble of an export (world title, story background, starting character, starting tracked items) into a `Metadata` model. |
 | `sections` | Splits a single turn body into its named sections (Action, Outcome, Secret Information, Tracked Items, Hidden Tracked Items) and returns a `TurnSections` model with raw section text. |
 | `tracked` | Parses a tracked-items section body into `{key: value}` dicts (`parse_tracked_items`) and computes a snapshot-on-change list over all turns (`generate_snapshots`), returning `Snapshot` models. |
 | `extract` | Orchestrates the full pipeline: combine → parse header → parse turns → build snapshots → index characters → write JSON files. Returns an `ExtractionSummary` model. |
@@ -42,7 +42,7 @@ This is achieved via `pydantic.alias_generators.to_camel` on the shared `_Base` 
 
 This package is pure/MCP-free. It has no dependency on the `mcp` SDK and does not register
 any tools. The MCP tool wrappers that expose `extract_story_data` and `query_story_data`
-to Claude are added in the PR2 layer (`src/iw_architect/tools/story.py`).
+to Claude are added in PR2 (`src/iw_architect/tools/story_tools.py`).
 
 ## Tests
 
