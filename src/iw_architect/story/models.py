@@ -106,7 +106,9 @@ class Metadata(_Base):
     title: str | None
     story_background: str | None
     character: Character
-    objective: None = None
+    # Always None today (no Objective section in exports); typed str|None because
+    # a sequel's objective may carry forward from the original world as a string.
+    objective: str | None = None
 
 
 # ---------------------------------------------------------------------------

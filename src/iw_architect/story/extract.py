@@ -10,11 +10,12 @@ Writes up to 5 files atomically into ``extraction_dir``:
 Atomic write: temp file ``extraction_dir/.tmp-<name>.json`` → ``os.replace``
 (same filesystem, so the replace is atomic on POSIX and on Windows Vista+).
 
-Returns an :class:`~iw_architect.story.models.ExtractionSummary` model.
-Access fields via snake_case attributes (``summary.total_turns``).
-``manifest.json`` on disk is pure camelCase (via ``Manifest.model_dump(by_alias=True)``),
-no ``total_turns`` snake key — ``query_story_data`` reads ``totalTurns`` and accesses
-it via the model's ``total_turns`` attribute after parsing.
+Returns an :class:`~iw_architect.story.models.ExtractionSummary` model with
+snake_case attributes. Casing maps across the serialization boundary: the Python
+attribute ``summary.total_turns`` ↔ the JSON key ``totalTurns``. ``manifest.json``
+on disk is pure camelCase (via ``Manifest.model_dump(by_alias=True)``); when
+``query_story_data`` reads it back, the ``totalTurns`` key populates the model's
+``total_turns`` attribute.
 
 Re-run is idempotent — previous output files are overwritten.
 """
