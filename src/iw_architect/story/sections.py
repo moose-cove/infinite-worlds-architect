@@ -10,12 +10,15 @@ Section name normalisation (spec §2):
 
 Section header format: ``Name\n----`` (≥4 dashes).
 
-Returns a dict with those five snake_case keys; absent sections → ``None``.
-The ``tracked_items`` and ``hidden_tracked_items`` values are the raw section
-text strings (``parse_tracked_items`` does the further parsing).
+Returns a :class:`~iw_architect.story.models.TurnSections` model (five
+snake_case attributes); absent sections → ``None``. The ``tracked_items`` and
+``hidden_tracked_items`` values are the raw section text strings
+(``parse_tracked_items`` does the further parsing).
 """
 
 import re
+
+from iw_architect.story.models import TurnSections
 
 _SECTION_HEADER = re.compile(r"^([^\n]+)\n-{4,}", re.MULTILINE)
 
@@ -44,7 +47,7 @@ def _extract_sections(text: str) -> dict[str, str]:
     return result
 
 
-def parse_turn_sections(turn_content: str, turn_number: int) -> dict:
+def parse_turn_sections(turn_content: str, turn_number: int) -> TurnSections:
     """Parse a turn's body into its five canonical sections.
 
     Parameters
@@ -57,10 +60,11 @@ def parse_turn_sections(turn_content: str, turn_number: int) -> dict:
 
     Returns
     -------
-    dict with snake_case keys ``action``, ``outcome``, ``secret_info``,
-    ``tracked_items``, ``hidden_tracked_items``.  Any absent section is
-    ``None``.  ``tracked_items`` and ``hidden_tracked_items`` are raw strings
-    for further parsing by ``parse_tracked_items``.
+    A :class:`~iw_architect.story.models.TurnSections` (snake_case attributes
+    ``action``, ``outcome``, ``secret_info``, ``tracked_items``,
+    ``hidden_tracked_items``).  Any absent section is ``None``;
+    ``tracked_items`` / ``hidden_tracked_items`` are raw strings for further
+    parsing by ``parse_tracked_items``.
     """
     sections = _extract_sections(turn_content)
 
@@ -84,10 +88,10 @@ def parse_turn_sections(turn_content: str, turn_number: int) -> dict:
         if not secret_info:
             secret_info = None
 
-    return {
-        "action": action,
-        "outcome": outcome,
-        "secret_info": secret_info,
-        "tracked_items": sections.get("tracked_items"),
-        "hidden_tracked_items": sections.get("hidden_tracked_items"),
-    }
+    return TurnSections(
+        action=action,
+        outcome=outcome,
+        secret_info=secret_info,
+        tracked_items=sections.get("tracked_items"),
+        hidden_tracked_items=sections.get("hidden_tracked_items"),
+    )

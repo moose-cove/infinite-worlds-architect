@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import re
 
-from iw_architect.story.models import Snapshot
+from iw_architect.story.models import Snapshot, Turn
 
 _KEY_RE = re.compile(r"^(?P<key>[^\n:][^\n]*?):[ \t]*$", re.MULTILINE)
 
@@ -61,15 +61,14 @@ def parse_tracked_items(section_text: str | None) -> dict | None:
     return result
 
 
-def generate_snapshots(parsed_turns: list[dict]) -> list[Snapshot]:
+def generate_snapshots(parsed_turns: list[Turn]) -> list[Snapshot]:
     """Build snapshot-on-change list over the tracked-state pair per turn.
 
     Parameters
     ----------
     parsed_turns:
-        List of turn dicts, each with at least ``number``, ``tracked_items``
-        (``dict | None``), ``hidden_tracked_items`` (``dict | None``).
-        Sorted ascending by ``number`` defensively.
+        List of :class:`~iw_architect.story.models.Turn` models. Sorted
+        ascending by ``number`` defensively.
 
     Returns
     -------
@@ -83,16 +82,16 @@ def generate_snapshots(parsed_turns: list[dict]) -> list[Snapshot]:
     if not parsed_turns:
         return []
 
-    turns = sorted(parsed_turns, key=lambda t: t["number"])
+    turns = sorted(parsed_turns, key=lambda t: t.number)
 
     snapshots: list[Snapshot] = []
     first = turns[0]
-    prev_state = (first.get("tracked_items"), first.get("hidden_tracked_items"))
-    run_start = first["number"]
-    prev_number = first["number"]
+    prev_state = (first.tracked_items, first.hidden_tracked_items)
+    run_start = first.number
+    prev_number = first.number
 
     for turn in turns[1:]:
-        cur_state = (turn.get("tracked_items"), turn.get("hidden_tracked_items"))
+        cur_state = (turn.tracked_items, turn.hidden_tracked_items)
         if cur_state != prev_state:
             snapshots.append(
                 Snapshot(
@@ -102,15 +101,15 @@ def generate_snapshots(parsed_turns: list[dict]) -> list[Snapshot]:
                     hidden_tracked_items=prev_state[1],
                 )
             )
-            run_start = turn["number"]
+            run_start = turn.number
             prev_state = cur_state
-        prev_number = turn["number"]
+        prev_number = turn.number
 
     # Always emit a final snapshot through the max turn.
     snapshots.append(
         Snapshot(
             from_turn=run_start,
-            to_turn=turns[-1]["number"],
+            to_turn=turns[-1].number,
             tracked_items=prev_state[0],
             hidden_tracked_items=prev_state[1],
         )

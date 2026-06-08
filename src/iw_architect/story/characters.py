@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 
-from iw_architect.story.models import CharacterEntry, CharacterIndex, CharacterMention
+from iw_architect.story.models import CharacterEntry, CharacterIndex, CharacterMention, Turn
 
 
 def _build_pattern(name: str, aliases: list[str]) -> re.Pattern:
@@ -42,7 +42,7 @@ def _build_context(text: str, start: int, end: int) -> str:
 
 
 def index_characters(
-    parsed_turns: list[dict],
+    parsed_turns: list[Turn],
     source_text: dict[str, str],
     character_list: list[dict],
 ) -> tuple[CharacterIndex | None, list[str]]:
@@ -51,8 +51,7 @@ def index_characters(
     Parameters
     ----------
     parsed_turns:
-        List of turn dicts with at minimum ``number``, ``source``,
-        ``line_range``.
+        List of :class:`~iw_architect.story.models.Turn` models.
     source_text:
         Mapping of absolute source path → full file text (LF-normalised).
     character_list:
@@ -79,10 +78,10 @@ def index_characters(
         mentions_map[name] = []
 
     for turn in parsed_turns:
-        turn_number = turn["number"]
-        source = turn.get("source", "")
-        line_range = turn.get("line_range")
-        if not line_range or source not in source_text:
+        turn_number = turn.number
+        source = turn.source
+        line_range = turn.line_range
+        if source not in source_text:
             continue
         start_line, end_line = line_range
         file_lines = source_text[source].split("\n")

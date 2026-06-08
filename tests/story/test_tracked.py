@@ -1,6 +1,6 @@
 """Tests for iw_architect.story.tracked."""
 
-from iw_architect.story.models import Snapshot
+from iw_architect.story.models import Snapshot, Turn
 from iw_architect.story.tracked import generate_snapshots, parse_tracked_items
 
 
@@ -50,12 +50,26 @@ class TestParseTrackedItems:
         assert result["Key"] == "value"
 
 
+def _make_turn(number: int, tracked_items=None, hidden_tracked_items=None) -> Turn:
+    """Build a Turn model with minimal required fields for snapshot tests."""
+    return Turn(
+        number=number,
+        action=None,
+        outcome=None,
+        secret_info=None,
+        tracked_items=tracked_items,
+        hidden_tracked_items=hidden_tracked_items,
+        source="/fake/export.txt",
+        line_range=(1, 1),
+    )
+
+
 class TestGenerateSnapshots:
     def _make_turns(self, states):
         """states: list of (number, tracked, hidden).
-        Uses snake_case keys as extract.py now produces.
+        Builds Turn models as generate_snapshots now requires.
         """
-        return [{"number": n, "tracked_items": t, "hidden_tracked_items": h} for n, t, h in states]
+        return [_make_turn(n, t, h) for n, t, h in states]
 
     def test_empty_turns(self):
         assert generate_snapshots([]) == []

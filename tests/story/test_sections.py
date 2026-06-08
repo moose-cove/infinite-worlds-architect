@@ -18,55 +18,55 @@ TURN1_BODY = (
 class TestTurn1:
     def test_action_is_none_for_turn1(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["action"] is None
+        assert result.action is None
 
     def test_outcome_present(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["outcome"] == "You arrive."
+        assert result.outcome == "You arrive."
 
     def test_secret_info_present(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["secret_info"] == "The safe is empty."
+        assert result.secret_info == "The safe is empty."
 
     def test_tracked_items_raw_string(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["tracked_items"] is not None
-        assert "HP" in result["tracked_items"]
+        assert result.tracked_items is not None
+        assert "HP" in result.tracked_items
 
     def test_hidden_tracked_items_none(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["hidden_tracked_items"] is None
+        assert result.hidden_tracked_items is None
 
 
 class TestTurn2:
     def test_action_present(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        assert result["action"] == "Open the locker."
+        assert result.action == "Open the locker."
 
     def test_outcome_present(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        assert result["outcome"] == "It creaks open."
+        assert result.outcome == "It creaks open."
 
     def test_secret_info_none_when_absent(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        assert result["secret_info"] is None
+        assert result.secret_info is None
 
     def test_tracked_items_raw_contains_keys(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        raw = result["tracked_items"]
+        raw = result.tracked_items
         assert "Key Count" in raw
         assert "Notes" in raw
 
     def test_hidden_tracked_items_none_when_absent(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        assert result["hidden_tracked_items"] is None
+        assert result.hidden_tracked_items is None
 
 
 class TestSectionNormalisation:
     def test_secret_information_normalised(self):
         body = "\nSecret Information\n------------------\nHidden truth.\n"
         result = parse_turn_sections(body, 3)
-        assert result["secret_info"] == "Hidden truth."
+        assert result.secret_info == "Hidden truth."
 
     def test_hidden_tracked_items_normalised(self):
         body = (
@@ -75,8 +75,8 @@ class TestSectionNormalisation:
             "Hidden Tracked Items\n--------------------\nSecret:\n42\n"
         )
         result = parse_turn_sections(body, 2)
-        assert result["hidden_tracked_items"] is not None
-        assert "Secret" in result["hidden_tracked_items"]
+        assert result.hidden_tracked_items is not None
+        assert "Secret" in result.hidden_tracked_items
 
     def test_unknown_sections_ignored(self):
         body = (
@@ -85,12 +85,12 @@ class TestSectionNormalisation:
             "Narrator Notes\n--------------\nSome GM note.\n"
         )
         result = parse_turn_sections(body, 2)
-        assert result["action"] == "Act."
-        assert result["outcome"] == "Out."
+        assert result.action == "Act."
+        assert result.outcome == "Out."
 
     def test_crlf_body(self):
         body = "\r\nAction\r\n------\r\nMove.\r\n\r\nOutcome\r\n-------\r\nMoved.\r\n"
         # sections.py receives already-normalised text from combine,
         # but test tolerance here directly.
         result = parse_turn_sections(body.replace("\r\n", "\n"), 2)
-        assert result["action"] == "Move."
+        assert result.action == "Move."

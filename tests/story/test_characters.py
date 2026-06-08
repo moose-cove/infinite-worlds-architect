@@ -1,16 +1,27 @@
 """Tests for iw_architect.story.characters."""
 
 from iw_architect.story.characters import index_characters
-from iw_architect.story.models import CharacterIndex
+from iw_architect.story.models import CharacterIndex, Turn
 
 
 def _make_turns(entries):
     """entries: list of (number, source, line_range, raw_lines).
-    Uses snake_case keys as extract.py now produces.
+    Builds Turn models as index_characters now requires.
     """
     turns = []
     for number, source, line_range, _ in entries:
-        turns.append({"number": number, "source": source, "line_range": line_range})
+        turns.append(
+            Turn(
+                number=number,
+                action=None,
+                outcome=None,
+                secret_info=None,
+                tracked_items=None,
+                hidden_tracked_items=None,
+                source=source,
+                line_range=tuple(line_range),
+            )
+        )
     return turns
 
 

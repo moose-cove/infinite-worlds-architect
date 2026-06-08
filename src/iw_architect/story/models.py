@@ -173,3 +173,47 @@ class TurnDetail(_Base):
     turn: int
     raw: str
     source: str
+
+
+class TurnDetailResult(_Base):
+    """Wrapper for the ``turn_detail`` query result (a list of TurnDetail)."""
+
+    turn_detail: list[TurnDetail]
+
+
+# ---------------------------------------------------------------------------
+# Internal pipeline models — produced/consumed within story/ (never written to
+# disk, but use the same _Base so the casing convention holds if ever dumped).
+# ---------------------------------------------------------------------------
+
+
+class RawTurn(_Base):
+    """A single turn split from the raw export, before section parsing."""
+
+    number: int
+    content: str
+    source: str
+    mtime: float
+
+
+class CombineResult(_Base):
+    """Result of merging one or more export files (``combine``)."""
+
+    header: str
+    turns: list[RawTurn]
+    combined_text: str
+    warnings: list[str]
+
+
+class TurnSections(_Base):
+    """Raw section bodies parsed from one turn, before tracked-item parsing.
+
+    ``tracked_items`` / ``hidden_tracked_items`` here are the raw section *text*
+    (``str | None``), not the parsed ``dict`` maps used by :class:`Turn`.
+    """
+
+    action: str | None
+    outcome: str | None
+    secret_info: str | None
+    tracked_items: str | None
+    hidden_tracked_items: str | None

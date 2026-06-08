@@ -88,15 +88,15 @@ def extract_story_data(
     os.makedirs(extraction_dir, exist_ok=True)
 
     combined = combine(input_paths)
-    header_text = combined["header"]
-    raw_turns = combined["turns"]
-    warnings: list[str] = list(combined["warnings"])
+    header_text = combined.header
+    raw_turns = combined.turns
+    warnings: list[str] = list(combined.warnings)
 
     # Build per-source line arrays for line_range computation and char indexing.
     source_lines: dict[str, list[str]] = {}
     source_text: dict[str, str] = {}
     for t in raw_turns:
-        src = t["source"]
+        src = t.source
         if src not in source_lines:
             with open(src, encoding="utf-8") as fh:
                 raw = fh.read().replace("\r\n", "\n").replace("\r", "\n")
@@ -107,15 +107,15 @@ def extract_story_data(
     metadata = parse_header(header_text)
 
     # Parse each turn — compute line_range relative to its source file.
-    parsed_turns: list[dict] = []
+    parsed_turns: list[Turn] = []
     for t in raw_turns:
-        number = t["number"]
-        content = t["content"]
-        src = t["source"]
+        number = t.number
+        content = t.content
+        src = t.source
 
         sections = parse_turn_sections(content, number)
-        tracked = parse_tracked_items(sections["tracked_items"])
-        hidden = parse_tracked_items(sections["hidden_tracked_items"])
+        tracked = parse_tracked_items(sections.tracked_items)
+        hidden = parse_tracked_items(sections.hidden_tracked_items)
 
         # Compute line_range: find the turn marker in the source file.
         src_lines = source_lines[src]
@@ -148,26 +148,24 @@ def extract_story_data(
             line_range = (start_line, end_line)
 
         parsed_turns.append(
-            {
-                "number": number,
-                "action": sections["action"],
-                "outcome": sections["outcome"],
-                "secret_info": sections["secret_info"],
-                "tracked_items": tracked,
-                "hidden_tracked_items": hidden,
-                "source": src,
-                "line_range": line_range,
-            }
+            Turn(
+                number=number,
+                action=sections.action,
+                outcome=sections.outcome,
+                secret_info=sections.secret_info,
+                tracked_items=tracked,
+                hidden_tracked_items=hidden,
+                source=src,
+                line_range=line_range,
+            )
         )
 
-    # Build Turn models and TurnIndex.
-    turn_models = [Turn(**t) for t in parsed_turns]
-    turn_index = TurnIndex(turns=turn_models)
+    # Build TurnIndex directly from the parsed Turn models.
+    turn_index = TurnIndex(turns=parsed_turns)
 
     # Build tracked_state (only if any tracked items found).
     has_tracked = any(
-        t["tracked_items"] is not None or t["hidden_tracked_items"] is not None
-        for t in parsed_turns
+        t.tracked_items is not None or t.hidden_tracked_items is not None for t in parsed_turns
     )
     tracked_state: TrackedState | None = None
     if has_tracked:
@@ -189,15 +187,15 @@ def extract_story_data(
         files_written.append("character_index.json")
 
     # Derive summary fields (spec §3 contract).
-    numbers = [t["number"] for t in parsed_turns]
+    numbers = [t.number for t in parsed_turns]
     turn_range = TurnRange(min=min(numbers), max=max(numbers))
-    has_tracked_items = any(t["tracked_items"] is not None for t in parsed_turns)
-    has_hidden_items = any(t["hidden_tracked_items"] is not None for t in parsed_turns)
+    has_tracked_items = any(t.tracked_items is not None for t in parsed_turns)
+    has_hidden_items = any(t.hidden_tracked_items is not None for t in parsed_turns)
 
     # Provenance: group turn numbers by source file (first-appearance order).
     sources_map: dict[str, list[int]] = {}
     for t in parsed_turns:
-        sources_map.setdefault(t["source"], []).append(t["number"])
+        sources_map.setdefault(t.source, []).append(t.number)
     sources = [Source(path=src, turns=sorted(nums)) for src, nums in sources_map.items()]
 
     # Build the manifest model (pure camelCase on disk).

@@ -8,7 +8,7 @@ import pytest
 from iw_architect.story.extract import extract_story_data
 from iw_architect.story.models import ExtractionSummary
 
-FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
+FIXTURES = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 
 
 def fixture(name: str) -> str:

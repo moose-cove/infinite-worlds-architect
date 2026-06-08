@@ -15,7 +15,7 @@ from iw_architect.story.models import (
 )
 from iw_architect.story.query import query_story_data
 
-FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
+FIXTURES = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 
 
 def fixture(name: str) -> str:
@@ -154,24 +154,24 @@ class TestQueryTrackedState:
 class TestQueryTurnDetail:
     def test_returns_turn_detail_list(self, extracted):
         result = query_story_data(extracted, "turn_detail", turns=["1"])
-        assert "turn_detail" in result
-        assert len(result["turn_detail"]) == 1
+        assert hasattr(result, "turn_detail")
+        assert len(result.turn_detail) == 1
 
     def test_turn_detail_model_attrs(self, extracted):
         result = query_story_data(extracted, "turn_detail", turns=["1"])
-        detail = result["turn_detail"][0]
+        detail = result.turn_detail[0]
         assert detail.turn == 1
         assert isinstance(detail.raw, str)
         assert len(detail.raw) > 0
 
     def test_turn_detail_contains_source_path(self, extracted):
         result = query_story_data(extracted, "turn_detail", turns=["2"])
-        detail = result["turn_detail"][0]
+        detail = result.turn_detail[0]
         assert os.path.isabs(detail.source)
 
     def test_turn_detail_last(self, extracted):
         result = query_story_data(extracted, "turn_detail", turns=["last"])
-        detail = result["turn_detail"][0]
+        detail = result.turn_detail[0]
         assert detail.turn == 5
 
     def test_turn_detail_requires_turns_arg(self, extracted):

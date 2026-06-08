@@ -7,7 +7,7 @@ Supports 6 categories:
 - ``tracked_state``   — return TrackedState model (optionally filtered by turns)
 - ``turn_detail``     — NOT a stored file; re-reads source lines from
                         ``turn_index.json`` lineRange (raw, unparsed); returns
-                        ``{"turn_detail": [TurnDetail, ...]}``
+                        a ``TurnDetailResult`` model
 - ``character_index`` — return CharacterIndex model
 
 The ``turns`` parameter accepts a list of strings; each element may be an
@@ -35,6 +35,7 @@ from iw_architect.story.models import (
     Metadata,
     TrackedState,
     TurnDetail,
+    TurnDetailResult,
     TurnIndex,
 )
 
@@ -60,7 +61,7 @@ def query_story_data(
     extraction_dir: str,
     category: str,
     turns: list[str] | None = None,
-) -> Manifest | Metadata | TurnIndex | TrackedState | CharacterIndex | dict:
+) -> Manifest | Metadata | TurnIndex | TrackedState | CharacterIndex | TurnDetailResult:
     """Query structured extraction output.
 
     Parameters
@@ -77,9 +78,10 @@ def query_story_data(
 
     Returns
     -------
-    A pydantic model for the queried category, or ``{"turn_detail": [...]}``
-    for ``turn_detail``.  All models expose snake_case attributes; serialise
-    with ``model_dump(by_alias=True)`` for camelCase JSON.
+    A pydantic model for the queried category (``turn_detail`` returns a
+    :class:`~iw_architect.story.models.TurnDetailResult`).  All models expose
+    snake_case attributes; serialise with ``model_dump(by_alias=True)`` for
+    camelCase JSON.
 
     Raises
     ------
@@ -169,4 +171,4 @@ def query_story_data(
             )
         )
 
-    return {"turn_detail": details}
+    return TurnDetailResult(turn_detail=details)
