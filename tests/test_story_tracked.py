@@ -1,5 +1,6 @@
 """Tests for iw_architect.story.tracked."""
 
+from iw_architect.story.models import Snapshot
 from iw_architect.story.tracked import generate_snapshots, parse_tracked_items
 
 
@@ -51,8 +52,10 @@ class TestParseTrackedItems:
 
 class TestGenerateSnapshots:
     def _make_turns(self, states):
-        """states: list of (number, tracked, hidden)."""
-        return [{"number": n, "trackedItems": t, "hiddenTrackedItems": h} for n, t, h in states]
+        """states: list of (number, tracked, hidden).
+        Uses snake_case keys as extract.py now produces.
+        """
+        return [{"number": n, "tracked_items": t, "hidden_tracked_items": h} for n, t, h in states]
 
     def test_empty_turns(self):
         assert generate_snapshots([]) == []
@@ -61,7 +64,7 @@ class TestGenerateSnapshots:
         turns = self._make_turns([(1, {"HP": "10"}, None)])
         result = generate_snapshots(turns)
         expected = [
-            {"fromTurn": 1, "toTurn": 1, "trackedItems": {"HP": "10"}, "hiddenTrackedItems": None}
+            Snapshot(from_turn=1, to_turn=1, tracked_items={"HP": "10"}, hidden_tracked_items=None)
         ]
         assert result == expected
 
@@ -69,7 +72,7 @@ class TestGenerateSnapshots:
         turns = self._make_turns([(1, {"HP": "10"}, None), (2, {"HP": "10"}, None)])
         result = generate_snapshots(turns)
         expected = [
-            {"fromTurn": 1, "toTurn": 2, "trackedItems": {"HP": "10"}, "hiddenTrackedItems": None}
+            Snapshot(from_turn=1, to_turn=2, tracked_items={"HP": "10"}, hidden_tracked_items=None)
         ]
         assert result == expected
 
@@ -85,8 +88,8 @@ class TestGenerateSnapshots:
         )
         result = generate_snapshots(turns)
         assert result == [
-            {"fromTurn": 1, "toTurn": 2, "trackedItems": {"HP": "10"}, "hiddenTrackedItems": None},
-            {"fromTurn": 3, "toTurn": 4, "trackedItems": {"HP": "8"}, "hiddenTrackedItems": None},
+            Snapshot(from_turn=1, to_turn=2, tracked_items={"HP": "10"}, hidden_tracked_items=None),
+            Snapshot(from_turn=3, to_turn=4, tracked_items={"HP": "8"}, hidden_tracked_items=None),
         ]
 
     def test_change_every_turn(self):
@@ -95,14 +98,10 @@ class TestGenerateSnapshots:
         )
         result = generate_snapshots(turns)
         assert len(result) == 3
-        snap0 = {
-            "fromTurn": 1,
-            "toTurn": 1,
-            "trackedItems": {"HP": "10"},
-            "hiddenTrackedItems": None,
-        }
-        assert result[0] == snap0
-        assert result[2]["toTurn"] == 3
+        assert result[0] == Snapshot(
+            from_turn=1, to_turn=1, tracked_items={"HP": "10"}, hidden_tracked_items=None
+        )
+        assert result[2].to_turn == 3
 
     def test_none_vs_empty_dict_differ(self):
         # None (absent) != {} (empty section)
@@ -115,8 +114,8 @@ class TestGenerateSnapshots:
         states = [(3, {"HP": "8"}, None), (1, {"HP": "10"}, None), (2, {"HP": "10"}, None)]
         turns = self._make_turns(states)
         result = generate_snapshots(turns)
-        assert result[0]["fromTurn"] == 1
-        assert result[0]["toTurn"] == 2
+        assert result[0].from_turn == 1
+        assert result[0].to_turn == 2
 
     def test_starting_tracked_items_not_involved(self):
         """Starting Tracked Items from the header is metadata only; not an input here."""
@@ -124,7 +123,7 @@ class TestGenerateSnapshots:
         result = generate_snapshots(turns)
         # Should be a single snapshot, seeded from Turn 1's state.
         assert len(result) == 1
-        assert result[0]["fromTurn"] == 1
+        assert result[0].from_turn == 1
 
     def test_hidden_tracked_change_triggers_snapshot(self):
         turns = self._make_turns(

@@ -10,9 +10,11 @@ Writes up to 5 files atomically into ``extraction_dir``:
 Atomic write: temp file ``extraction_dir/.tmp-<name>.json`` → ``os.replace``
 (same filesystem, so the replace is atomic on POSIX and on Windows Vista+).
 
-Returns a camelCase summary dict; ``manifest.json`` on disk mirrors it plus a
-snake ``total_turns`` key (used by ``query_story_data`` to resolve ``"last"``)
-and a ``sources`` provenance list (spec §3).
+Returns an :class:`~iw_architect.story.models.ExtractionSummary` model.
+Access fields via snake_case attributes (``summary.total_turns``).
+``manifest.json`` on disk is pure camelCase (via ``Manifest.model_dump(by_alias=True)``),
+no ``total_turns`` snake key — ``query_story_data`` reads ``totalTurns`` and accesses
+it via the model's ``total_turns`` attribute after parsing.
 
 Re-run is idempotent — previous output files are overwritten.
 """
@@ -25,6 +27,15 @@ import os
 from iw_architect.story.characters import index_characters
 from iw_architect.story.combine import combine
 from iw_architect.story.header import parse_header
+from iw_architect.story.models import (
+    ExtractionSummary,
+    Manifest,
+    Source,
+    TrackedState,
+    Turn,
+    TurnIndex,
+    TurnRange,
+)
 from iw_architect.story.sections import parse_turn_sections
 from iw_architect.story.tracked import generate_snapshots, parse_tracked_items
 
@@ -42,7 +53,7 @@ def extract_story_data(
     input_paths: list[str],
     extraction_dir: str,
     character_list: list[dict] | None = None,
-) -> dict:
+) -> ExtractionSummary:
     """Extract a story export set and write structured JSON output files.
 
     Parameters
@@ -58,8 +69,10 @@ def extract_story_data(
 
     Returns
     -------
-    camelCase summary dict per spec §3 (``manifest.json`` on disk mirrors it
-    plus snake ``total_turns`` and ``sources``).
+    :class:`~iw_architect.story.models.ExtractionSummary` with snake_case
+    attributes.  Access fields as ``summary.total_turns``,
+    ``summary.turn_range.min``, etc.  Serialise with
+    ``model_dump(by_alias=True)`` for the camelCase API shape.
 
     Notes
     -----
@@ -78,7 +91,7 @@ def extract_story_data(
     raw_turns = combined["turns"]
     warnings: list[str] = list(combined["warnings"])
 
-    # Build per-source line arrays for lineRange computation and char indexing.
+    # Build per-source line arrays for line_range computation and char indexing.
     source_lines: dict[str, list[str]] = {}
     source_text: dict[str, str] = {}
     for t in raw_turns:
@@ -89,11 +102,10 @@ def extract_story_data(
             source_lines[src] = raw.split("\n")
             source_text[src] = raw
 
-    # Parse metadata from header.
+    # Parse metadata from header — returns a Metadata model.
     metadata = parse_header(header_text)
-    metadata["objective"] = None
 
-    # Parse each turn — compute lineRange relative to its source file.
+    # Parse each turn — compute line_range relative to its source file.
     parsed_turns: list[dict] = []
     for t in raw_turns:
         number = t["number"]
@@ -101,10 +113,10 @@ def extract_story_data(
         src = t["source"]
 
         sections = parse_turn_sections(content, number)
-        tracked = parse_tracked_items(sections["trackedItems"])
-        hidden = parse_tracked_items(sections["hiddenTrackedItems"])
+        tracked = parse_tracked_items(sections["tracked_items"])
+        hidden = parse_tracked_items(sections["hidden_tracked_items"])
 
-        # Compute lineRange: find the turn marker in the source file.
+        # Compute line_range: find the turn marker in the source file.
         src_lines = source_lines[src]
         marker = f"-- Turn {number} --"
         start_line = None
@@ -115,7 +127,7 @@ def extract_story_data(
 
         if start_line is None:
             # Fallback: shouldn't happen if combine worked correctly.
-            line_range = [1, 1]
+            line_range = (1, 1)
         else:
             # end_line: last non-empty line before next turn marker or EOF.
             next_marker_line = None
@@ -132,32 +144,34 @@ def extract_story_data(
             # Trim trailing blank lines.
             while end_line > start_line and not src_lines[end_line - 1].strip():
                 end_line -= 1
-            line_range = [start_line, end_line]
+            line_range = (start_line, end_line)
 
         parsed_turns.append(
             {
                 "number": number,
                 "action": sections["action"],
                 "outcome": sections["outcome"],
-                "secretInfo": sections["secretInfo"],
-                "trackedItems": tracked,
-                "hiddenTrackedItems": hidden,
+                "secret_info": sections["secret_info"],
+                "tracked_items": tracked,
+                "hidden_tracked_items": hidden,
                 "source": src,
-                "lineRange": line_range,
+                "line_range": line_range,
             }
         )
 
-    # Build turn_index.
-    turn_index = {"turns": parsed_turns}
+    # Build Turn models and TurnIndex.
+    turn_models = [Turn(**t) for t in parsed_turns]
+    turn_index = TurnIndex(turns=turn_models)
 
     # Build tracked_state (only if any tracked items found).
     has_tracked = any(
-        t["trackedItems"] is not None or t["hiddenTrackedItems"] is not None for t in parsed_turns
+        t["tracked_items"] is not None or t["hidden_tracked_items"] is not None
+        for t in parsed_turns
     )
-    tracked_state = None
+    tracked_state: TrackedState | None = None
     if has_tracked:
         snapshots = generate_snapshots(parsed_turns)
-        tracked_state = {"snapshots": snapshots}
+        tracked_state = TrackedState(snapshots=snapshots)
 
     # Build character_index (only if character_list provided).
     char_index = None
@@ -166,7 +180,7 @@ def extract_story_data(
         char_index, char_warnings = index_characters(parsed_turns, source_text, character_list)
     warnings.extend(char_warnings)
 
-    # Build the written-files list (camelCase per spec §3).
+    # Build the written-files list.
     files_written: list[str] = ["manifest.json", "metadata.json", "turn_index.json"]
     if tracked_state is not None:
         files_written.append("tracked_state.json")
@@ -175,38 +189,52 @@ def extract_story_data(
 
     # Derive summary fields (spec §3 contract).
     numbers = [t["number"] for t in parsed_turns]
-    turn_range = {"min": min(numbers), "max": max(numbers)}
-    has_tracked_items = any(t["trackedItems"] is not None for t in parsed_turns)
-    has_hidden_items = any(t["hiddenTrackedItems"] is not None for t in parsed_turns)
+    turn_range = TurnRange(min=min(numbers), max=max(numbers))
+    has_tracked_items = any(t["tracked_items"] is not None for t in parsed_turns)
+    has_hidden_items = any(t["hidden_tracked_items"] is not None for t in parsed_turns)
 
     # Provenance: group turn numbers by source file (first-appearance order).
     sources_map: dict[str, list[int]] = {}
     for t in parsed_turns:
         sources_map.setdefault(t["source"], []).append(t["number"])
-    sources = [{"path": src, "turns": sorted(nums)} for src, nums in sources_map.items()]
+    sources = [Source(path=src, turns=sorted(nums)) for src, nums in sources_map.items()]
 
-    # Return dict: camelCase API shape, NO `success` key (failure is signalled by
-    # the MCP wrapper's bare {"error": ...}).
-    summary = {
-        "totalTurns": len(parsed_turns),
-        "turnRange": turn_range,
-        "inputFilesProcessed": len(input_paths),
-        "hasTrackedItems": has_tracked_items,
-        "hasHiddenTrackedItems": has_hidden_items,
-        "filesWritten": files_written,
-        "warnings": warnings,
-    }
-    # On-disk manifest mirrors the summary plus snake `total_turns` (for the
-    # query "last" lookup) and `sources` provenance.
-    manifest = {**summary, "total_turns": len(parsed_turns), "sources": sources}
+    # Build the manifest model (pure camelCase on disk).
+    manifest = Manifest(
+        total_turns=len(parsed_turns),
+        turn_range=turn_range,
+        input_files_processed=len(input_paths),
+        has_tracked_items=has_tracked_items,
+        has_hidden_tracked_items=has_hidden_items,
+        files_written=files_written,
+        warnings=warnings,
+        sources=sources,
+    )
 
-    # Write files atomically.
-    _atomic_write(extraction_dir, "manifest", manifest)
-    _atomic_write(extraction_dir, "metadata", metadata)
-    _atomic_write(extraction_dir, "turn_index", turn_index)
+    # Write files atomically (all camelCase via model_dump).
+    _atomic_write(extraction_dir, "manifest", manifest.model_dump(by_alias=True, mode="json"))
+    _atomic_write(extraction_dir, "metadata", metadata.model_dump(by_alias=True, mode="json"))
+    _atomic_write(extraction_dir, "turn_index", turn_index.model_dump(by_alias=True, mode="json"))
     if tracked_state is not None:
-        _atomic_write(extraction_dir, "tracked_state", tracked_state)
+        _atomic_write(
+            extraction_dir,
+            "tracked_state",
+            tracked_state.model_dump(by_alias=True, mode="json"),
+        )
     if char_index is not None:
-        _atomic_write(extraction_dir, "character_index", char_index)
+        _atomic_write(
+            extraction_dir,
+            "character_index",
+            char_index.model_dump(by_alias=True, mode="json"),
+        )
 
-    return summary
+    # Return ExtractionSummary (no sources — that's Manifest-only).
+    return ExtractionSummary(
+        total_turns=len(parsed_turns),
+        turn_range=turn_range,
+        input_files_processed=len(input_paths),
+        has_tracked_items=has_tracked_items,
+        has_hidden_tracked_items=has_hidden_items,
+        files_written=files_written,
+        warnings=warnings,
+    )

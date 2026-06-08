@@ -2,22 +2,24 @@
 
 Header format (spec §2):
 - ``== Title ==``                              → ``title``
-- ``-- Story Background --`` block            → ``storyBackground``
+- ``-- Story Background --`` block            → ``story_background``
 - ``-- Character --`` block with sub-sections:
     - ``Name\\n----``                          → ``character.name``
     - ``Background\\n----``                    → ``character.background``
     - ``Skills\\n----``                        → ``character.skills``
-    - ``Starting Tracked Items\\n----``        → ``character.startingTrackedItems``
+    - ``Starting Tracked Items\\n----``        → ``character.starting_tracked_items``
       (optional; parse with ``parse_tracked_items``; absent → ``None``)
 
-The caller sets ``metadata["objective"] = None`` after calling this function;
-this function does NOT produce an ``objective`` key.
-
-Returns the ``metadata.json`` shape minus ``objective``.
+Returns a :class:`~iw_architect.story.models.Metadata` model (``objective``
+defaults to ``None``).  Serialise with ``model_dump(by_alias=True)`` to get
+the camelCase ``metadata.json`` shape.
 """
+
+from __future__ import annotations
 
 import re
 
+from iw_architect.story.models import Character, Metadata
 from iw_architect.story.tracked import parse_tracked_items
 
 _TITLE_RE = re.compile(r"^== (.+?) ==$", re.MULTILINE)
@@ -47,8 +49,8 @@ def _extract_subsection(text: str, label: str) -> str | None:
     return None
 
 
-def parse_header(header_text: str) -> dict:
-    """Parse the header block into a metadata dict (without ``objective``).
+def parse_header(header_text: str) -> Metadata:
+    """Parse the header block into a :class:`~iw_architect.story.models.Metadata` model.
 
     Parameters
     ----------
@@ -57,9 +59,10 @@ def parse_header(header_text: str) -> dict:
 
     Returns
     -------
-    dict with keys ``title``, ``storyBackground``, ``character`` (with sub-keys
-    ``name``, ``background``, ``skills``, ``startingTrackedItems``).
-    The caller must set ``objective = None``.
+    :class:`~iw_architect.story.models.Metadata` with snake_case attributes.
+    ``objective`` is always ``None``.  Serialise with
+    ``model_dump(by_alias=True)`` to produce the camelCase ``metadata.json``
+    shape.
     """
     # Extract title (absent → None per §3 "string|null").
     title_match = _TITLE_RE.search(header_text)
@@ -80,13 +83,14 @@ def parse_header(header_text: str) -> dict:
     starting_raw = _extract_subsection(char_block, "Starting Tracked Items")
     starting_tracked = parse_tracked_items(starting_raw) if starting_raw is not None else None
 
-    return {
-        "title": title,
-        "storyBackground": story_background,
-        "character": {
-            "name": char_name,
-            "background": char_background,
-            "skills": char_skills,
-            "startingTrackedItems": starting_tracked,
-        },
-    }
+    character = Character(
+        name=char_name,
+        background=char_background,
+        skills=char_skills,
+        starting_tracked_items=starting_tracked,
+    )
+    return Metadata(
+        title=title,
+        story_background=story_background,
+        character=character,
+    )

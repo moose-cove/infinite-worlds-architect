@@ -3,15 +3,15 @@
 Section name normalisation (spec §2):
 - ``action``            → ``action``          (Turn 1 → ``None``)
 - ``outcome``           → ``outcome``
-- ``secret information``→ ``secretInfo``
-- ``tracked items``     → ``trackedItems``
-- ``hidden tracked items`` → ``hiddenTrackedItems``
+- ``secret information``→ ``secret_info``
+- ``tracked items``     → ``tracked_items``
+- ``hidden tracked items`` → ``hidden_tracked_items``
 - anything else         → ignored
 
 Section header format: ``Name\n----`` (≥4 dashes).
 
-Returns a dict with those five keys; absent sections → ``None``.
-The ``trackedItems`` and ``hiddenTrackedItems`` values are the raw section
+Returns a dict with those five snake_case keys; absent sections → ``None``.
+The ``tracked_items`` and ``hidden_tracked_items`` values are the raw section
 text strings (``parse_tracked_items`` does the further parsing).
 """
 
@@ -22,9 +22,9 @@ _SECTION_HEADER = re.compile(r"^([^\n]+)\n-{4,}", re.MULTILINE)
 _NORM: dict[str, str] = {
     "action": "action",
     "outcome": "outcome",
-    "secret information": "secretInfo",
-    "tracked items": "trackedItems",
-    "hidden tracked items": "hiddenTrackedItems",
+    "secret information": "secret_info",
+    "tracked items": "tracked_items",
+    "hidden tracked items": "hidden_tracked_items",
 }
 
 
@@ -57,10 +57,10 @@ def parse_turn_sections(turn_content: str, turn_number: int) -> dict:
 
     Returns
     -------
-    dict with keys ``action``, ``outcome``, ``secretInfo``, ``trackedItems``,
-    ``hiddenTrackedItems``.  Any absent section is ``None``.  ``trackedItems``
-    and ``hiddenTrackedItems`` are raw strings for further parsing by
-    ``parse_tracked_items``.
+    dict with snake_case keys ``action``, ``outcome``, ``secret_info``,
+    ``tracked_items``, ``hidden_tracked_items``.  Any absent section is
+    ``None``.  ``tracked_items`` and ``hidden_tracked_items`` are raw strings
+    for further parsing by ``parse_tracked_items``.
     """
     sections = _extract_sections(turn_content)
 
@@ -78,7 +78,7 @@ def parse_turn_sections(turn_content: str, turn_number: int) -> dict:
         if not outcome:
             outcome = None
 
-    secret_info = sections.get("secretInfo")
+    secret_info = sections.get("secret_info")
     if secret_info is not None:
         secret_info = secret_info.strip()
         if not secret_info:
@@ -87,7 +87,7 @@ def parse_turn_sections(turn_content: str, turn_number: int) -> dict:
     return {
         "action": action,
         "outcome": outcome,
-        "secretInfo": secret_info,
-        "trackedItems": sections.get("trackedItems"),
-        "hiddenTrackedItems": sections.get("hiddenTrackedItems"),
+        "secret_info": secret_info,
+        "tracked_items": sections.get("tracked_items"),
+        "hidden_tracked_items": sections.get("hidden_tracked_items"),
     }

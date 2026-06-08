@@ -13,12 +13,17 @@
     - An entirely empty section (no key lines) → ``None`` (not ``{}``).
 
 ``generate_snapshots(parsed_turns)``
-    Snapshot-on-change over ``(trackedItems, hiddenTrackedItems)`` per turn.
+    Snapshot-on-change over ``(tracked_items, hidden_tracked_items)`` per turn.
     Seeded from Turn 1 (NOT from the header's Starting Tracked Items).
     Emits a final snapshot through the max turn.
+    Returns a list of :class:`~iw_architect.story.models.Snapshot` objects.
 """
 
+from __future__ import annotations
+
 import re
+
+from iw_architect.story.models import Snapshot
 
 _KEY_RE = re.compile(r"^(?P<key>[^\n:][^\n]*?):[ \t]*$", re.MULTILINE)
 
@@ -56,22 +61,20 @@ def parse_tracked_items(section_text: str | None) -> dict | None:
     return result
 
 
-def generate_snapshots(parsed_turns: list[dict]) -> list[dict]:
+def generate_snapshots(parsed_turns: list[dict]) -> list[Snapshot]:
     """Build snapshot-on-change list over the tracked-state pair per turn.
 
     Parameters
     ----------
     parsed_turns:
-        List of turn dicts, each with at least ``number``, ``trackedItems``
-        (``dict | None``), ``hiddenTrackedItems`` (``dict | None``).
+        List of turn dicts, each with at least ``number``, ``tracked_items``
+        (``dict | None``), ``hidden_tracked_items`` (``dict | None``).
         Sorted ascending by ``number`` defensively.
 
     Returns
     -------
-    List of snapshot dicts::
-
-        [{"fromTurn": int, "toTurn": int,
-          "trackedItems": dict | None, "hiddenTrackedItems": dict | None}]
+    List of :class:`~iw_architect.story.models.Snapshot` objects (snake_case
+    attributes; serialise with ``model_dump(by_alias=True)`` for camelCase JSON).
 
     An empty ``parsed_turns`` list returns ``[]``.
 
@@ -82,22 +85,22 @@ def generate_snapshots(parsed_turns: list[dict]) -> list[dict]:
 
     turns = sorted(parsed_turns, key=lambda t: t["number"])
 
-    snapshots: list[dict] = []
+    snapshots: list[Snapshot] = []
     first = turns[0]
-    prev_state = (first.get("trackedItems"), first.get("hiddenTrackedItems"))
+    prev_state = (first.get("tracked_items"), first.get("hidden_tracked_items"))
     run_start = first["number"]
     prev_number = first["number"]
 
     for turn in turns[1:]:
-        cur_state = (turn.get("trackedItems"), turn.get("hiddenTrackedItems"))
+        cur_state = (turn.get("tracked_items"), turn.get("hidden_tracked_items"))
         if cur_state != prev_state:
             snapshots.append(
-                {
-                    "fromTurn": run_start,
-                    "toTurn": prev_number,
-                    "trackedItems": prev_state[0],
-                    "hiddenTrackedItems": prev_state[1],
-                }
+                Snapshot(
+                    from_turn=run_start,
+                    to_turn=prev_number,
+                    tracked_items=prev_state[0],
+                    hidden_tracked_items=prev_state[1],
+                )
             )
             run_start = turn["number"]
             prev_state = cur_state
@@ -105,12 +108,12 @@ def generate_snapshots(parsed_turns: list[dict]) -> list[dict]:
 
     # Always emit a final snapshot through the max turn.
     snapshots.append(
-        {
-            "fromTurn": run_start,
-            "toTurn": turns[-1]["number"],
-            "trackedItems": prev_state[0],
-            "hiddenTrackedItems": prev_state[1],
-        }
+        Snapshot(
+            from_turn=run_start,
+            to_turn=turns[-1]["number"],
+            tracked_items=prev_state[0],
+            hidden_tracked_items=prev_state[1],
+        )
     )
 
     return snapshots

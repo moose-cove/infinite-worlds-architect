@@ -26,16 +26,16 @@ class TestTurn1:
 
     def test_secret_info_present(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["secretInfo"] == "The safe is empty."
+        assert result["secret_info"] == "The safe is empty."
 
     def test_tracked_items_raw_string(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["trackedItems"] is not None
-        assert "HP" in result["trackedItems"]
+        assert result["tracked_items"] is not None
+        assert "HP" in result["tracked_items"]
 
     def test_hidden_tracked_items_none(self):
         result = parse_turn_sections(TURN1_BODY, 1)
-        assert result["hiddenTrackedItems"] is None
+        assert result["hidden_tracked_items"] is None
 
 
 class TestTurn2:
@@ -49,24 +49,24 @@ class TestTurn2:
 
     def test_secret_info_none_when_absent(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        assert result["secretInfo"] is None
+        assert result["secret_info"] is None
 
     def test_tracked_items_raw_contains_keys(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        raw = result["trackedItems"]
+        raw = result["tracked_items"]
         assert "Key Count" in raw
         assert "Notes" in raw
 
     def test_hidden_tracked_items_none_when_absent(self):
         result = parse_turn_sections(TURN2_BODY, 2)
-        assert result["hiddenTrackedItems"] is None
+        assert result["hidden_tracked_items"] is None
 
 
 class TestSectionNormalisation:
     def test_secret_information_normalised(self):
         body = "\nSecret Information\n------------------\nHidden truth.\n"
         result = parse_turn_sections(body, 3)
-        assert result["secretInfo"] == "Hidden truth."
+        assert result["secret_info"] == "Hidden truth."
 
     def test_hidden_tracked_items_normalised(self):
         body = (
@@ -75,8 +75,8 @@ class TestSectionNormalisation:
             "Hidden Tracked Items\n--------------------\nSecret:\n42\n"
         )
         result = parse_turn_sections(body, 2)
-        assert result["hiddenTrackedItems"] is not None
-        assert "Secret" in result["hiddenTrackedItems"]
+        assert result["hidden_tracked_items"] is not None
+        assert "Secret" in result["hidden_tracked_items"]
 
     def test_unknown_sections_ignored(self):
         body = (
