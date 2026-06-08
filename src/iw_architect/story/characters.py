@@ -27,6 +27,20 @@ def _build_pattern(name: str, aliases: list[str]) -> re.Pattern:
     return re.compile(rf"\b(?:{combined})\b", re.IGNORECASE)
 
 
+def _build_context(text: str, start: int, end: int) -> str:
+    """Context window around a match: up to 100 chars before ``start`` and 100
+    after ``end``, each extended outward to a whole-word boundary so a word is
+    never cut mid-token (the window may exceed 100 chars per side as a result).
+    """
+    left = max(0, start - 100)
+    while left > 0 and not text[left - 1].isspace():
+        left -= 1
+    right = min(len(text), end + 100)
+    while right < len(text) and not text[right].isspace():
+        right += 1
+    return text[left:right]
+
+
 def index_characters(
     parsed_turns: list[dict],
     source_text: dict[str, str],
@@ -78,21 +92,24 @@ def index_characters(
             line_number = idx + 1  # 1-indexed
             for char_def in character_list:
                 name = char_def["name"]
-                if patterns[name].search(line_text):
-                    context = line_text[:100]
+                match = patterns[name].search(line_text)
+                if match:
+                    context = _build_context(line_text, match.start(), match.end())
                     mentions_map[name].append(
                         CharacterMention(turn=turn_number, line=line_number, context=context)
                     )
 
     total_mentions = sum(len(m) for m in mentions_map.values())
-    incomplete = any(len(m) == 0 for m in mentions_map.values())
 
-    if incomplete:
-        missing = [n for n, m in mentions_map.items() if len(m) == 0]
-        warnings.append(f"Characters with no mentions: {', '.join(missing)}")
+    # One warning per character that never matched (usually means the alias list
+    # is off). Absence of mentions is normal, so this is informational only;
+    # there is no `incomplete` flag — derive it from len(mentions) if needed.
+    for name, m in mentions_map.items():
+        if len(m) == 0:
+            warnings.append(f"Character '{name}' had no mentions in the story.")
 
     characters = {
-        name: CharacterEntry(name=name, aliases=aliases_map[name], mentions=mentions_map[name])
+        name: CharacterEntry(aliases=aliases_map[name], mentions=mentions_map[name])
         for name in mentions_map
     }
 
@@ -101,7 +118,6 @@ def index_characters(
             characters=characters,
             indexed_character_count=len(characters),
             total_mentions=total_mentions,
-            incomplete=incomplete,
         ),
         warnings,
     )

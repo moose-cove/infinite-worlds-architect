@@ -77,24 +77,60 @@ class TestIndexCharacters:
         char_index, _ = index_characters(turns, src_text, [{"name": "Ada", "aliases": ["Ace"]}])
         assert len(char_index.characters["Ada"].mentions) >= 1
 
-    def test_context_truncated_at_100(self):
+    def test_context_extends_to_whole_word(self):
+        # A long unbroken word adjacent to the match is included whole, even >100.
         source = "/fake/export.txt"
-        long_line = "Ada " + "x" * 200
-        entries = [(1, source, [1, 2], ["-- Turn 1 --", long_line])]
+        long_word = "x" * 150
+        line = f"Ada {long_word} end"
+        entries = [(1, source, [1, 1], [line])]
         turns = _make_turns(entries)
         src_text = _make_source_text(entries)
         char_index, _ = index_characters(turns, src_text, [{"name": "Ada", "aliases": []}])
-        for mention in char_index.characters["Ada"].mentions:
-            assert len(mention.context) <= 100
+        ctx = char_index.characters["Ada"].mentions[0].context
+        assert long_word in ctx  # whole word grabbed, not cut at 100
 
-    def test_incomplete_flag_when_no_mentions(self):
+    def test_context_bounded_around_match(self):
+        # ~100 chars before AND after the match — not the entire long line.
+        source = "/fake/export.txt"
+        far = "word " * 60  # 300 chars of short words on each side
+        line = far + "Ada " + far
+        entries = [(1, source, [1, 1], [line])]
+        turns = _make_turns(entries)
+        src_text = _make_source_text(entries)
+        char_index, _ = index_characters(turns, src_text, [{"name": "Ada", "aliases": []}])
+        ctx = char_index.characters["Ada"].mentions[0].context
+        assert "Ada" in ctx
+        assert len(ctx) < len(line)  # bounded — not the whole line
+        # ~100 before + match + ~100 after, plus small word-boundary slack
+        assert 150 <= len(ctx) <= 230
+
+    def test_context_left_extends_to_whole_word(self):
+        # A long unbroken word BEFORE the match is included whole (left boundary).
+        source = "/fake/export.txt"
+        long_word = "y" * 150
+        line = f"start {long_word} Ada end"
+        entries = [(1, source, [1, 1], [line])]
+        turns = _make_turns(entries)
+        src_text = _make_source_text(entries)
+        char_index, _ = index_characters(turns, src_text, [{"name": "Ada", "aliases": []}])
+        ctx = char_index.characters["Ada"].mentions[0].context
+        assert long_word in ctx  # whole preceding word grabbed, not cut at 100
+
+    def test_per_character_warning_when_no_mentions(self):
         source = "/fake/export.txt"
         entries = [(1, source, [1, 2], ["-- Turn 1 --", "Nobody is here."])]
         turns = _make_turns(entries)
         src_text = _make_source_text(entries)
-        char_index, warnings = index_characters(turns, src_text, [{"name": "Ada", "aliases": []}])
-        assert char_index.incomplete is True
-        assert len(warnings) >= 1
+        char_index, warnings = index_characters(
+            turns,
+            src_text,
+            [{"name": "Ada", "aliases": []}, {"name": "Bob", "aliases": []}],
+        )
+        # One warning per zero-mention character — no combined warning, no boolean.
+        assert len(warnings) == 2
+        assert any("Ada" in w for w in warnings)
+        assert any("Bob" in w for w in warnings)
+        assert not hasattr(char_index, "incomplete")
 
     def test_total_mentions_count(self):
         source = "/fake/export.txt"

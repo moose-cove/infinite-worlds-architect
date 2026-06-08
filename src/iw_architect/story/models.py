@@ -150,7 +150,6 @@ class CharacterMention(_Base):
 class CharacterEntry(_Base):
     """Entry for one character in the character index."""
 
-    name: str
     aliases: list[str]
     mentions: list[CharacterMention]
 
@@ -161,7 +160,6 @@ class CharacterIndex(_Base):
     characters: dict[str, CharacterEntry]
     indexed_character_count: int
     total_mentions: int
-    incomplete: bool
 
 
 # ---------------------------------------------------------------------------
