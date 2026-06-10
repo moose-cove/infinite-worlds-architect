@@ -51,7 +51,8 @@
       "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
       "mcp__plugin_context-mode_context-mode__ctx_search",
       "Bash(rtk find *)",
-      "mcp__plugin_context7_context7__resolve-library-id"
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_infinite-worlds-architect_iw-json-tools"
     ]
   }
 }
