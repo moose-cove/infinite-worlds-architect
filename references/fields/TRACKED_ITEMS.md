@@ -1,6 +1,6 @@
 # Field Guide: Tracked Items
 
-JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#4-trackeditems) §4.
+JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#4-trackeditems) §4.
 
 This file covers *authoring judgments* about tracked items: when to use them, how to choose `dataType` and `visibility`, what `updateInstructions` actually shape.
 
@@ -18,7 +18,7 @@ Tracked items are author-defined variables the storyteller AI monitors and updat
 **Update timing.** Auto-updates are written by the Storyteller AI *after*
 it has finished writing `outcomeDescription` and `secretInfo` for the turn
 (step 7 of the per-turn sequence — see
-[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+[`AI_RUNTIME_MECHANICS.md`](../../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 §3). The AI cannot read a tracked item's just-updated value during the
 same turn — it only sees the new value starting turn N+1.
 
@@ -97,4 +97,4 @@ The v2.1 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 
 **Cross-reference for trigger interaction.** Tracked items pair tightly with `triggerOnTrackedItem` conditions (for gating) and `effectSetTrackedItemValue` / `effectModifyTrackedItemDetails` effects (for modification). When designing a tracked item, consider what conditions will read it and what effects will write it — if neither exists, the item is dead weight.
 
-See also: [`FIELD_ALLOCATION_STRATEGY.md`](../FIELD_ALLOCATION_STRATEGY.md) on when to choose a tracked item vs. embedding state in `secretInfo` or `background`.
+See also: [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md) on when to choose a tracked item vs. embedding state in `secretInfo` or `background`.

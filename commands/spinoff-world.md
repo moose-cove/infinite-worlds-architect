@@ -13,10 +13,10 @@ You are helping an author create a **variant** of an existing Infinite Worlds wo
 
 The references in `references/` cover authoring judgments specific to spinoffs:
 
-- **Before changing any character** → read `references/CHARACTER_AUTHORING_GUARDRAILS.md`. Spinoffs especially benefit from the no-fabrication rule because the temptation is to "complete" thinly-sketched source characters by inventing detail. The source dossier is the floor, not a starting point to embellish. Premise changes don't license character changes — ask the author what carries forward and what doesn't.
-- **When deciding whether to keep or restructure source content** → read `references/FIELD_ALLOCATION_STRATEGY.md`. A spinoff with a different premise often needs content reallocated (e.g., the original's `background` describes the wrong setting; some of its `instructionBlocks` become irrelevant). Use the allocation rules to decide what to keep, what to move, and what to drop.
-- **When changing `instructions`, `authorStyle`, or any trigger that the spinoff inherits** → read `references/AI_RUNTIME_MECHANICS.md` to understand what those fields actually shape at runtime.
-- **For per-field judgment calls** → read the matching file in `references/sections/`.
+- **Before changing any character** → read `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`. Spinoffs especially benefit from the no-fabrication rule because the temptation is to "complete" thinly-sketched source characters by inventing detail. The source dossier is the floor, not a starting point to embellish. Premise changes don't license character changes — ask the author what carries forward and what doesn't.
+- **When deciding whether to keep or restructure source content** → read `references/guidance/FIELD_ALLOCATION_STRATEGY.md`. A spinoff with a different premise often needs content reallocated (e.g., the original's `background` describes the wrong setting; some of its `instructionBlocks` become irrelevant). Use the allocation rules to decide what to keep, what to move, and what to drop.
+- **When changing `instructions`, `authorStyle`, or any trigger that the spinoff inherits** → read `references/mechanics/AI_RUNTIME_MECHANICS.md` to understand what those fields actually shape at runtime.
+- **For per-field judgment calls** → read the matching file in `references/fields/`.
 
 ## Step 1 — Confirm paths
 
@@ -66,11 +66,11 @@ Follow the **modify-world** field-by-field approval loop on the target file:
 4. Edit
 5. Validate after each batch
 
-Key fields that usually diverge in a spinoff (read the matching section file in `references/sections/` before drafting changes):
-- `title`, `description`, `background` (see [`references/sections/INTRODUCING_THE_STORY.md`](../references/sections/INTRODUCING_THE_STORY.md)) — identify the variant clearly
-- `designNotes` (see [`references/sections/MAIN_INSTRUCTIONS.md`](../references/sections/MAIN_INSTRUCTIONS.md)) — record why this variant exists (not sent to AI)
-- Character `name` and `description` (see [`references/sections/PLAYER_CHARACTERS.md`](../references/sections/PLAYER_CHARACTERS.md) and [`references/CHARACTER_AUTHORING_GUARDRAILS.md`](../references/CHARACTER_AUTHORING_GUARDRAILS.md)) — if the protagonist changes
-- Tracked item initial values (see [`references/sections/TRACKED_ITEMS.md`](../references/sections/TRACKED_ITEMS.md)) — if mechanics differ
+Key fields that usually diverge in a spinoff (read the matching file in `references/fields/` before drafting changes):
+- `title`, `description`, `background` (see [`references/fields/INTRODUCING_THE_STORY.md`](../references/fields/INTRODUCING_THE_STORY.md)) — identify the variant clearly
+- `designNotes` (see [`references/fields/MAIN_INSTRUCTIONS.md`](../references/fields/MAIN_INSTRUCTIONS.md)) — record why this variant exists (not sent to AI)
+- Character `name` and `description` (see [`references/fields/PLAYER_CHARACTERS.md`](../references/fields/PLAYER_CHARACTERS.md) and [`references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`](../references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md)) — if the protagonist changes
+- Tracked item initial values (see [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md)) — if mechanics differ
 
 ## Step 5 — Validate and audit the variant
 

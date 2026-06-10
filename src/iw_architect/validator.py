@@ -199,6 +199,31 @@ def _check_position_in_list(world: dict, errors: list[str], warnings: list[str])
 _IMAGE_STYLE_DEFAULT = "photo_1"
 
 
+def _check_tracked_item_id_charset(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """Warn when a tracked-item id contains non-alphanumeric characters.
+
+    IW silently renames tracked-item IDs that contain non-alphanumeric characters (e.g. '+',
+    '/', '-') on import, WITHOUT updating trigger references — confirmed via import test (June
+    2026): 'trkPlus+1' was renamed to 'JOgXHlGyO' and 'trkSlsh/2' to 'Yi3bE076Q', leaving
+    8 dangling trigger references. Other entity kinds (EIB, KIB, trigger-event) survived '+/'
+    unchanged in the same test — so this warning is scoped to tracked items only.
+
+    mint_ids now emits alphanumeric-only IDs. This warning catches IDs authored by hand or
+    imported from older worlds.
+    """
+    _NON_ALNUM = re.compile(r"[^A-Za-z0-9]")
+    for ti in world.get("trackedItems", []):
+        tid = ti.get("id")
+        if tid and _NON_ALNUM.search(tid):
+            name = ti.get("name", "?")
+            warnings.append(
+                f"trackedItems[name={name!r}]: id {tid!r} contains non-alphanumeric characters. "
+                "IW silently renames such tracked-item IDs on import WITHOUT updating trigger "
+                "references, leaving dangling refs and broken triggers (confirmed import test, "
+                "June 2026). Use alphanumeric-only IDs (A-Za-z0-9)."
+            )
+
+
 def _check_null_image_fields(world: dict, errors: list[str], warnings: list[str]) -> None:
     """Warn when imageStyle is explicitly null.
 
@@ -660,6 +685,7 @@ def validate_world(world_path: str) -> str:
     _check_schema_version(world, errors, warnings)
     _check_duplicate_ids(world, errors, warnings)
     _check_position_in_list(world, errors, warnings)
+    _check_tracked_item_id_charset(world, errors, warnings)
     _check_null_image_fields(world, errors, warnings)
     _check_cross_field_invariants(world, errors, warnings)
     _check_logic_conditions(world, errors, warnings)

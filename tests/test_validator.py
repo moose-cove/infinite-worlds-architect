@@ -630,6 +630,82 @@ def test_compare_worlds_detects_change(tmp_path):
     assert result["total_changes"] > 0
 
 
+# ── Tracked-item ID charset warnings ──────────────────────────────────────────
+
+
+def _make_tracked_item(id_: str, name: str, position: int) -> dict:
+    return {
+        "id": id_,
+        "name": name,
+        "positionInList": position,
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+    }
+
+
+def test_tracked_item_non_alphanumeric_id_warns():
+    """A tracked-item id with '+' or '/' triggers a WARNING (not an error).
+
+    IW silently renames such IDs on import without updating trigger references,
+    leaving dangling refs — confirmed via import test (June 2026).
+    """
+    world = _base_world()
+    world["trackedItems"] = [_make_tracked_item("bad+id12", "Health", 0)]
+    result = _validate(world)
+    assert result["valid"], (
+        "Non-alphanumeric tracked-item id should warn, not error. Errors: " + str(result["errors"])
+    )
+    assert any("bad+id12" in w and "alphanumeric" in w.lower() for w in result["warnings"]), (
+        f"Expected alphanumeric warning for 'bad+id12'. Warnings: {result['warnings']}"
+    )
+
+
+def test_tracked_item_slash_id_warns():
+    """A tracked-item id containing '/' also triggers the charset warning."""
+    world = _base_world()
+    world["trackedItems"] = [_make_tracked_item("trkSlsh/2", "Mana", 0)]
+    result = _validate(world)
+    assert result["valid"]
+    assert any("trkSlsh/2" in w for w in result["warnings"]), (
+        f"Expected warning for 'trkSlsh/2'. Warnings: {result['warnings']}"
+    )
+
+
+def test_tracked_item_clean_id_no_charset_warning():
+    """A tracked-item id that is purely alphanumeric must not trigger the charset warning."""
+    world = _base_world()
+    world["trackedItems"] = [_make_tracked_item("trkClean3", "Stamina", 0)]
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("alphanumeric" in w.lower() and "trkClean3" in w for w in result["warnings"]), (
+        f"Unexpected charset warning for clean id. Warnings: {result['warnings']}"
+    )
+
+
+def test_eib_non_alphanumeric_id_does_not_warn():
+    """Instruction-block IDs with '+' or '/' must NOT trigger a charset warning.
+
+    EIB/KIB/trigger IDs with '+' or '/' were observed to survive IW import unchanged
+    in the same test where tracked-item IDs were silently renamed. Scoping the warning
+    to tracked items only prevents false positives on other entity kinds.
+    """
+    world = _base_world()
+    world["instructionBlocks"] = [
+        {
+            "id": "eibPlus+6",
+            "name": "Test EIB",
+            "positionInList": 0,
+            "content": "Some content",
+        }
+    ]
+    result = _validate(world)
+    # May have other errors (e.g. schema validation on EIB shape) but must not warn on charset
+    assert not any("eibPlus+6" in w and "alphanumeric" in w.lower() for w in result["warnings"]), (
+        f"Unexpected charset warning for EIB id. Warnings: {result['warnings']}"
+    )
+
+
 # ── KB v2.8 checks (recs 1–7 + rec 9 validator slice) ───────────────────────
 
 

@@ -2,7 +2,7 @@
 
 Covers: world-level `skills`, the `possibleCharacters` array, and the six `allowChangeCharacter*` permission booleans.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#2-possiblecharacters-player-characters) §2 and §7.
+For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#2-possiblecharacters-player-characters) §2 and §7.
 
 ---
 

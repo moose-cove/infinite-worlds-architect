@@ -2,7 +2,7 @@
 
 Covers: `title`, `description`, `background`, `firstInput`, `objective`.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1. For broader allocation rules see [`FIELD_ALLOCATION_STRATEGY.md`](../FIELD_ALLOCATION_STRATEGY.md).
+For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1. For broader allocation rules see [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md).
 
 ---
 
@@ -44,7 +44,7 @@ The initial situation and premise of the story. This field is powerful but **tim
 
 **Important: `effectChangeBackground` is Start-of-Game (SoG) only.** Confirmed by IW import testing (May 2026): in a regular (mid-game) trigger, IW silently ignores `effectChangeBackground` at runtime. Even if IW allowed it, the effect would be inert mid-game — `background` is only sent to the storyteller AI at turn 0; after ~turn 8 it is superseded by the Summary AI's running summary and the storyteller no longer sees raw `background` text. To change context or setting framing mid-game, use `effectChangeMainInstructions` (replaces the `instructions` block) or restate framing via `summaryRequest`.
 
-For the deeper rule against packing `background` with content that belongs elsewhere, see [`FIELD_ALLOCATION_STRATEGY.md`](../FIELD_ALLOCATION_STRATEGY.md#anti-patterns).
+For the deeper rule against packing `background` with content that belongs elsewhere, see [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md#anti-patterns).
 
 ---
 

@@ -6,6 +6,7 @@ import copy
 import json
 import os
 import secrets
+import string
 import uuid
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,7 @@ from iw_architect import KNOWN_SCHEMA_VERSION
 from iw_architect.paths import RelativePathError, relative_path_message, require_absolute
 
 # Platform ID formats derived from the v2.1 fixture samples:
-#   8-char: characters, triggers       — base64 character set (A-Za-z0-9+/)
+#   8-char: characters, triggers       — alphanumeric (A-Za-z0-9)
 #   9-char: NPCs, trackedItems, instruction/lore blocks — same character set
 #   UUID:   trigger conditions and effects
 _ENTITY_ID_LENGTHS: dict[str, int | None] = {
@@ -27,12 +28,16 @@ _ENTITY_ID_LENGTHS: dict[str, int | None] = {
     "loreBookEntry": 9,
 }
 
-_B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+# Alphanumeric-only charset (A-Za-z0-9, 62 chars).
+# Base64 chars (+, /) are intentionally excluded: IW silently renames tracked-item IDs that
+# contain non-alphanumeric characters on import (confirmed via import test, June 2026),
+# WITHOUT updating trigger references — leaving dangling refs and broken triggers.
+_ID_CHARS = string.ascii_letters + string.digits
 
 
 def _random_short_id(length: int) -> str:
     """Generate a random ID of the given length using the platform's observed character set."""
-    return "".join(secrets.choice(_B64_CHARS) for _ in range(length))
+    return "".join(secrets.choice(_ID_CHARS) for _ in range(length))
 
 
 def mint_ids(kind: str, count: int = 1) -> str:
