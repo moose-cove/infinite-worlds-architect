@@ -341,7 +341,7 @@
           "enum": ["everyone", "ai_only", "ai_only_boring", "player_only", "hidden"]
         },
         "initialPCValue": {
-          "description": "Initial value for this tracked item on this character. A string is a single fixed starting value. An array of strings is a pick-one selection menu offered to the player at character creation: the player chooses exactly one option, and that single choice becomes the item's active value. The array is NOT a multi-value state holding every option at once, nor a [min, max, default] tuple. Trigger conditions (triggerOnTrackedItem) therefore evaluate against the one chosen value, not the whole option list.",
+          "description": "Initial value for this tracked item on this character. A string is a single fixed starting value. An array of strings is a pick-one selection menu presented to the player at character selection: the player chooses exactly one option, and that single choice becomes the item's active value. The array is NOT a multi-value state holding every option at once, nor a [min, max, default] tuple. Trigger conditions (triggerOnTrackedItem) therefore evaluate against the one chosen value, not the whole option list.",
           "oneOf": [
             { "type": "string" },
             { "type": "array", "items": { "type": "string" } }
