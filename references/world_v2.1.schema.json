@@ -575,7 +575,7 @@
         },
         "effectFireRandomTrigger": {
           "data": "null or omitted",
-          "description": "Fire a random trigger from the world's trigger pool. Historically absent from the schema but confirmed working in real worlds. Ignored (stripped) in Start-of-Game triggers.",
+          "description": "Fire a random trigger (selection pool/weighting unconfirmed). Historically absent from the schema but confirmed working in real worlds. Ignored (stripped) in Start-of-Game triggers.",
           "x-iw-note": "KB-empirical: confirmed working in non-SoG triggers. Source: iw_knowledge_base_v2_8.md 'Import Test Results'."
         }
       }

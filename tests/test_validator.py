@@ -31,14 +31,16 @@ def _validate(world: dict) -> dict:
 
 def _base_world(**overrides) -> dict:
     """Minimal valid world scaffold for test mutations."""
-    import tempfile
-
     from iw_architect.tools.helpers import create_new_world_json
 
-    tmp = tempfile.mktemp(suffix=".json")
-    create_new_world_json(tmp, title="Test World")
-    world = json.loads(Path(tmp).read_text())
-    Path(tmp).unlink(missing_ok=True)
+    # NamedTemporaryFile(delete=False) instead of mktemp() — mktemp has a TOCTOU race.
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+        tmp_path = tmp.name
+    try:
+        create_new_world_json(tmp_path, title="Test World")
+        world = json.loads(Path(tmp_path).read_text())
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
     world.update(overrides)
     return world
 
@@ -670,7 +672,9 @@ def _trigger_world_with_condition(cond_data: dict) -> dict:
     return world
 
 
-def _trigger_world_with_effect(effect_type: str, effect_data, sog: bool = False) -> dict:
+def _trigger_world_with_effect(
+    effect_type: str, effect_data: dict | str | None, sog: bool = False
+) -> dict:
     """Helper: world with a trigger carrying a single effect."""
     world = _base_world()
     world["triggerEvents"] = [
@@ -824,6 +828,26 @@ def test_effect_request_input_all_keys_valid():
     )
 
 
+def test_effect_present_choice_non_dict_data_warns():
+    # rec 3: non-dict effectPresentChoice data is also malformed → WARNING
+    world = _trigger_world_with_effect("effectPresentChoice", "not a dict")
+    result = _validate(world)
+    assert result["valid"]
+    assert any("effectPresentChoice" in w and "not a dict" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+def test_effect_request_input_non_dict_data_warns():
+    # rec 3: non-dict effectRequestInput data is also malformed → WARNING
+    world = _trigger_world_with_effect("effectRequestInput", None)
+    result = _validate(world)
+    assert result["valid"]
+    assert any("effectRequestInput" in w and "not a dict" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
 # ── rec 4: effectFireRandomTrigger registered ────────────────────────────────
 
 
@@ -885,16 +909,24 @@ def test_non_empty_skills_no_warning():
     assert not any("skills" in w and "empty" in w for w in result["warnings"]), result["warnings"]
 
 
-def test_scaffold_skills_not_empty():
-    # rec 6: scaffold must seed at least one skill
-    import tempfile
+def test_empty_skills_with_hide_skill_system_warns():
+    # rec 6: empty skills + hideSkillSystem: true → still valid, but emits the
+    # hideSkillSystem-specific caveat warning (not the generic empty-skills one).
+    world = _base_world(skills=[], hideSkillSystem=True)
+    result = _validate(world)
+    assert result["valid"]
+    assert any("skills" in w and "hideSkillSystem" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
 
+
+def test_scaffold_skills_not_empty(tmp_path):
+    # rec 6: scaffold must seed at least one skill
     from iw_architect.tools.helpers import create_new_world_json
 
-    tmp = tempfile.mktemp(suffix=".json")
-    create_new_world_json(tmp, title="Test World")
-    world = json.loads(Path(tmp).read_text())
-    Path(tmp).unlink(missing_ok=True)
+    output = tmp_path / "scaffold_skills.json"
+    create_new_world_json(str(output), title="Test World")
+    world = json.loads(output.read_text())
     assert isinstance(world["skills"], list)
     assert len(world["skills"]) >= 1, "scaffold must seed at least one skill string"
 

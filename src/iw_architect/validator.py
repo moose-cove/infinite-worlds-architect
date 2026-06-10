@@ -318,23 +318,39 @@ def _check_player_interaction_effect_shapes(
             data = effect.get("data")
             eid = effect.get("id", "?")
 
-            if etype == "effectPresentChoice" and isinstance(data, dict):
-                missing = _EFFECT_PRESENT_CHOICE_REQUIRED_KEYS - set(data.keys())
-                if missing:
+            # A non-dict `data` is itself malformed (IW silently strips it), so warn
+            # for that case too — not only for a dict missing required keys.
+            if etype == "effectPresentChoice":
+                if not isinstance(data, dict):
                     warnings.append(
                         f"Trigger '{tname}' effect '{eid}': effectPresentChoice "
-                        f"data missing required keys {sorted(missing)} — "
+                        f"data is not a dict (got {type(data).__name__}) — "
                         "silently stripped on IW import if malformed"
                     )
+                else:
+                    missing = _EFFECT_PRESENT_CHOICE_REQUIRED_KEYS - set(data.keys())
+                    if missing:
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectPresentChoice "
+                            f"data missing required keys {sorted(missing)} — "
+                            "silently stripped on IW import if malformed"
+                        )
 
-            elif etype == "effectRequestInput" and isinstance(data, dict):
-                missing = _EFFECT_REQUEST_INPUT_REQUIRED_KEYS - set(data.keys())
-                if missing:
+            elif etype == "effectRequestInput":
+                if not isinstance(data, dict):
                     warnings.append(
                         f"Trigger '{tname}' effect '{eid}': effectRequestInput "
-                        f"data missing required keys {sorted(missing)} — "
+                        f"data is not a dict (got {type(data).__name__}) — "
                         "silently stripped on IW import if malformed"
                     )
+                else:
+                    missing = _EFFECT_REQUEST_INPUT_REQUIRED_KEYS - set(data.keys())
+                    if missing:
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectRequestInput "
+                            f"data missing required keys {sorted(missing)} — "
+                            "silently stripped on IW import if malformed"
+                        )
 
 
 def _check_set_tracked_item_value_shapes(
@@ -374,6 +390,9 @@ def _check_sog_effect_context(world: dict, errors: list[str], warnings: list[str
     """
     for trigger in world.get("triggerEvents", []):
         tname = trigger.get("name", trigger.get("id", "?"))
+        # identity check (`is True`): only literal True counts, not truthy 1/"true".
+        # Do not "simplify" to bool(...) — a non-bool value here is itself a Tier 1 type
+        # error, and treating it as truthy would mask that and emit a misleading SoG warning.
         is_sog = trigger.get("triggerOnStartOfGame", False) is True
 
         for effect in trigger.get("triggerEffects", []):
