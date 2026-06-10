@@ -144,7 +144,7 @@ def _menu_backed_items(world: dict) -> dict[str, dict]:
                 continue
             entry = menu.setdefault(tid, {"name": itv.get("name", tid), "options": []})
             for opt in value:
-                if opt not in entry["options"]:
+                if isinstance(opt, str) and opt not in entry["options"]:
                     entry["options"].append(opt)
     return menu
 
@@ -328,7 +328,8 @@ def audit_world(world_path: str) -> str:
             for cond in _iter_leaf_conditions(te.get("triggerConditions", [])):
                 if cond.get("type") != "triggerOnTrackedItem":
                     continue
-                data = cond.get("data") if isinstance(cond.get("data"), dict) else {}
+                raw_data = cond.get("data")
+                data = raw_data if isinstance(raw_data, dict) else {}
                 tid = cond.get("trackedItemID") or data.get("trackedItemID")
                 if tid not in menu_items:
                     continue

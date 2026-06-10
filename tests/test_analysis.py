@@ -249,12 +249,16 @@ def test_audit_missing_per_character_overrides(tmp_path):
         Path(path).unlink(missing_ok=True)
 
 
-def _menu_world(initial_pc_value, *, nest_in_logic: bool = False) -> dict:
+def _menu_world(
+    initial_pc_value, *, nest_in_logic: bool = False, top_level_id: bool = True
+) -> dict:
     """Build a world with one tracked item, one character override carrying
     ``initial_pc_value``, and a triggerOnTrackedItem condition on that item.
 
     When ``nest_in_logic`` is True the condition is wrapped in a compound
-    ``category: "logic"`` group to exercise recursive descent.
+    ``category: "logic"`` group to exercise recursive descent. When
+    ``top_level_id`` is False the leaf carries ``trackedItemID`` only inside
+    ``data`` (not at the top level), exercising the fallback lookup.
     """
     leaf = {
         "id": "cond-uuid-1111-1111-1111-1111-111111111111",
@@ -266,8 +270,9 @@ def _menu_world(initial_pc_value, *, nest_in_logic: bool = False) -> dict:
             "trackedItemID": "ITEM00001",
             "textComparison": "contains",
         },
-        "trackedItemID": "ITEM00001",
     }
+    if top_level_id:
+        leaf["trackedItemID"] = "ITEM00001"
     if nest_in_logic:
         conditions = [
             {
@@ -370,6 +375,59 @@ def test_audit_menu_backed_condition_nested_in_logic(tmp_path):
         menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
         assert len(menu) == 1
         assert menu[0]["trackedItem"] == "Image Settings"
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_menu_backed_condition_id_only_in_data(tmp_path):
+    """The trackedItemID may live only inside the condition's data dict."""
+    from iw_architect.tools.analysis import audit_world
+
+    world = _menu_world(["Basic Images", "Premium Advanced Images"], top_level_id=False)
+    # Sanity: the top-level key really is absent on the leaf.
+    assert "trackedItemID" not in world["triggerEvents"][0]["triggerConditions"][0]
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
+        assert len(menu) == 1
+        assert menu[0]["trackedItem"] == "Image Settings"
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_menu_backed_options_unioned_across_characters(tmp_path):
+    """Options offered by different characters for the same item are unioned, deduped, ordered."""
+    from iw_architect.tools.analysis import audit_world
+
+    world = _menu_world(["Basic Images", "Premium Advanced Images"])
+    # A second character offers an overlapping-plus-new menu for the same item.
+    world["possibleCharacters"].append(
+        {
+            "name": "Bob",
+            "characterId": "CHAR0002",
+            "skills": {},
+            "initialTrackedItemValues": [
+                {
+                    "id": "ITEM00001",
+                    "name": "Image Settings",
+                    "visibility": "everyone",
+                    "initialPCValue": ["Premium Advanced Images", "Ultra Images"],
+                    "initialValueBasedOnPC": "character",
+                }
+            ],
+        }
+    )
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
+        assert len(menu) == 1
+        assert menu[0]["options"] == [
+            "Basic Images",
+            "Premium Advanced Images",
+            "Ultra Images",
+        ]
     finally:
         Path(path).unlink(missing_ok=True)
 
