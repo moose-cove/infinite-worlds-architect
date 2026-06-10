@@ -63,16 +63,18 @@ Use this when the author's request doesn't map obviously to a field name:
 | NPC omniscience, knowledge isolation, perception tiers | `ADVANCED_METHODOLOGIES.md` |
 | Import behavior, ID renaming, JSON field order, World Debug, Export | `PLATFORM_BEHAVIOR_NOTES.md` |
 
-## ID formats (derived from canonical fixture)
+## ID formats (charsets from the canonical fixture; length bounds from KB import testing)
 
 Always mint IDs with `mint_ids(kind, count)` — never invent them by hand. Formats are entity-specific:
 
 | Entity | ID field | Format |
 |---|---|---|
 | Player character | `characterId` | 8 chars (`A-Za-z0-9+/`) |
-| NPC | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
-| Tracked item | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
+| NPC | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
+| Tracked item | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
 | Trigger event | `id` | 8 chars |
 | Trigger condition / effect | `id` | UUID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) |
-| Instruction block | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
-| Lore book entry | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
+| Instruction block | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
+| Lore book entry | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
+
+[^idlen]: **KB-empirical.** The canonical fixture only contains 9-char IDs, so the fixture alone reads as "exactly 9." KB import testing confirms shorter IDs (1–9 chars) are valid for these four entity kinds — the rule is a *maximum*, not a fixed length.

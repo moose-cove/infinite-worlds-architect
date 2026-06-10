@@ -2,7 +2,7 @@
 
 > **Provenance:** KB-empirical — these templates come from real IW world builds shared by the community (KB v2.8, May 2026). They are not schema-governed. Each template is a ready-to-use EIB (`instructionBlock`) content block; copy and adapt for your world.
 >
-> **Placement:** These belong in `instructionBlocks` (EIBs), not in `instructions` (Main Instructions). EIBs load alongside MI every turn and are easier to manage and replace individually. See `sections/MAIN_INSTRUCTIONS.md` for EIB vs MI placement guidance.
+> **Placement:** These belong in `instructionBlocks` (EIBs), not in `instructions` (Main Instructions). EIBs load alongside MI every turn and are easier to manage and replace individually. See `MAIN_INSTRUCTIONS.md` for EIB vs MI placement guidance.
 
 ---
 

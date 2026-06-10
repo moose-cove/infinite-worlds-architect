@@ -10,6 +10,8 @@ Consistent image generation in IW requires disciplined prompt engineering inside
 
 ## Pattern 1 — Persistent Attribute Storage in `illustrClothesChanged`
 
+> **Note on `illustrClothesChanged`:** This is a per-turn **runtime** field the storyteller AI emits each turn — it is **not** part of the authoring schema or fixture (the only image fields the schema/fixture define are the seven `imagePromptDetails` members: `illustrGenre`, `illustrClothes`, `illustrSetting`, `illustrSubject`, `illustrAppearance`, `illustrIsCharacter`, `illustrExpressionPosition`). The persistence behavior described below is KB-empirical and **cannot be verified from the schema or fixture**; confirm against live runtime output before relying on it.
+
 `illustrClothesChanged` is written every turn for all characters. This makes it a reliable vehicle for carrying persistent per-character state across turns without a separate TI.
 
 **Mechanism:** Extend the field value from a plain boolean to include keyed attribute data:
@@ -118,7 +120,7 @@ These four patterns compose additively:
 
 | What you want | Apply |
 |---|---|
-| Basic structure and word limits | See `sections/IMAGE_STYLE.md` (Xyphrax Director or Thyr templates) |
+| Basic structure and word limits | See `IMAGE_STYLE.md` (Xyphrax Director or Thyr templates) |
 | Consistent appearance for recurring characters | Add Pattern 1 (persistent storage) |
 | Eliminate description drift over many turns | Add Pattern 2 (exact string tables) |
 | Catch generation errors before they compound | Add Pattern 3 (multi-pass validation) |

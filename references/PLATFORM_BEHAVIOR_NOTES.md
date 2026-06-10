@@ -18,14 +18,14 @@ favorite → title → description → background → instructions → authorSty
 → previewImage → fullSizePreviewImage → previewImageOptions
 → fullSizePreviewImageOptions → currentPreviewImageIndex → imagePromptDetails
 → permissionsOnceShared → [allowChange* fields]
-→ descriptionRequest → evaluationRequest → summaryRequest
+→ descriptionRequest → evaluationRequest → hideSkillSystem → summaryRequest
 → schemaVersion → charSelectText → skills
 → possibleCharacters → triggerEvents → victoryCondition → defeatCondition
 → instructionBlocks → loreBookEntries → trackedItems → NPCs
 → autoAdvanceVersion → version → designNotes
 ```
 
-Note: `schemaVersion` is near the **end** of the canonical ordering (position ~40), not the beginning.
+Note: `schemaVersion` is near the **end** of the canonical ordering (position ~40), not the beginning. `hideSkillSystem` sits between `evaluationRequest` and `summaryRequest` in the fixture, but is stripped on import when `false` (see [Other Import Findings](#other-import-findings)) — so it only appears in this slot when set to `true`.
 
 **Canonical sub-object ordering:**
 
@@ -99,6 +99,8 @@ Accessible via the Storyteller option menu (Storyteller must be enabled first). 
 | Include "Extra-hidden" tracked items in "Hidden tracked items" view | Reveals `ai_only_boring` and `hidden_boring` TIs in the tracked items view |
 
 > **"Extra-hidden"** is IW's official term for the boring modifier (`ai_only_boring` / `hidden_boring`). The `_boring` suffix in the JSON maps to the "Extra-hidden" UI concept.
+
+> **Status of `hidden_boring` / `ai_only_boring` as `visibility` values — KB-empirical, `[PENDING TEST]`.** These are newly-added `visibility` enum values (added to the schema's `visibility` enum) and have **not** yet been confirmed by an import round-trip test. `hidden_boring` is **AI-cannot-read** — the storyteller AI cannot see its value (same read-visibility as `hidden`); the `_boring` modifier additionally hides it from the standard "Hidden tracked items" view unless "Extra-hidden" is checked. Treat these as authorable-but-import-test-pending rather than settled values until a fixture confirms round-trip survival.
 
 ### Active Instructions Panel
 
