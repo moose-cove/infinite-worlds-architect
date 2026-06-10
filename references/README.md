@@ -18,6 +18,8 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 | `AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
 | `FIELD_ALLOCATION_STRATEGY.md` | Populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world. |
 | `CHARACTER_AUTHORING_GUARDRAILS.md` | Writing any character. The no-fabrication discipline — never invent `img_appearance` or `img_clothing`. |
+| `ADVANCED_METHODOLOGIES.md` | Designing worlds with complex NPC knowledge isolation, perception tiers, or ensemble casts where NPCs must not share information they shouldn't have. |
+| `PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
 
 ## Per-field section files
 
@@ -35,6 +37,9 @@ The `sections/` subdirectory contains per-field authoring judgment notes that do
 | `sections/VICTORY_DEFEAT.md` | `victoryCondition` / `defeatCondition` |
 | `sections/IMAGE_STYLE.md` | `imageStyle*`, `illustrationStyle*`, LoRA keywords, model word limits |
 | `sections/MISC_ADVANCED_FEATURES.md` | `descriptionRequest`, `summaryRequest`, Summary AI cadence |
+| `sections/WORLD_DESIGN_PATTERNS.md` | Reusable `trackedItems` + `instructionBlocks` architectural patterns: phase escalation, survival stats, word-count control, NPC appearance caching. |
+| `sections/IMAGE_SYSTEM_PATTERNS.md` | Advanced image consistency techniques: persistent attribute storage, exact-string tables, multi-pass validation, field isolation. Read alongside `IMAGE_STYLE.md`. |
+| `sections/INSTRUCTION_BLOCK_TEMPLATES.md` | Ready-to-use EIB (`instructionBlock`) content templates: AI Taming, Claude Taming, Dialogue Integrity, pacing, characterization. |
 
 ## Authoring-intent → section-file lookup
 
@@ -52,6 +57,11 @@ Use this when the author's request doesn't map obviously to a field name:
 | Victory, defeat, ending the game | `sections/VICTORY_DEFEAT.md` |
 | Illustration style, image generation, LoRAs | `sections/IMAGE_STYLE.md` |
 | Summary AI, description format, advanced mechanics | `sections/MISC_ADVANCED_FEATURES.md` |
+| Phase escalation, survival stats, word count control, NPC caching | `sections/WORLD_DESIGN_PATTERNS.md` |
+| Image consistency, attribute drift, exact-string tables, field isolation | `sections/IMAGE_SYSTEM_PATTERNS.md` |
+| EIB templates, AI taming, dialogue integrity, pacing | `sections/INSTRUCTION_BLOCK_TEMPLATES.md` |
+| NPC omniscience, knowledge isolation, perception tiers | `ADVANCED_METHODOLOGIES.md` |
+| Import behavior, ID renaming, JSON field order, World Debug, Export | `PLATFORM_BEHAVIOR_NOTES.md` |
 
 ## ID formats (derived from canonical fixture)
 
@@ -60,9 +70,9 @@ Always mint IDs with `mint_ids(kind, count)` — never invent them by hand. Form
 | Entity | ID field | Format |
 |---|---|---|
 | Player character | `characterId` | 8 chars (`A-Za-z0-9+/`) |
-| NPC | `id` | 9 chars (`A-Za-z0-9+/`) |
-| Tracked item | `id` | 9 chars |
+| NPC | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
+| Tracked item | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
 | Trigger event | `id` | 8 chars |
 | Trigger condition / effect | `id` | UUID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) |
-| Instruction block | `id` | 9 chars |
-| Lore book entry | `id` | 9 chars |
+| Instruction block | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
+| Lore book entry | `id` | max 9 chars (1–9 valid; shorter IDs confirmed) — alphanumeric only |
