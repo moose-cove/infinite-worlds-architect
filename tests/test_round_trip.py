@@ -7,6 +7,7 @@ If validate_world reports errors against the fixture, the validator is wrong and
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from pathlib import Path
 
@@ -233,3 +234,53 @@ def test_fixture_schema_coverage_nested(fixture_world):
         "Either add them to the schema or mark the parent with "
         "x-iw-allow-extra-keys: true.\n" + "\n".join(f"  - {p}" for p in paths)
     )
+
+
+# ── mint_ids charset tests ─────────────────────────────────────────────────────
+
+_ALNUM_RE = re.compile(r"^[A-Za-z0-9]+$")
+
+_MINT_IDS_KINDS_AND_LENGTHS = [
+    ("character", 8),
+    ("npc", 9),
+    ("trackedItem", 9),
+    ("triggerEvent", 8),
+    ("instructionBlock", 9),
+    ("loreBookEntry", 9),
+]
+
+
+def test_mint_ids_alphanumeric_only():
+    """mint_ids must emit only A-Za-z0-9 chars — no '+' or '/' (base64 extras).
+
+    IW silently renames tracked-item IDs that contain '+' or '/' on import without
+    updating trigger references, breaking trigger chains (confirmed June 2026).
+    """
+    import json
+
+    from iw_architect.tools.helpers import mint_ids
+
+    for kind, _ in _MINT_IDS_KINDS_AND_LENGTHS:
+        result = json.loads(mint_ids(kind, 20))
+        assert "ids" in result, f"mint_ids({kind!r}) returned error: {result}"
+        for id_ in result["ids"]:
+            assert _ALNUM_RE.match(id_), (
+                f"mint_ids({kind!r}) emitted non-alphanumeric ID: {id_!r}. "
+                "Base64 extras (+, /) must not appear in minted IDs."
+            )
+
+
+def test_mint_ids_expected_lengths():
+    """mint_ids must preserve the expected per-entity-kind ID lengths."""
+    import json
+
+    from iw_architect.tools.helpers import mint_ids
+
+    for kind, expected_len in _MINT_IDS_KINDS_AND_LENGTHS:
+        result = json.loads(mint_ids(kind, 5))
+        assert "ids" in result, f"mint_ids({kind!r}) returned error: {result}"
+        for id_ in result["ids"]:
+            assert len(id_) == expected_len, (
+                f"mint_ids({kind!r}) returned ID of length {len(id_)}, "
+                f"expected {expected_len}: {id_!r}"
+            )
