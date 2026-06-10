@@ -33,7 +33,7 @@ The AI sees several predefined values every turn alongside the world fields you'
 | `playerAction` | The text the player just submitted |
 | `description` | The selected player character's `possibleCharacters[*].description` field (not the world-level `description`, which is the user-facing world-browser blurb) |
 | `objective` | The world's current `objective` (mutable via `effectChangeObjective`) |
-| `background` | The world's current `background` (mutable via `effectChangeBackground`) |
+| `background` | The world's `background` (set at Start-of-Game; `effectChangeBackground` is SoG-only — see §7 and the SoG-only notes) |
 
 If you write `instructions` that say "respond to the player's intent" — that intent is in `playerAction`. If you say "remind the player of their goal" — that's `objective`.
 
@@ -118,7 +118,11 @@ can react is turn N+1, when it reads the now-updated world state.
   `effectChangeAuthorStyle`, `effectChangeObjective`, and
   `effectChangeDescriptionInstructions` don't retroactively reshape the
   current turn's narrative.** The AI wrote turn N using the *old* values.
-  The new values influence turn N+1 onward.
+  The new values influence turn N+1 onward. (Note: `effectChangeBackground`
+  is **Start-of-Game-only** — it is silently ignored in regular mid-game
+  triggers entirely; for mid-game context changes use
+  `effectChangeMainInstructions`. See §7 and the SoG-only notes in
+  `TRIGGER_EVENTS.md`.)
 - **`effectTellAIWhatToDo` is a *next-turn* directive.** Its description
   specifies "one-turn instruction" — that's the *single turn after firing*,
   not the turn during which the trigger fired.
@@ -215,12 +219,58 @@ When you override the skill system this aggressively, consider setting `hideSkil
 The `authorStyle` field is free-form prose that frames the AI's voice. Three principles:
 
 - **Consistency over creativity.** If `authorStyle` says "Gritty Noir," the AI should hold that register even when the player's action invites a tonal shift. Reinforce the style in `instructions` for stronger adherence.
-- **Higher-tier models are more proactive.** Premium models (e.g., "Lion", "Smilodon" tiers) drive narrative forward without explicit prompting from the player. Lower-tier models tend to wait. If your world depends on AI-initiated story beats, recommend a high-tier model via `recommendedAIModel`.
+- **Higher-tier models are more proactive.** Premium models (e.g., Massivecat / Opus 4.5, Smilodon / Sonnet 4.5) drive narrative forward without explicit prompting from the player. Lower-tier models tend to wait. If your world depends on AI-initiated story beats, recommend a high-tier model via `recommendedAIModel`.
 - **Descriptive depth belongs in `outcomeDescription`.** Sensory and emotional detail goes there. Keep `whereWhen` short (location + time clause) and `evaluation` to a single token. Authors who try to push poetic language into `evaluation` create downstream parsing problems for the platform.
 
 ---
 
-## 7. Cross-references
+## 7. Storyteller AI model roster (as of May 2026 — server-side, will drift)
+
+> **Source:** IW community roster, May 2026. This section documents platform state, not schema-governed rules. Model availability changes over time and is not validated by the JSON Schema or this plugin. Treat this as a reference snapshot, not a canonical source — verify with the IW platform or community channels before relying on a specific model string.
+
+### Currently active models
+
+| IW Name | Underlying Model | Notes |
+|---|---|---|
+| **Smilodon** | Claude Sonnet 4.5 | Recommended all-rounder; Claude family |
+| **Smilodon-thinking** | Claude Sonnet 4.5 (extended thinking) | Slower; deeper reasoning |
+| **Massivecat** | Claude Opus 4.5 | Most powerful; expensive; Claude family |
+| **Massivecat-thinking** | Claude Opus 4.5 (extended thinking) | |
+| **Lynx** | Claude Haiku 4.5 | Low cost; Claude family |
+| **Lynx-thinking** | Claude Haiku 4.5 (extended thinking) | |
+| **Grimalkin** | GPT-4.1 | OpenAI model |
+| **Leopard** | Gemini 2.5 Pro | Darker tone; tends to be harsh |
+| **Leopard-2** | Gemini 3.1 Pro | Newer Leopard; less tested |
+| **Wampus** | Aion-2.0 | Experimental; "turns things up to 11" |
+| **Wildcat** | Hermes 3 405B | Budget option; decent creativity |
+| **Tomcat** | Unknown | Very cheap; poor quality; testing only |
+| **Caracal** | MiMo-V2.5-Pro | Confirmed active May 2026; Xiaomi model |
+
+### Removed / no-longer-valid models
+
+These strings have been removed from IW and will be **silently stripped on import**. Do not use them in `selectedAIProfiles` or `recommendedAIModel`.
+
+| IW Name | Was | Notes |
+|---|---|---|
+| **Lion** | Claude Sonnet 3.7 | **REMOVED** — stripped on import |
+| **Lion-thinking** | Claude Sonnet 3.7 (extended thinking) | **REMOVED** |
+| **Sabertooth** | Claude Sonnet 4.0 | Removed |
+| **Sabertooth-thinking** | Claude Sonnet 4.0 (extended thinking) | Removed |
+| **Panther** | Grok 4 | Removed |
+| **Ocelot** / **Ocelot-new** / **Ocetoomuch** | DeepSeek R1 variants | Removed |
+| **Tiger** | GPT-4o | Removed |
+| **Gryphon** | Gemini 1.5 | Removed |
+| **Shishi** | Qwen-2.5-Max | Removed |
+| **Manticore** (as storyteller) | DeepSeek v3 | Removed as storyteller. **Note:** `imageModel: "manticore"` in world JSON refers to the image-generation model and remains valid — this is a separate system. |
+| **Chimaera** | Random picker (Wildcat/Ocelot/Gryphon/Shishi) | Removed; all constituent models also removed |
+
+### `selectedAIProfiles` — Claude-family only
+
+`selectedAIProfiles` (used with `enableAISpecificInstructionBlocks: true`) is expected to accept only the **Claude family**: `smilodon`, `smilodon-thinking`, `massivecat`, `massivecat-thinking`, `lynx`, `lynx-thinking`. **Confirmed:** the removed `lion` / `lion-thinking` strings are invalid and stripped on import. The broader claim — that *all* non-Claude strings (including the otherwise-valid storyteller `tomcat`) are stripped from `selectedAIProfiles` — is **reported but import-test-pending**; treat it as the safe default (use only Claude-family strings here) until confirmed.
+
+---
+
+## 8. Cross-references
 
 - **Trigger conditions and effects** — see `WORLD_JSON_SCHEMA_v2.1.md` §5 for the v2.1 canonical list. The set of effect/condition types is the source of truth there, not in this document.
 - **Template variables** — see `WORLD_JSON_SCHEMA_v2.1.md` §9 for the full `<<…>>` syntax.
