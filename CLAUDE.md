@@ -44,11 +44,19 @@ references/                                          # On-demand authoring + sch
 ├── README.md                                        # Index, authoring-intent lookup, ID-format table
 ├── WORLD_JSON_SCHEMA_v2.1.md                        # Human-readable schema reference
 ├── world_v2.1.schema.json                           # JSON Schema artifact (Tier 1 validator)
-├── AI_RUNTIME_MECHANICS.md                          # Runtime/turn-lifecycle behavior
-├── FIELD_ALLOCATION_STRATEGY.md                     # Where content belongs
-├── CHARACTER_AUTHORING_GUARDRAILS.md                # No-fabrication discipline
-└── sections/                                        # Per-field authoring judgment notes
-    └── *.md                                         # INTRODUCING_THE_STORY, TRIGGER_EVENTS, etc.
+├── mechanics/                                       # Runtime and platform behaviour
+│   ├── AI_RUNTIME_MECHANICS.md                      # Runtime/turn-lifecycle behavior
+│   └── PLATFORM_BEHAVIOR_NOTES.md                  # Import, ID renaming, World Debug, Export
+├── guidance/                                        # Authoring principles
+│   ├── FIELD_ALLOCATION_STRATEGY.md                 # Where content belongs
+│   ├── CHARACTER_AUTHORING_GUARDRAILS.md            # No-fabrication discipline
+│   └── LAYERED_KNOWLEDGE_ISOLATION.md              # NPC knowledge isolation patterns
+├── fields/                                          # Per-field authoring judgment notes
+│   └── *.md                                         # INTRODUCING_THE_STORY, TRIGGER_EVENTS, etc.
+├── patterns/                                        # Reusable design patterns
+│   └── *.md                                         # PHASE_ESCALATION, SURVIVAL_STATS, etc.
+└── templates/                                       # Ready-to-use EIB content
+    └── *.md                                         # AI_TAMING, CLAUDE_TAMING, etc.
 
 agents/
 └── world-architect.md                               # Autonomous + command-loaded agent
@@ -192,7 +200,7 @@ The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it au
 
 ## Reference file naming convention
 
-Markdown reference files in `references/` (and `references/sections/`) use **UPPER_SNAKE_CASE** (e.g., `FIELD_ALLOCATION_STRATEGY.md`, `TRIGGER_EVENTS.md`). This matches the repo's existing `.md` convention (CLAUDE.md, DESIGN_BRIEF_v2.md, etc.). Do not rename files to kebab-case.
+Markdown reference files in `references/` and its subdirectories (`fields/`, `mechanics/`, `guidance/`, `patterns/`, `templates/`) use **UPPER_SNAKE_CASE** (e.g., `FIELD_ALLOCATION_STRATEGY.md`, `TRIGGER_EVENTS.md`). This matches the repo's existing `.md` convention (CLAUDE.md, DESIGN_BRIEF_v2.md, etc.). Do not rename files to kebab-case.
 
 ## Open questions (from DESIGN_BRIEF_v2.md §9)
 

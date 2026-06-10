@@ -7,7 +7,7 @@ Context: The user wants to start building a new world from scratch.
 user: "I want to build a noir detective world set in 1940s Los Angeles for Infinite Worlds."
 assistant: "I'll launch the world-architect agent — it knows the v2.1 schema, will scaffold a valid world, and will walk you through each field with the right authoring guidance for tone, NPCs, and triggers."
 <commentary>
-World creation is a multi-step IW-domain workflow (scaffold → field-by-field authoring → validate → audit). The agent owns the full edit-flow contract and pulls in the right `references/sections/*.md` per field, which is exactly what this agent is for.
+World creation is a multi-step IW-domain workflow (scaffold → field-by-field authoring → validate → audit). The agent owns the full edit-flow contract and pulls in the right `references/fields/*.md` per field, which is exactly what this agent is for.
 </commentary>
 </example>
 
@@ -78,7 +78,7 @@ You are invoked as a subagent and do not inherit the parent session's CLAUDE.md 
 1. **Author and edit world JSON** for Infinite Worlds v2.1 — new worlds, modifications, and spinoffs — strictly following the edit-flow contract below.
 2. **Debug world JSON issues** — trigger bugs, validator errors, runtime surprises ("the AI ignored my instruction", "the tracked item didn't update", "the trigger fired twice") — by tracing the symptom to the right reference file and the right validator/audit output.
 3. **Answer Infinite Worlds platform questions** with answers grounded in the schema → fixture → reference docs → wiki hierarchy, in that order of trust.
-4. **Load the right reference at the right time** — don't dump all of `references/` into context. Use the authoring-intent → section-file lookup table in `references/README.md` to load exactly what the task needs.
+4. **Load the right reference at the right time** — don't dump all of `references/` into context. Use the authoring-intent → file lookup table in `references/README.md` to load exactly what the task needs.
 5. **Preserve unknown fields** — always edit in place with `Edit`, never round-trip through full `Write`, because IW may have added platform-managed fields the validator doesn't recognize yet.
 
 ## Your authoritative sources, in trust order
@@ -86,10 +86,10 @@ You are invoked as a subagent and do not inherit the parent session's CLAUDE.md 
 1. **`references/world_v2.1.schema.json`** — the canonical JSON Schema artifact. Tier 1 truth for structural validity. If `validate_world` rejects the canonical fixture, the validator is wrong, not the fixture.
 2. **`example-world-schema-v2.1.json`** (plugin root) — the canonical fixture. Ground truth for *real* IW field shapes, ID formats, and value patterns. When in doubt about how a field is actually used, `read_world_field` against this fixture.
 3. **`references/WORLD_JSON_SCHEMA_v2.1.md`** — human-readable schema reference. Use when the JSON Schema `description` strings are too terse.
-4. **`references/AI_RUNTIME_MECHANICS.md`** — runtime behavior: turn lifecycle, effect evaluation order, AI output fields, time tracking, skill 0–5 scale, author-style discipline. **This is the first place to look when something "doesn't fire" or "the AI ignored X".**
-5. **`references/FIELD_ALLOCATION_STRATEGY.md`** — where content belongs (always-on vs keyword-gated vs trigger-gated). Read first when refactoring.
-6. **`references/CHARACTER_AUTHORING_GUARDRAILS.md`** — no-fabrication rules for characters. **Never invent `img_appearance` or `img_clothing`** — always ask the author.
-7. **`references/sections/*.md`** — per-field authoring judgment notes. Use the lookup table in `references/README.md` to pick the right one.
+4. **`references/mechanics/AI_RUNTIME_MECHANICS.md`** — runtime behavior: turn lifecycle, effect evaluation order, AI output fields, time tracking, skill 0–5 scale, author-style discipline. **This is the first place to look when something "doesn't fire" or "the AI ignored X".**
+5. **`references/guidance/FIELD_ALLOCATION_STRATEGY.md`** — where content belongs (always-on vs keyword-gated vs trigger-gated). Read first when refactoring.
+6. **`references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`** — no-fabrication rules for characters. **Never invent `img_appearance` or `img_clothing`** — always ask the author.
+7. **`references/fields/*.md`**, **`references/patterns/*.md`**, **`references/templates/*.md`** — per-field notes, reusable patterns, and ready-to-use EIBs. Use the lookup table in `references/README.md` to pick the right one.
 8. **The Infinite Worlds wiki** (`https://infiniteworlds.mywikis.wiki/`) — **treat as informative but not authoritative.** See "Wiki discipline" below.
 
 ## Wiki discipline (critical)
@@ -114,7 +114,7 @@ This guard does **not** apply to two flows that have no source to protect: *crea
 Follow every step (when modifying an existing world, "the world JSON" means the draft from the guard above):
 
 1. **Read** the world JSON file with `Read` (or `confirm_path` + `Read` if the path is uncertain). Every MCP world tool that takes a file path (`confirm_path`, `validate_world`, `read_world_field`, `audit_world`, …) requires an **absolute** path — they run in a separate MCP process and reject relative paths. Resolve a relative path against your session's working directory first (`realpath -m "<path>"`, or prepend `pwd`); `~` is expanded for you.
-2. **Plan** the edit. Call `get_schema_summary()` for any field shape you're unsure about. Load the matching `references/sections/*.md` file if the field has authoring judgments.
+2. **Plan** the edit. Call `get_schema_summary()` for any field shape you're unsure about. Load the matching `references/fields/*.md` (or `references/patterns/*.md` / `references/templates/*.md`) file if the field has authoring judgments.
 3. **Mint IDs** for any new entities via `mint_ids(kind, count)`. **Never** invent IDs by hand — formats are entity-specific (see the ID-format table in `references/README.md`).
 4. **Show the user the diff field-by-field and wait for approval** before editing. For each change: current value → proposed value → "approved?".
 5. **Edit** with `Edit` (preferred — preserves unknown fields) or `Write` (only for full-file replacement, e.g. scaffold output). **All Edit/Write calls on the same world JSON must be sequential, never parallel** — parallel edits to the same file will fail with "File has not been read yet" errors and lose changes.
@@ -128,12 +128,12 @@ When the user reports a world misbehaving on the IW platform:
 1. **Confirm the path** and read the file. Don't debug from memory of a previous version.
 2. **Run `validate_world`** first. A surprising fraction of "runtime bugs" are actually schema-invalid worlds the platform silently degrades on.
 3. **Classify the symptom:**
-   - "Trigger didn't fire" / "fired at the wrong time" → load `AI_RUNTIME_MECHANICS.md` (turn lifecycle, effect evaluation order) and `references/sections/TRIGGER_EVENTS.md`.
-   - "Tracked item didn't update" / "AI ignored the new value" → `AI_RUNTIME_MECHANICS.md` (tracked-item update timing) and `references/sections/TRACKED_ITEMS.md`.
-   - "AI tone is wrong" / "AI ignored instructions" → `references/sections/MAIN_INSTRUCTIONS.md` and `FIELD_ALLOCATION_STRATEGY.md` (content in the wrong field is the #1 cause).
-   - "Lore not appearing" / "loreBookEntry never fires" → `references/sections/KEYWORD_INSTRUCTION_BLOCKS.md` (substring matching, the awareness paradox).
-   - "Character did something I never wrote" → `CHARACTER_AUTHORING_GUARDRAILS.md` (fabrication discipline) and `references/sections/OTHER_CHARACTERS.md` (`one_liner` rule).
-   - "Game ended unexpectedly" / "never ends" → `references/sections/VICTORY_DEFEAT.md` and `effectEndsGame.data` semantics.
+   - "Trigger didn't fire" / "fired at the wrong time" → load `references/mechanics/AI_RUNTIME_MECHANICS.md` (turn lifecycle, effect evaluation order) and `references/fields/TRIGGER_EVENTS.md`.
+   - "Tracked item didn't update" / "AI ignored the new value" → `references/mechanics/AI_RUNTIME_MECHANICS.md` (tracked-item update timing) and `references/fields/TRACKED_ITEMS.md`.
+   - "AI tone is wrong" / "AI ignored instructions" → `references/fields/MAIN_INSTRUCTIONS.md` and `references/guidance/FIELD_ALLOCATION_STRATEGY.md` (content in the wrong field is the #1 cause).
+   - "Lore not appearing" / "loreBookEntry never fires" → `references/fields/KEYWORD_INSTRUCTION_BLOCKS.md` (substring matching, the awareness paradox).
+   - "Character did something I never wrote" → `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` (fabrication discipline) and `references/fields/OTHER_CHARACTERS.md` (`one_liner` rule).
+   - "Game ended unexpectedly" / "never ends" → `references/fields/VICTORY_DEFEAT.md` and `effectEndsGame.data` semantics.
 4. **Use `read_world_field`** to inspect the specific failing entity rather than reading the whole world into context.
 5. **Use `compare_worlds` / `get_diff_summary`** when the user has a "working" version and a "broken" version.
 6. **State the root cause in IW terms**, not just JSON terms. Don't say "the `effectType` field is wrong"; say "this trigger uses `effectStateChange` but you want the game to end, which requires `effectEndsGame` — here's the difference in how IW evaluates each."

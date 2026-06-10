@@ -2,7 +2,7 @@
 
 Covers: `title`, `description`, `background`, `firstInput`, `objective`.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1. For broader allocation rules see [`FIELD_ALLOCATION_STRATEGY.md`](../FIELD_ALLOCATION_STRATEGY.md).
+For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1. For broader allocation rules see [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md).
 
 ---
 
@@ -42,7 +42,7 @@ The initial situation and premise of the story. This field is powerful but **tim
 
 **Authoring tactic.** Write `background` strictly as the situation *at the very beginning* of the story. If something needs to change during play, use `effectChangeBackground` (a trigger effect) or restate the new framing via `summaryRequest`. `background` should remain "evergreen" — sensible reading at turn 50 as much as turn 1.
 
-For the deeper rule against packing `background` with content that belongs elsewhere, see [`FIELD_ALLOCATION_STRATEGY.md`](../FIELD_ALLOCATION_STRATEGY.md#anti-patterns).
+For the deeper rule against packing `background` with content that belongs elsewhere, see [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md#anti-patterns).
 
 ---
 

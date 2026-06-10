@@ -2,7 +2,7 @@
 
 JSON key: `triggerEvents` — array of trigger objects.
 
-For the canonical list of v2.1 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
+For the canonical list of v2.1 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
 
 ---
 
@@ -10,7 +10,7 @@ For the canonical list of v2.1 condition types and effect types with their `data
 
 Triggers evaluate and fire **after the Storyteller AI has finished writing
 the turn's narrative** — they're step 9 of the per-turn sequence (see
-[`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+[`AI_RUNTIME_MECHANICS.md`](../../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 §3 for the full lifecycle). This is the single most important fact about
 triggers — most authoring mistakes stem from forgetting it.
 
@@ -169,4 +169,4 @@ comparison.
 
 ## Variable replacement in effect data
 
-The `<<item_name>>` syntax works in all effect data string fields. References resolve at runtime using the current value of the named tracked item (spaces become underscores, lowercase). Math and dice functions also work — `<<1d20>>`, `<<gold * 2>>`, `<<round(turn_number/3)>>`. See [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#9-template-variable-system) §9 for the full template-variable system.
+The `<<item_name>>` syntax works in all effect data string fields. References resolve at runtime using the current value of the named tracked item (spaces become underscores, lowercase). Math and dice functions also work — `<<1d20>>`, `<<gold * 2>>`, `<<round(turn_number/3)>>`. See [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#9-template-variable-system) §9 for the full template-variable system.

@@ -1,6 +1,6 @@
 # Field Guide: Keyword Instruction Blocks (`loreBookEntries`)
 
-JSON key: `loreBookEntries` — array of keyword block objects. Each entry has `id`, `name`, `keywords` (string[]), `content`. For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../WORLD_JSON_SCHEMA_v2.1.md#6-instruction-blocks) §6.
+JSON key: `loreBookEntries` — array of keyword block objects. Each entry has `id`, `name`, `keywords` (string[]), `content`. For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#6-instruction-blocks) §6.
 
 ---
 
@@ -90,4 +90,4 @@ This is how you implement "the player learns a new technique" or "the village no
 
 If the content is relevant every turn → EIB or `instructions`. If it's relevant only when a specific topic surfaces → KIB.
 
-See also: [`FIELD_ALLOCATION_STRATEGY.md`](../FIELD_ALLOCATION_STRATEGY.md) on the broader always-on vs. keyword-gated vs. trigger-gated decision.
+See also: [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md) on the broader always-on vs. keyword-gated vs. trigger-gated decision.

@@ -110,7 +110,7 @@ When the change touches the plugin itself — commands, references, skill conten
 4. **Cross-reference correctness** — If the command creates entities that reference other entities (triggers referencing tracked items, etc.), does it guide the user to use real entity IDs from the world?
 5. **Pass-through respect** — Does the command preserve `schemaVersion` and unknown fields when editing existing worlds? Read-before-write per project rule.
 
-### For new or edited reference documentation (`skills/world-architect/references/**` or `references/sections/**`)
+### For new or edited reference documentation (`skills/world-architect/references/**` or `references/{fields,mechanics,guidance,patterns,templates}/**`)
 
 1. **Factual accuracy** — Every claim about IW behavior is a hypothesis. Verify against tier 1 (schema), then tier 2 (fixture), then tier 3 (sibling reference docs). Only escalate to the wiki when local sources are silent, and apply the wiki usage protocol.
 2. **Example fidelity** — JSON examples in docs must match the schema and the fixture's patterns. Flag any example that wouldn't validate.
