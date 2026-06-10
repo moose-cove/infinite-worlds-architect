@@ -33,7 +33,7 @@ The AI sees several predefined values every turn alongside the world fields you'
 | `playerAction` | The text the player just submitted |
 | `description` | The selected player character's `possibleCharacters[*].description` field (not the world-level `description`, which is the user-facing world-browser blurb) |
 | `objective` | The world's current `objective` (mutable via `effectChangeObjective`) |
-| `background` | The world's current `background` (mutable via `effectChangeBackground`) |
+| `background` | The world's `background` (set at Start-of-Game; `effectChangeBackground` is SoG-only — see §7 and the SoG-only notes) |
 
 If you write `instructions` that say "respond to the player's intent" — that intent is in `playerAction`. If you say "remind the player of their goal" — that's `objective`.
 
@@ -118,7 +118,11 @@ can react is turn N+1, when it reads the now-updated world state.
   `effectChangeAuthorStyle`, `effectChangeObjective`, and
   `effectChangeDescriptionInstructions` don't retroactively reshape the
   current turn's narrative.** The AI wrote turn N using the *old* values.
-  The new values influence turn N+1 onward.
+  The new values influence turn N+1 onward. (Note: `effectChangeBackground`
+  is **Start-of-Game-only** — it is silently ignored in regular mid-game
+  triggers entirely; for mid-game context changes use
+  `effectChangeMainInstructions`. See §7 and the SoG-only notes in
+  `TRIGGER_EVENTS.md`.)
 - **`effectTellAIWhatToDo` is a *next-turn* directive.** Its description
   specifies "one-turn instruction" — that's the *single turn after firing*,
   not the turn during which the trigger fired.
@@ -262,7 +266,7 @@ These strings have been removed from IW and will be **silently stripped on impor
 
 ### `selectedAIProfiles` — Claude-family only
 
-`selectedAIProfiles` (used with `enableAISpecificInstructionBlocks: true`) accepts only the **Claude family**: `smilodon`, `smilodon-thinking`, `massivecat`, `massivecat-thinking`, `lynx`, `lynx-thinking`. Other model strings — including the otherwise-valid storyteller `tomcat` — are stripped from `selectedAIProfiles` on import. Old `lion` / `lion-thinking` strings are also invalid.
+`selectedAIProfiles` (used with `enableAISpecificInstructionBlocks: true`) is expected to accept only the **Claude family**: `smilodon`, `smilodon-thinking`, `massivecat`, `massivecat-thinking`, `lynx`, `lynx-thinking`. **Confirmed:** the removed `lion` / `lion-thinking` strings are invalid and stripped on import. The broader claim — that *all* non-Claude strings (including the otherwise-valid storyteller `tomcat`) are stripped from `selectedAIProfiles` — is **reported but import-test-pending**; treat it as the safe default (use only Claude-family strings here) until confirmed.
 
 ---
 
