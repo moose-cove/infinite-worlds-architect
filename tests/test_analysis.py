@@ -249,6 +249,131 @@ def test_audit_missing_per_character_overrides(tmp_path):
         Path(path).unlink(missing_ok=True)
 
 
+def _menu_world(initial_pc_value, *, nest_in_logic: bool = False) -> dict:
+    """Build a world with one tracked item, one character override carrying
+    ``initial_pc_value``, and a triggerOnTrackedItem condition on that item.
+
+    When ``nest_in_logic`` is True the condition is wrapped in a compound
+    ``category: "logic"`` group to exercise recursive descent.
+    """
+    leaf = {
+        "id": "cond-uuid-1111-1111-1111-1111-111111111111",
+        "category": "condition",
+        "type": "triggerOnTrackedItem",
+        "data": {
+            "inequality": "is_exactly",
+            "requiredValue": "Basic Images",
+            "trackedItemID": "ITEM00001",
+            "textComparison": "contains",
+        },
+        "trackedItemID": "ITEM00001",
+    }
+    if nest_in_logic:
+        conditions = [
+            {
+                "id": "cond-uuid-9999-9999-9999-999999999999",
+                "category": "logic",
+                "operator": "and",
+                "data": [leaf],
+            }
+        ]
+    else:
+        conditions = [leaf]
+
+    world = _base()
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Image Settings",
+            "positionInList": 0,
+            "dataType": "text",
+            "visibility": "everyone",
+            "autoUpdate": False,
+            "initialValueBasedOnPC": "character",
+        }
+    ]
+    world["possibleCharacters"] = [
+        {
+            "name": "Alice",
+            "characterId": "CHAR0001",
+            "skills": {},
+            "initialTrackedItemValues": [
+                {
+                    "id": "ITEM00001",
+                    "name": "Image Settings",
+                    "visibility": "everyone",
+                    "initialPCValue": initial_pc_value,
+                    "initialValueBasedOnPC": "character",
+                }
+            ],
+        }
+    ]
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Images",
+            "triggerOnStartOfGame": True,
+            "triggerEffects": [
+                {
+                    "id": "eff-uuid-1111-1111-1111-1111-111111111111",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": conditions,
+        }
+    ]
+    return world
+
+
+def test_audit_detects_menu_backed_condition(tmp_path):
+    """A triggerOnTrackedItem condition on a pick-one menu item is surfaced as info."""
+    from iw_architect.tools.analysis import audit_world
+
+    world = _menu_world(["Basic Images", "Premium Advanced Images"])
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
+        assert len(menu) == 1
+        assert menu[0]["severity"] == "info"
+        assert menu[0]["trackedItem"] == "Image Settings"
+        assert menu[0]["options"] == ["Basic Images", "Premium Advanced Images"]
+        # The detail must spell out that the test is not always-true.
+        assert "not always-true" in menu[0]["detail"].lower()
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_menu_backed_condition_not_flagged_for_scalar(tmp_path):
+    """A scalar initialPCValue is a fixed value, not a menu — no finding."""
+    from iw_architect.tools.analysis import audit_world
+
+    world = _menu_world("Basic Images")
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
+        assert menu == []
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
+def test_audit_menu_backed_condition_nested_in_logic(tmp_path):
+    """A menu-backed condition nested inside a compound logic group is still detected."""
+    from iw_architect.tools.analysis import audit_world
+
+    world = _menu_world(["Basic Images", "Premium Advanced Images"], nest_in_logic=True)
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+        menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
+        assert len(menu) == 1
+        assert menu[0]["trackedItem"] == "Image Settings"
+    finally:
+        Path(path).unlink(missing_ok=True)
+
+
 def test_audit_file_not_found():
     from iw_architect.tools.analysis import audit_world
 
