@@ -1,4 +1,4 @@
-# Advanced Methodologies
+# Layered Knowledge Isolation
 
 > **Provenance:** KB-empirical — techniques reverse-engineered from real IW worlds and community testing (KB v2.8, May 2026). Not schema-governed; apply where your world design warrants the complexity.
 

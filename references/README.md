@@ -18,7 +18,7 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 | `AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
 | `FIELD_ALLOCATION_STRATEGY.md` | Populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world. |
 | `CHARACTER_AUTHORING_GUARDRAILS.md` | Writing any character. The no-fabrication discipline — never invent `img_appearance` or `img_clothing`. |
-| `ADVANCED_METHODOLOGIES.md` | Designing worlds with complex NPC knowledge isolation, perception tiers, or ensemble casts where NPCs must not share information they shouldn't have. |
+| `LAYERED_KNOWLEDGE_ISOLATION.md` | Designing worlds with complex NPC knowledge isolation, perception tiers, or ensemble casts where NPCs must not share information they shouldn't have. |
 | `PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
 
 ## Per-field section files
@@ -37,9 +37,18 @@ The `sections/` subdirectory contains per-field authoring judgment notes that do
 | `sections/VICTORY_DEFEAT.md` | `victoryCondition` / `defeatCondition` |
 | `sections/IMAGE_STYLE.md` | `imageStyle*`, `illustrationStyle*`, LoRA keywords, model word limits |
 | `sections/MISC_ADVANCED_FEATURES.md` | `descriptionRequest`, `summaryRequest`, Summary AI cadence |
-| `sections/WORLD_DESIGN_PATTERNS.md` | Reusable `trackedItems` + `instructionBlocks` architectural patterns: phase escalation, survival stats, word-count control, NPC appearance caching. |
 | `sections/IMAGE_SYSTEM_PATTERNS.md` | Advanced image consistency techniques: persistent attribute storage, exact-string tables, multi-pass validation, field isolation. Read alongside `IMAGE_STYLE.md`. |
-| `sections/INSTRUCTION_BLOCK_TEMPLATES.md` | Ready-to-use EIB (`instructionBlock`) content templates: AI Taming, Claude Taming, Dialogue Integrity, pacing, characterization. |
+| `sections/PATTERN_PHASE_ESCALATION.md` | Pattern: use `effectModifyInstructionBlock` to swap an EIB's content at story beats, driving multi-phase world-state escalation. |
+| `sections/PATTERN_SURVIVAL_STATS.md` | Pattern: single `text` TI with holistic numerical update rules for survival stat sets (Hunger, Thirst, Stamina, etc.). |
+| `sections/PATTERN_TARGET_WORD_COUNT.md` | Pattern: player-adjustable `number` TI driving turn-length control via `<<>>` math expressions in `instructions`. |
+| `sections/PATTERN_NPC_APPEARANCE_CACHE.md` | Pattern: `ai_only` `text` TI as a rolling cache of NPC visual descriptions for consistent image generation across turns. |
+| `sections/EIB_AI_TAMING.md` | Ready-to-use EIB: general AI defaults (omniscience, infallibility, jargon, authority-calling). Copy and adapt. |
+| `sections/EIB_CLAUDE_TAMING.md` | Ready-to-use EIB: Claude-family model taming (omniscient NPCs, generic names, surveillance forces). Apply to all `-thinking` variants. |
+| `sections/EIB_DIALOGUE_INTEGRITY.md` | Ready-to-use EIB: forbid comparative flattery, manufactured rapport, and unearned information-sharing in NPC dialogue. |
+| `sections/EIB_CLAUDE_BUGFIXES.md` | Ready-to-use EIB (lighter): restricts `secretInfo` misuse and psychobabble for Claude-family models. |
+| `sections/EIB_TURN_BASED_PACING.md` | Ready-to-use EIB: prevents scene-rushing and missing player-interactive moments in turn-based play. |
+| `sections/EIB_QOL_CHARACTERIZATION.md` | Ready-to-use EIB: prevents NPC character degradation (mindless vessels, out-of-character reactions after failed checks). |
+| `sections/EIB_USAGE_NOTES.md` | Cross-cutting notes on EIB token length, `selectedAIProfiles` gating, and legacy "Lion" naming. |
 
 ## Authoring-intent → section-file lookup
 
@@ -57,10 +66,19 @@ Use this when the author's request doesn't map obviously to a field name:
 | Victory, defeat, ending the game | `sections/VICTORY_DEFEAT.md` |
 | Illustration style, image generation, LoRAs | `sections/IMAGE_STYLE.md` |
 | Summary AI, description format, advanced mechanics | `sections/MISC_ADVANCED_FEATURES.md` |
-| Phase escalation, survival stats, word count control, NPC caching | `sections/WORLD_DESIGN_PATTERNS.md` |
+| Phase escalation, swapping world state via EIB replacement | `sections/PATTERN_PHASE_ESCALATION.md` |
+| Survival stats, holistic stat tracking in a single TI | `sections/PATTERN_SURVIVAL_STATS.md` |
+| Word count control, turn length, paragraph count | `sections/PATTERN_TARGET_WORD_COUNT.md` |
+| NPC appearance caching, consistent image generation across turns | `sections/PATTERN_NPC_APPEARANCE_CACHE.md` |
 | Image consistency, attribute drift, exact-string tables, field isolation | `sections/IMAGE_SYSTEM_PATTERNS.md` |
-| EIB templates, AI taming, dialogue integrity, pacing | `sections/INSTRUCTION_BLOCK_TEMPLATES.md` |
-| NPC omniscience, knowledge isolation, perception tiers | `ADVANCED_METHODOLOGIES.md` |
+| AI taming, omniscient NPCs, jargon, authority-calling | `sections/EIB_AI_TAMING.md` |
+| Claude taming, generic names, surveillance forces, Claude-family EIBs | `sections/EIB_CLAUDE_TAMING.md` |
+| Dialogue integrity, comparative flattery, manufactured rapport, NPC voice | `sections/EIB_DIALOGUE_INTEGRITY.md` |
+| Claude bugfixes, secretInfo misuse, psychobabble, lighter Claude EIB | `sections/EIB_CLAUDE_BUGFIXES.md` |
+| Turn-based pacing, scene rushing, player-interactive moments | `sections/EIB_TURN_BASED_PACING.md` |
+| Character degradation, mindless vessels, out-of-character reactions | `sections/EIB_QOL_CHARACTERIZATION.md` |
+| EIB length, selectedAIProfiles, token budget, model-gating | `sections/EIB_USAGE_NOTES.md` |
+| NPC omniscience, knowledge isolation, perception tiers | `LAYERED_KNOWLEDGE_ISOLATION.md` |
 | Import behavior, ID renaming, JSON field order, World Debug, Export | `PLATFORM_BEHAVIOR_NOTES.md` |
 
 ## ID formats (charsets from the canonical fixture; length bounds from KB import testing)
