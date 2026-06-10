@@ -99,18 +99,20 @@ author another trigger that re-installs the old value. This applies to
 deliberately; one-shot "fire and forget" replacements leave the world
 permanently in the new state for the rest of the playthrough.
 
-| Effect | Replaces |
-|---|---|
-| `effectChangeBackground` | `background` |
-| `effectChangeMainInstructions` | `instructions` (use cautiously — overrides the whole block) |
-| `effectChangeAuthorStyle` | `authorStyle` (great for genre transitions mid-story) |
-| `effectChangeDescriptionInstructions` | `descriptionRequest` |
-| `effectChangeObjective` | `objective` (AI prioritizes objective heavily — this is the most powerful silent story-redirection lever) |
-| `effectChangeFirstAction` | `firstInput` (only meaningful in `triggerOnStartOfGame` triggers) |
-| `effectChangeVictoryCondition` | `victoryCondition` (engine-only — no narrative effect) |
-| `effectChangeDefeatCondition` | `defeatCondition` (engine-only) |
-| `effectModifyInstructionBlock` | A specific Extra Instruction Block by `id` — surgical alternative to `effectChangeMainInstructions` |
-| `effectModifyKeywordBlock` | A specific Keyword Instruction Block by `id` — replaces both `keywords` and `content` |
+**Scope restriction:** `effectChangeBackground` and `effectChangeFirstAction` are **Start-of-Game (SoG) only**. Confirmed by IW import testing (May 2026): IW silently ignores these effects in regular (mid-game) triggers. For mid-game context or setting changes, use `effectChangeMainInstructions` instead. (Even if IW permitted mid-game `effectChangeBackground`, the effect would be inert: `background` is only sent to the storyteller AI at turn 0 and is superseded by the Summary AI's running summary after ~turn 8.)
+
+| Effect | Replaces | Notes |
+|---|---|---|
+| `effectChangeBackground` | `background` | **SoG-only** — silently ignored in regular triggers |
+| `effectChangeMainInstructions` | `instructions` | Use cautiously — overrides the whole block; preferred alternative for mid-game context changes |
+| `effectChangeAuthorStyle` | `authorStyle` | Great for genre transitions mid-story |
+| `effectChangeDescriptionInstructions` | `descriptionRequest` | |
+| `effectChangeObjective` | `objective` | AI prioritizes objective heavily — most powerful silent story-redirection lever |
+| `effectChangeFirstAction` | `firstInput` | **SoG-only** — only meaningful in `triggerOnStartOfGame` triggers |
+| `effectChangeVictoryCondition` | `victoryCondition` | Engine-only — no narrative effect |
+| `effectChangeDefeatCondition` | `defeatCondition` | Engine-only |
+| `effectModifyInstructionBlock` | A specific Extra Instruction Block by `id` | Surgical alternative to `effectChangeMainInstructions` |
+| `effectModifyKeywordBlock` | A specific Keyword Instruction Block by `id` | Replaces both `keywords` and `content` |
 
 `effectChangeObjective` is underused. The AI strongly weights the current objective when deciding what to narrate, so quietly swapping the objective at a plot transition is one of the most powerful authoring techniques — the player sees a UI update and feels the story shift naturally.
 
@@ -126,7 +128,7 @@ permanently in the new state for the rest of the playthrough.
 
 | Effect | Use for |
 |---|---|
-| `effectSetTrackedItemValue` | Single-item update. Data shape varies by `action`: `set` / `add` / `subtract` for numbers; `set` / `add` (append) / `subtract` (remove if present) / `replace` (find-and-replace via `replaceWith`) for text/XML. Supports `<<item_name>>` interpolation in values. |
+| `effectSetTrackedItemValue` | Single-item update. Data shape varies by `action`: `set` / `add` / `subtract` for numbers; `set` / `add` (append) / `subtract` (remove if present) / `replace` (find-and-replace via `replaceWith`) for text/XML. Supports `<<item_name>>` interpolation in values. **`replaceWith` must be present in `data` for every action** (use `""` when unused) — omitting it may break import. It is only *consumed* by the `replace` action, but the field itself is required regardless of action type. |
 | `effectModifyTrackedItemDetails` | Modify the item's *definition* (name, description, visibility, updateInstructions, autoUpdate) — not its value. Override flags control which fields are changed. |
 
 ### Interactive effects (blocking — pause until player responds)

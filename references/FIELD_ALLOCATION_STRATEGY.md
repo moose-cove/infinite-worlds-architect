@@ -23,7 +23,7 @@ Every text field in the world JSON has a different *injection profile* — when,
 
 1. **Packing always-on fields.** Authors paste NPC backstories, location lore, and faction history into `background` because it "feels canonical." The AI now spends tokens re-reading that content every turn — including the 95% of turns where it's irrelevant — and the player pays the cost via inflated prompt sizes and noisier responses.
 
-2. **Treating `background` as state.** `background` is the **initial premise**. It is not updated during play unless an `effectChangeBackground` trigger fires. Authors who write running plot summaries into `background` are confused when the AI keeps "rewinding" to early-story framing.
+2. **Treating `background` as state.** `background` is the **initial premise**. `effectChangeBackground` is Start-of-Game (SoG) only — it is silently ignored at runtime in regular (mid-game) triggers (confirmed by IW import testing, May 2026). Even if IW allowed mid-game changes, `background` is only sent to the storyteller at turn 0 and is superseded by the Summary AI after ~turn 8, making a mid-game change inert in any case. For mid-game context shifts, use `effectChangeMainInstructions`. Authors who write running plot summaries into `background` are confused when the AI keeps "rewinding" to early-story framing.
 
 The allocation strategy below exists to push every piece of content to the **least-injecting field that still works**.
 
@@ -95,7 +95,7 @@ For content that is only relevant in specific game phases, or that needs to swap
 
 - **`instructionBlocks[*]`** — Extra always-on blocks. Use when you want a separable chunk of always-on instruction you can later modify via `effectModifyInstructionBlock` (e.g., "Chapter 2 narration rules" replacing "Chapter 1 narration rules").
 - **`triggerEvents`** — Conditional logic that fires effects. Use for:
-  - Plot-phase transitions (`effectChangeBackground`, `effectChangeObjective`, `effectChangeMainInstructions`).
+  - Plot-phase transitions (`effectChangeObjective`, `effectChangeMainInstructions`). For mid-game context or setting changes, use `effectChangeMainInstructions` — not `effectChangeBackground`, which is Start-of-Game (SoG) only and silently ignored in regular triggers (confirmed by IW import testing, May 2026).
   - State-dependent AI guidance (`effectTellAIWhatToDo` — one-turn directive, the most reliable steering effect).
   - Hidden information surfacing (`effectGiveInfo` — appended to `secretInfo`, suggestive rather than directive).
   - Tracked item changes (`effectSetTrackedItemValue`).
@@ -143,7 +143,8 @@ Putting AI-facing content here is a silent no-op — the AI literally never sees
 | Situational rule | `loreBookEntries` (keyword: trigger phrase) | 4 |
 | Always-on rule chunk (swappable) | `instructionBlocks` | 5 (trigger-gated swap) |
 | Phase-specific narrative rules | `triggerEvents` → `effectChangeMainInstructions` | 5 |
-| Plot transition | `triggerEvents` → `effectChangeBackground` / `effectChangeObjective` | 5 |
+| Plot transition (mid-game) | `triggerEvents` → `effectChangeMainInstructions` / `effectChangeObjective` | 5 |
+| Plot transition (SoG only) | `triggerEvents` → `effectChangeBackground` (SoG-only; ignored in regular triggers) | 5 |
 | One-turn AI directive | `triggerEvents` → `effectTellAIWhatToDo` | 5 |
 | Hidden info for AI only | `triggerEvents` → `effectGiveInfo` (appends to `secretInfo`) | 5 |
 | Game state variable | `trackedItems` | varies |
@@ -159,7 +160,7 @@ These are the recurring mistakes. Avoiding them is most of the value of this doc
 
 **Do not put narrative history in `instructions`.** `instructions` is for AI *decision-making logic* — how to evaluate actions, what tone to maintain, what mechanics to enforce. It is not for "what has happened." Use `background` for the initial situation, keyword blocks for character/location lore, and triggers for evolving plot state.
 
-**Do not treat `background` as an ongoing state field.** It holds the world situation at the **very beginning** of the story and is not updated during play unless `effectChangeBackground` fires. Be judicious — only the initial premise and setting belong here, not story developments or evolved state.
+**Do not treat `background` as an ongoing state field.** It holds the world situation at the **very beginning** of the story. `effectChangeBackground` is Start-of-Game (SoG) only — it is silently ignored in regular (mid-game) triggers. For mid-game context or setting changes, use `effectChangeMainInstructions` instead. Only the initial premise and setting belong in `background`; story developments and evolved state belong elsewhere.
 
 **Do not pack always-on fields with content that is only relevant sometimes.** If a piece of content is only useful when the player is in a specific location, talking to a specific NPC, or has reached a specific story phase — that's a keyword block or a trigger-gated effect, not an always-on field. Every always-on token is paid every turn.
 
