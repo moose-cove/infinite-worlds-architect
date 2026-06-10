@@ -413,8 +413,9 @@
         },
         "visibility": {
           "type": "string",
-          "enum": ["everyone", "ai_only", "ai_only_boring", "player_only", "hidden"],
-          "description": "Who can see this value."
+          "enum": ["everyone", "ai_only", "ai_only_boring", "player_only", "hidden", "hidden_boring"],
+          "description": "Who can see this value.",
+          "x-iw-note": "hidden_boring: AI cannot read the item (same readability as 'hidden'). Developer-confirmed; import survival KB-marked [PENDING TEST] as of May 2026. Source: iw_knowledge_base_v2_8.md."
         },
         "description": { "type": "string", "description": "Authoring description of what this variable represents." },
         "updateInstructions": { "type": "string", "description": "Instructions for how the AI should update this value." },
@@ -475,7 +476,8 @@
         "triggerOnTrackedItem": {
           "data": "{inequality, requiredValue, trackedItemID, textComparison}",
           "description": "Fires based on tracked item or skill value comparison",
-          "inequalities": ["at_least", "is_exactly", "at_most", "contains"]
+          "inequalities": ["at_least", "is_exactly", "at_most", "contains", "not_equal"],
+          "x-iw-note": "not_equal: UI label 'is not exactly'; maps to JSON value 'not_equal'. KB-empirical; import survival [PENDING TEST] as of May 2026. Source: iw_knowledge_base_v2_8.md."
         },
         "triggerOnRandomChance": {
           "data": "string (formula, e.g. '30' for 30%)",
@@ -570,6 +572,11 @@
         "effectRequestInput": {
           "data": "{inputMode, requestText, requiresInput, targetTrackedItemId}",
           "description": "Request free-text input from player (blocking)"
+        },
+        "effectFireRandomTrigger": {
+          "data": "null or omitted",
+          "description": "Fire a random trigger from the world's trigger pool. Historically absent from the schema but confirmed working in real worlds. Ignored (stripped) in Start-of-Game triggers.",
+          "x-iw-note": "KB-empirical: confirmed working in non-SoG triggers. Source: iw_knowledge_base_v2_8.md 'Import Test Results'."
         }
       }
     },

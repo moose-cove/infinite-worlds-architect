@@ -626,3 +626,379 @@ def test_compare_worlds_detects_change(tmp_path):
     create_new_world_json(str(path_b), title="World B")  # different title
     result = json.loads(compare_worlds(str(path_a), str(path_b)))
     assert result["total_changes"] > 0
+
+
+# ── KB v2.8 checks (recs 1–7 + rec 9 validator slice) ───────────────────────
+
+
+def _trigger_world_with_condition(cond_data: dict) -> dict:
+    """Helper: world with a single triggerOnTrackedItem condition carrying the given data."""
+    world = _base_world()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerOnTrackedItem",
+                    "trackedItemID": "ITEM00001",
+                    "inequality": cond_data.get("inequality", "is_exactly"),
+                    "data": cond_data,
+                }
+            ],
+        }
+    ]
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
+    return world
+
+
+def _trigger_world_with_effect(effect_type: str, effect_data, sog: bool = False) -> dict:
+    """Helper: world with a trigger carrying a single effect."""
+    world = _base_world()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerOnStartOfGame": sog,
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": effect_type,
+                    "data": effect_data,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+# ── rec 1: empty-string condition strip ──────────────────────────────────────
+
+
+def test_empty_inequality_warns():
+    # rec 1: empty-string inequality silently stripped on IW import → WARNING
+    world = _trigger_world_with_condition(
+        {"inequality": "", "requiredValue": "5", "trackedItemID": "ITEM00001"}
+    )
+    result = _validate(world)
+    assert result["valid"]  # warning, not error
+    assert any("inequality" in w and "silently stripped" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_empty_text_comparison_warns():
+    # rec 1: empty-string textComparison silently stripped on IW import → WARNING
+    world = _trigger_world_with_condition(
+        {
+            "inequality": "contains",
+            "requiredValue": "cake",
+            "trackedItemID": "ITEM00001",
+            "textComparison": "",
+        }
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert any("textComparison" in w and "silently stripped" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+# ── rec 2: non-string requiredValue ──────────────────────────────────────────
+
+
+def test_non_string_required_value_errors():
+    # rec 2: int requiredValue → AttributeError on IW import → ERROR
+    world = _trigger_world_with_condition(
+        {"inequality": "is_exactly", "requiredValue": 5, "trackedItemID": "ITEM00001"}
+    )
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("requiredValue" in e and "string" in e for e in result["errors"]), result["errors"]
+
+
+def test_float_required_value_errors():
+    # rec 2: float requiredValue also crashes IW → ERROR
+    world = _trigger_world_with_condition(
+        {"inequality": "at_least", "requiredValue": 5.5, "trackedItemID": "ITEM00001"}
+    )
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("requiredValue" in e for e in result["errors"]), result["errors"]
+
+
+def test_string_required_value_is_valid():
+    # rec 2: string requiredValue is fine
+    world = _trigger_world_with_condition(
+        {"inequality": "is_exactly", "requiredValue": "5", "trackedItemID": "ITEM00001"}
+    )
+    result = _validate(world)
+    assert not any("requiredValue" in e for e in result["errors"]), result["errors"]
+
+
+# ── rec 3: player-interaction effect shapes ───────────────────────────────────
+
+
+def test_effect_present_choice_missing_keys_warns():
+    # rec 3: effectPresentChoice missing required keys → WARNING
+    world = _trigger_world_with_effect(
+        "effectPresentChoice",
+        # Missing: selectionMode, minSelections, maxSelections, updateMode,
+        # valueDelimiter, targetTrackedItemId
+        {"message": "Choose one:", "choices": "A\nB"},
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert any("effectPresentChoice" in w and "missing" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_effect_present_choice_all_keys_valid():
+    # rec 3: effectPresentChoice with all 8 keys → no warning
+    world = _trigger_world_with_effect(
+        "effectPresentChoice",
+        {
+            "message": "Choose one:",
+            "choices": "A\nB",
+            "selectionMode": "single",
+            "minSelections": None,
+            "maxSelections": None,
+            "updateMode": "replace",
+            "valueDelimiter": "newline",
+            "targetTrackedItemId": "",
+        },
+    )
+    result = _validate(world)
+    assert not any("effectPresentChoice" in w and "missing" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+def test_effect_request_input_missing_keys_warns():
+    # rec 3: effectRequestInput missing required keys → WARNING
+    world = _trigger_world_with_effect(
+        "effectRequestInput",
+        # Missing: targetTrackedItemId, requiresInput, inputMode
+        {"requestText": "Tell me your name:"},
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert any("effectRequestInput" in w and "missing" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_effect_request_input_all_keys_valid():
+    # rec 3: effectRequestInput with all 4 keys → no missing-keys warning
+    world = _trigger_world_with_effect(
+        "effectRequestInput",
+        {
+            "requestText": "Tell me your name:",
+            "targetTrackedItemId": "",
+            "requiresInput": True,
+            "inputMode": "single",
+        },
+    )
+    result = _validate(world)
+    assert not any("effectRequestInput" in w and "missing" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+# ── rec 4: effectFireRandomTrigger registered ────────────────────────────────
+
+
+def test_effect_fire_random_trigger_no_unknown_warning():
+    # rec 4: effectFireRandomTrigger must not produce "unknown effect type" warning
+    world = _trigger_world_with_effect("effectFireRandomTrigger", None)
+    result = _validate(world)
+    assert not any("effectFireRandomTrigger" in w and "unknown" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+# ── rec 5: visibility + inequality ───────────────────────────────────────────
+
+
+def test_hidden_boring_visibility_valid():
+    # rec 5: hidden_boring is a valid visibility value
+    world = _base_world()
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "hidden_boring",
+            "autoUpdate": False,
+        }
+    ]
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    assert not any("visibility" in e for e in result["errors"])
+
+
+def test_not_equal_inequality_no_cross_ref_error():
+    # rec 5: not_equal inequality in triggerOnTrackedItem → no unknown-inequality error
+    world = _trigger_world_with_condition(
+        {"inequality": "not_equal", "requiredValue": "5", "trackedItemID": "ITEM00001"}
+    )
+    result = _validate(world)
+    # Should not error on the inequality value (the schema now includes not_equal)
+    assert not any("not_equal" in e for e in result["errors"]), result["errors"]
+
+
+# ── rec 6: skills not empty ───────────────────────────────────────────────────
+
+
+def test_empty_skills_warns():
+    # rec 6: empty skills array → WARNING
+    world = _base_world(skills=[])
+    result = _validate(world)
+    assert result["valid"]
+    assert any("skills" in w and "empty" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_non_empty_skills_no_warning():
+    # rec 6: non-empty skills → no empty-skills warning
+    world = _base_world(skills=["General"])
+    result = _validate(world)
+    assert not any("skills" in w and "empty" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_scaffold_skills_not_empty():
+    # rec 6: scaffold must seed at least one skill
+    import tempfile
+
+    from iw_architect.tools.helpers import create_new_world_json
+
+    tmp = tempfile.mktemp(suffix=".json")
+    create_new_world_json(tmp, title="Test World")
+    world = json.loads(Path(tmp).read_text())
+    Path(tmp).unlink(missing_ok=True)
+    assert isinstance(world["skills"], list)
+    assert len(world["skills"]) >= 1, "scaffold must seed at least one skill string"
+
+
+# ── rec 7: SoG effect context ─────────────────────────────────────────────────
+
+
+def test_sog_only_effect_in_regular_trigger_warns():
+    # rec 7: effectChangeBackground in a non-SoG trigger → WARNING
+    world = _trigger_world_with_effect("effectChangeBackground", "New background", sog=False)
+    result = _validate(world)
+    assert result["valid"]
+    assert any(
+        "effectChangeBackground" in w and "Start-of-Game" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_sog_only_effect_in_sog_trigger_valid():
+    # rec 7: effectChangeBackground in a SoG trigger → no SoG warning
+    world = _trigger_world_with_effect("effectChangeBackground", "New background", sog=True)
+    result = _validate(world)
+    assert not any(
+        "effectChangeBackground" in w and "Start-of-Game" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_regular_only_effect_in_sog_trigger_warns():
+    # rec 7: effectGiveInfo in a SoG trigger → WARNING
+    world = _trigger_world_with_effect("effectGiveInfo", "Some info", sog=True)
+    result = _validate(world)
+    assert result["valid"]
+    assert any("effectGiveInfo" in w and "stripped" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_regular_only_effect_in_regular_trigger_valid():
+    # rec 7: effectGiveInfo in a regular trigger → no SoG warning
+    world = _trigger_world_with_effect("effectGiveInfo", "Some info", sog=False)
+    result = _validate(world)
+    assert not any("effectGiveInfo" in w and "stripped" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_fire_random_trigger_in_sog_warns():
+    # rec 7: effectFireRandomTrigger in SoG trigger → WARNING
+    world = _trigger_world_with_effect("effectFireRandomTrigger", None, sog=True)
+    result = _validate(world)
+    assert result["valid"]
+    assert any("effectFireRandomTrigger" in w and "stripped" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+def test_effect_change_first_action_in_regular_trigger_warns():
+    # rec 7: effectChangeFirstAction in a non-SoG trigger → WARNING
+    world = _trigger_world_with_effect("effectChangeFirstAction", "New first action", sog=False)
+    result = _validate(world)
+    assert result["valid"]
+    assert any(
+        "effectChangeFirstAction" in w and "Start-of-Game" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+# ── rec 9: effectSetTrackedItemValue replaceWith ─────────────────────────────
+
+
+def test_set_tracked_item_value_missing_replace_with_warns():
+    # rec 9: effectSetTrackedItemValue without replaceWith → WARNING
+    world = _trigger_world_with_effect(
+        "effectSetTrackedItemValue",
+        {"action": "set", "newValue": "10", "trackedItemID": "ITEM00001"},
+    )
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
+    result = _validate(world)
+    assert result["valid"]
+    assert any("replaceWith" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_set_tracked_item_value_with_replace_with_no_warning():
+    # rec 9: effectSetTrackedItemValue with replaceWith present → no replaceWith warning
+    world = _trigger_world_with_effect(
+        "effectSetTrackedItemValue",
+        {"action": "set", "newValue": "10", "replaceWith": "", "trackedItemID": "ITEM00001"},
+    )
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Health",
+            "positionInList": 0,
+            "dataType": "number",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
+    result = _validate(world)
+    assert not any("replaceWith" in w for w in result["warnings"]), result["warnings"]
