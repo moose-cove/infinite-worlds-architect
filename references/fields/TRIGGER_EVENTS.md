@@ -71,6 +71,8 @@ Same shape as `triggerPrereqs`. The named triggers must NOT have fired previousl
 
 `triggerOnEvent` is the most flexible but also the noisiest. The AI's evaluation can produce false positives (firing when the situation didn't really occur) and false negatives (failing to fire when it did). Use very explicit language and prefer concrete cues over abstract ones. "The player has explicitly handed the dagger to Mira" is more reliable than "The player has surrendered."
 
+**`triggerOnTrackedItem` evaluates the *current* value, not the menu of possible values.** When a tracked item's per-character `initialPCValue` is a string array, that array is a **pick-one selection menu** — the player chooses one option at character creation and that single choice becomes the active value (see [`TRACKED_ITEMS.md`](./TRACKED_ITEMS.md#initial-values)). The condition is tested against the player's chosen value, so a `contains` test is **not** always-true just because the option list happens to include the `requiredValue`. Reason about *which single option* satisfies the condition. For example, an item with menu `["Basic Images", "Premium Advanced Images"]` and a `contains: "Basic Images"` condition fires **only** for players who picked Basic Images — not for everyone, and not at all for players who picked Premium Advanced Images.
+
 ---
 
 ## Choosing effect types — when to use which

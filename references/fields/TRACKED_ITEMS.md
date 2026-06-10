@@ -83,6 +83,8 @@ The v2.1 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 - **`initialValue`** — the world-default starting value, applied to all PCs unless overridden.
 - **`initialValueBasedOnPC`** — `"same"` (all PCs share `initialValue`), `"character"` (per-PC defaults from `possibleCharacters[*].initialTrackedItemValues`), or `"player"` (player picks at game start from the per-PC array of choices).
 - **`possibleCharacters[*].initialTrackedItemValues[*].initialPCValue`** can be a **string OR a string array**. When it's an array (e.g., `["0", "900", "5"]`), those are the *choices* the player picks from at character selection — not a `[min, max, default]` tuple. Treat the array as an unordered set of valid options.
+  - **Single value vs. selection menu.** A scalar string is a fixed starting value. An array is a **pick-one menu**: the player selects exactly one option at character creation, and that single choice becomes the item's active value. The item never holds every option at once.
+  - **Consequence for triggers.** Because the active value is the one chosen option, a `triggerOnTrackedItem` condition evaluates against that single choice — *not* against the whole option list. A `contains` test is **not** automatically satisfied just because the menu happens to list the required string. See [`TRIGGER_EVENTS.md`](./TRIGGER_EVENTS.md#choosing-condition-types).
 
 ---
 
