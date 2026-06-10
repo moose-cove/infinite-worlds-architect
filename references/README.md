@@ -71,10 +71,12 @@ Always mint IDs with `mint_ids(kind, count)` — never invent them by hand. Form
 |---|---|---|
 | Player character | `characterId` | 8 chars (`A-Za-z0-9+/`) |
 | NPC | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
-| Tracked item | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
+| Tracked item | `id` | max 9 chars, **alphanumeric only** (`A-Za-z0-9`) [^idlen] [^trkid] |
 | Trigger event | `id` | 8 chars |
 | Trigger condition / effect | `id` | UUID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) |
 | Instruction block | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
 | Lore book entry | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
 
 [^idlen]: **KB-empirical.** The canonical fixture only contains 9-char IDs, so the fixture alone reads as "exactly 9." KB import testing confirms shorter IDs (1–9 chars) are valid for these four entity kinds — the rule is a *maximum*, not a fixed length.
+
+[^trkid]: **KB-empirical — June 2026 import test.** IW silently renames tracked-item IDs that contain `+`, `/`, or other non-alphanumeric characters to random 9-char alphanumeric strings on import, WITHOUT updating trigger references (dangling refs, broken triggers). EIB/KIB/trigger-event IDs with `+`/`/` survived the same test unchanged — the hazard is specific to `trackedItems[].id`. `mint_ids` now emits alphanumeric-only IDs for all entity kinds.

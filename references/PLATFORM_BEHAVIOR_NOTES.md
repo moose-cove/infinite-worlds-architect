@@ -41,13 +41,23 @@ Note: `schemaVersion` is near the **end** of the canonical ordering (position ~4
 
 ## Silent ID-Rename Hazard
 
-IW silently renames non-conforming tracked item, instruction block (`instructionBlocks`), and lore book entry (`loreBookEntries`) IDs to random 9-char alphanumeric strings on import.
+**KB-empirical — June 2026 import test.** IW silently renames **tracked-item** (`trackedItems[].id`) IDs that contain non-alphanumeric characters to random 9-char alphanumeric strings on import, WITHOUT updating trigger references. The same test observed instruction-block, lore-book-entry, and trigger-event IDs with `+`/`/` survive import unchanged.
 
-**IDs at risk:** Any `trackedItems[].id`, `instructionBlocks[].id`, or `loreBookEntries[].id` that:
-- Contains non-alphanumeric characters (spaces, hyphens, underscores, symbols)
-- Exceeds 9 characters
+**Empirical evidence from the June 2026 import test:**
+- `trkPlus+1` (tracked item, contains `+`) → silently renamed to `JOgXHlGyO`
+- `trkSlsh/2` (tracked item, contains `/`) → silently renamed to `Yi3bE076Q`
+- `trkClean3` (tracked item, alphanumeric control) → unchanged
+- `eibPlus+6` (instruction block, contains `+`) → **unchanged** (survived import)
+- `kibSlsh/7` (lore book entry, contains `/`) → **unchanged** (survived import)
+- `Trg+Spc4` (trigger event, contains `+`) → **unchanged** (survived import)
 
-**Why this is dangerous:** All trigger references to the renamed ID break silently. The trigger appears valid but never fires, because it references an ID that no longer exists.
+After the rename, IW did **not** remap references: the 8 trigger conditions and effects pointing at `trkPlus+1` / `trkSlsh/2` (via `trackedItemID` on both `triggerOnTrackedItem` conditions and `effectSetTrackedItemValue` effects) were left pointing at the now-dead IDs, producing silent dead triggers.
+
+**IDs at risk:** `trackedItems[].id` values containing any non-alphanumeric character (`+`, `/`, `-`, `_`, spaces, etc.). The observed renames involved `+` and `/`; the broader pattern (any non-alnum char) is the safer rule to follow.
+
+**As of v0.10.0, `mint_ids` emits alphanumeric-only IDs (`A-Za-z0-9`) for all entity kinds**, eliminating this hazard for machine-minted IDs. The `validate_world` tool now warns when a tracked-item ID contains non-alphanumeric characters.
+
+**Why this is dangerous:** All trigger references to the renamed tracked-item ID break silently. The trigger appears valid in the world editor but never fires because it references an ID that no longer exists.
 
 ### Global String-Replace Remap Procedure
 
