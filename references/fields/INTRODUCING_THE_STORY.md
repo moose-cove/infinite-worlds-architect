@@ -36,11 +36,13 @@ The initial situation and premise of the story. This field is powerful but **tim
 - The "status quo before the adventure begins."
 
 **What does NOT belong here:**
-- Ongoing story developments or evolving state (this field is static unless `effectChangeBackground` fires).
+- Ongoing story developments or evolving state (this field is static after turn 0 — see authoring tactic below).
 - Redundant character descriptions — player characters go in `possibleCharacters`; NPCs go in `NPCs`.
 - Detailed location or faction lore — use keyword instruction blocks for on-demand injection.
 
-**Authoring tactic.** Write `background` strictly as the situation *at the very beginning* of the story. If something needs to change during play, use `effectChangeBackground` (a trigger effect) or restate the new framing via `summaryRequest`. `background` should remain "evergreen" — sensible reading at turn 50 as much as turn 1.
+**Authoring tactic.** Write `background` strictly as the situation *at the very beginning* of the story. `background` should remain "evergreen" — sensible reading at turn 50 as much as turn 1.
+
+**Important: `effectChangeBackground` is Start-of-Game (SoG) only.** Confirmed by IW import testing (May 2026): in a regular (mid-game) trigger, IW silently ignores `effectChangeBackground` at runtime. Even if IW allowed it, the effect would be inert mid-game — `background` is only sent to the storyteller AI at turn 0; after ~turn 8 it is superseded by the Summary AI's running summary and the storyteller no longer sees raw `background` text. To change context or setting framing mid-game, use `effectChangeMainInstructions` (replaces the `instructions` block) or restate framing via `summaryRequest`.
 
 For the deeper rule against packing `background` with content that belongs elsewhere, see [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md#anti-patterns).
 
