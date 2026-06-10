@@ -42,6 +42,37 @@ _KNOWN_EFFECT_TYPES = {
     "effectModifyTrackedItemDetails",
     "effectPresentChoice",
     "effectRequestInput",
+    # rec 4 (KB-empirical): historically schema-absent but confirmed working in real worlds.
+    # Source: iw_knowledge_base_v2_8.md "Import Test Results".
+    "effectFireRandomTrigger",
+}
+
+# rec 7: SoG = Start-of-Game (triggerOnStartOfGame: true on the trigger).
+# SoG-only effects are silently ignored in regular triggers;
+# regular-only effects are stripped in SoG.
+# Source: iw_knowledge_base_v2_8.md "All Effect Types" table.
+_SOG_ONLY_EFFECTS = {"effectChangeBackground", "effectChangeFirstAction"}
+_REGULAR_ONLY_EFFECTS = {"effectGiveInfo", "effectFireRandomTrigger"}
+
+# rec 3: required data keys for player-interaction effects.
+# effectPresentChoice: all 8 keys must be present (even in single-select; min/max may be null).
+# Source: fixture + WORLD_JSON_SCHEMA_v2.1.md.
+_EFFECT_PRESENT_CHOICE_REQUIRED_KEYS = {
+    "message",
+    "choices",
+    "selectionMode",
+    "minSelections",
+    "maxSelections",
+    "updateMode",
+    "valueDelimiter",
+    "targetTrackedItemId",
+}
+# effectRequestInput: 4 required keys.
+_EFFECT_REQUEST_INPUT_REQUIRED_KEYS = {
+    "requestText",
+    "targetTrackedItemId",
+    "requiresInput",
+    "inputMode",
 }
 
 _KNOWN_CONDITION_TYPES = {
@@ -229,6 +260,184 @@ def _resolve_tracked_item_ref(
     if ref.startswith("skill_"):
         return f"Tracked item reference '{ref}' not found (unknown skill)"
     return f"Tracked item ID '{ref}' not found"
+
+
+def _check_tracked_item_condition_data(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """rec 1 + rec 2: validate triggerOnTrackedItem condition data fields.
+
+    rec 1 (WARNING): empty-string inequality or textComparison is silently stripped by IW on import.
+    rec 2 (ERROR): non-string requiredValue causes AttributeError crash on IW import
+        (IW calls .strip() on it → 'int' object has no attribute 'strip').
+    Source: iw_knowledge_base_v2_8.md "triggerOnTrackedItem — Definitive Correct Format".
+    """
+    for trigger in world.get("triggerEvents", []):
+        tname = trigger.get("name", trigger.get("id", "?"))
+        for cond in trigger.get("triggerConditions", []):
+            if cond.get("type") != "triggerOnTrackedItem":
+                continue
+            data = cond.get("data")
+            if not isinstance(data, dict):
+                continue
+            cond_id = cond.get("id", "?")
+
+            # rec 1: empty-string inequality or textComparison is silently stripped on import
+            if data.get("inequality") == "":
+                warnings.append(
+                    f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
+                    "data.inequality is empty string — silently stripped on IW import"
+                )
+            if data.get("textComparison") == "":
+                warnings.append(
+                    f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
+                    "data.textComparison is empty string — silently stripped on IW import"
+                )
+
+            # rec 2: non-string requiredValue causes an AttributeError crash on IW import
+            rv = data.get("requiredValue")
+            if rv is not None and not isinstance(rv, str):
+                errors.append(
+                    f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
+                    f"data.requiredValue must be a string (got {type(rv).__name__}) — "
+                    "IW crashes on import with AttributeError: object has no attribute 'strip'"
+                )
+
+
+def _check_player_interaction_effect_shapes(
+    world: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """rec 3: validate effectPresentChoice and effectRequestInput data shapes.
+
+    Both effects are silently stripped if their data is malformed.
+    All required keys must be present (minSelections/maxSelections may be null).
+    Source: fixture + WORLD_JSON_SCHEMA_v2.1.md + iw_knowledge_base_v2_8.md.
+    """
+    for trigger in world.get("triggerEvents", []):
+        tname = trigger.get("name", trigger.get("id", "?"))
+        for effect in trigger.get("triggerEffects", []):
+            etype = effect.get("type")
+            data = effect.get("data")
+            eid = effect.get("id", "?")
+
+            # A non-dict `data` is itself malformed (IW silently strips it), so warn
+            # for that case too — not only for a dict missing required keys.
+            if etype == "effectPresentChoice":
+                if not isinstance(data, dict):
+                    warnings.append(
+                        f"Trigger '{tname}' effect '{eid}': effectPresentChoice "
+                        f"data is not a dict (got {type(data).__name__}) — "
+                        "silently stripped on IW import if malformed"
+                    )
+                else:
+                    missing = _EFFECT_PRESENT_CHOICE_REQUIRED_KEYS - set(data.keys())
+                    if missing:
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectPresentChoice "
+                            f"data missing required keys {sorted(missing)} — "
+                            "silently stripped on IW import if malformed"
+                        )
+
+            elif etype == "effectRequestInput":
+                if not isinstance(data, dict):
+                    warnings.append(
+                        f"Trigger '{tname}' effect '{eid}': effectRequestInput "
+                        f"data is not a dict (got {type(data).__name__}) — "
+                        "silently stripped on IW import if malformed"
+                    )
+                else:
+                    missing = _EFFECT_REQUEST_INPUT_REQUIRED_KEYS - set(data.keys())
+                    if missing:
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectRequestInput "
+                            f"data missing required keys {sorted(missing)} — "
+                            "silently stripped on IW import if malformed"
+                        )
+
+
+def _check_set_tracked_item_value_shapes(
+    world: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """rec 9 (validator slice): effectSetTrackedItemValue data must include 'replaceWith'.
+
+    KB-empirical import requirement: replaceWith must be present for all actions
+    (use "" when unused); it is only *consumed* by the 'replace' action.
+    Source: iw_knowledge_base_v2_8.md "Verified Corrections".
+    """
+    for trigger in world.get("triggerEvents", []):
+        tname = trigger.get("name", trigger.get("id", "?"))
+        for effect in trigger.get("triggerEffects", []):
+            if effect.get("type") != "effectSetTrackedItemValue":
+                continue
+            data = effect.get("data")
+            eid = effect.get("id", "?")
+            if isinstance(data, dict) and "replaceWith" not in data:
+                warnings.append(
+                    f"Trigger '{tname}' effect '{eid}': effectSetTrackedItemValue data "
+                    "is missing 'replaceWith' key — must be present for all actions "
+                    '(use "" when unused); KB-empirical import requirement '
+                    "(iw_knowledge_base_v2_8.md 'Verified Corrections')"
+                )
+
+
+def _check_sog_effect_context(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """rec 7: warn when SoG-only effects appear in regular triggers, or vice versa.
+
+    SoG trigger = triggerOnStartOfGame: true on the trigger object.
+    SoG-only effects (effectChangeBackground, effectChangeFirstAction) are silently
+    ignored in regular (non-SoG) triggers.
+    Regular-only effects (effectGiveInfo, effectFireRandomTrigger) are silently stripped
+    in SoG triggers.
+    Source: iw_knowledge_base_v2_8.md "All Effect Types" table + fixture verification.
+    """
+    for trigger in world.get("triggerEvents", []):
+        tname = trigger.get("name", trigger.get("id", "?"))
+        # identity check (`is True`): only literal True counts, not truthy 1/"true".
+        # Do not "simplify" to bool(...) — a non-bool value here is itself a Tier 1 type
+        # error, and treating it as truthy would mask that and emit a misleading SoG warning.
+        is_sog = trigger.get("triggerOnStartOfGame", False) is True
+
+        for effect in trigger.get("triggerEffects", []):
+            etype = effect.get("type")
+            if not etype:
+                continue
+            eid = effect.get("id", "?")
+
+            if is_sog and etype in _REGULAR_ONLY_EFFECTS:
+                warnings.append(
+                    f"Trigger '{tname}' effect '{eid}': {etype} is silently stripped "
+                    "in Start-of-Game triggers — it only works in regular (non-SoG) triggers"
+                )
+            elif not is_sog and etype in _SOG_ONLY_EFFECTS:
+                warnings.append(
+                    f"Trigger '{tname}' effect '{eid}': {etype} is Start-of-Game-only — "
+                    "silently ignored in regular triggers "
+                    "(KB-empirical; iw_knowledge_base_v2_8.md 'All Effect Types')"
+                )
+
+
+def _check_skills_not_empty(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """rec 6: warn when the top-level skills array is empty.
+
+    KB v2.8 asserts an empty skills array breaks import; not live-verified here —
+    warning only (not an error). Note: this is the world-level skills string array,
+    NOT the per-character skills object map (a different field entirely).
+    Source: iw_knowledge_base_v2_8.md.
+    """
+    skills = world.get("skills")
+    if isinstance(skills, list) and len(skills) == 0:
+        # hideSkillSystem: true might legitimately suppress skills — note the caveat
+        hide = world.get("hideSkillSystem", False)
+        if hide:
+            warnings.append(
+                "skills is empty and hideSkillSystem is true — if this world uses skill-based "
+                "triggers or tracking, a non-empty skills array may be required on IW import "
+                "(KB-empirical; iw_knowledge_base_v2_8.md)"
+            )
+        else:
+            warnings.append(
+                "skills is empty — KB v2.8 asserts an empty skills array may break IW import; "
+                "seed at least one skill string (e.g. 'General') "
+                "(KB-empirical; iw_knowledge_base_v2_8.md)"
+            )
 
 
 def _check_cross_references(world: dict, errors: list[str], warnings: list[str]) -> None:
@@ -457,6 +666,12 @@ def validate_world(world_path: str) -> str:
     _check_cross_references(world, errors, warnings)
     _check_template_variables(world, errors, warnings)
     _check_unknown_top_level_keys(world, errors, warnings)
+    # KB v2.8 checks (recs 1, 2, 3, 6, 7, 9-validator)
+    _check_tracked_item_condition_data(world, errors, warnings)
+    _check_player_interaction_effect_shapes(world, errors, warnings)
+    _check_set_tracked_item_value_shapes(world, errors, warnings)
+    _check_sog_effect_context(world, errors, warnings)
+    _check_skills_not_empty(world, errors, warnings)
 
     return json.dumps(
         {

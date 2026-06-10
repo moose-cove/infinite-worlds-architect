@@ -93,7 +93,9 @@ _DEFAULT_SCAFFOLD: dict[str, Any] = {
     "illustrationStyleCharacterHighPriority": "",
     "illustrationStyleNonCharacterLowPriority": "",
     "illustrationStyleNonCharacterHighPriority": "",
-    "skills": [],
+    # KB v2.8 rec 6: seed at least one skill string — an empty array may break IW import.
+    # (KB-empirical; iw_knowledge_base_v2_8.md). The value "General" matches the KB's own seed.
+    "skills": ["General"],
     "possibleCharacters": [],
     "NPCs": [],
     "trackedItems": [],
