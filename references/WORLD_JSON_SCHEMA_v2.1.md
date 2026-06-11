@@ -127,7 +127,7 @@ This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived fr
 | `initialValueBasedOnPC` | string | Editable | One of: `"same"` (all characters share initial value), `"character"` (per-character defaults), `"player"` (player chooses at game start) |
 | `autoUpdate` | boolean | Editable | Whether the AI updates this item automatically each turn |
 
-**`initialPCValue` array form**: in `possibleCharacters[*].initialTrackedItemValues`, the `initialPCValue` may be a string OR a string array. When it is an array (e.g., `["0", "900", "5"]`), the values are the **set of available choices the player picks from** at character selection. Treat the array as an unordered set of valid options — not a [min, max, default] tuple or a distribution.
+**`initialPCValue` array form**: in `possibleCharacters[*].initialTrackedItemValues`, the `initialPCValue` may be a string OR a string array. When it is an array (e.g., `["0", "900", "5"]`), the values are the **set of available choices the player picks from** at character selection — a pick-one menu. Treat the array as an unordered set of valid options — not a [min, max, default] tuple or a distribution. The player selects exactly one option and that single choice becomes the item's active value; the item never holds every option at once. Consequently a `triggerOnTrackedItem` condition is evaluated against the chosen value, so a `contains` test is not always-true merely because the menu lists the required string — see [`fields/TRIGGER_EVENTS.md`](fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
 ## 5 `triggerEvents[*]`
 

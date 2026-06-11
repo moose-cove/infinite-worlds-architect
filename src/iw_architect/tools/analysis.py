@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Any
 
 from iw_architect.paths import require_absolute
@@ -121,6 +122,48 @@ def _find_cycles(graph: dict[str, list[str]]) -> list[list[str]]:
             dfs(node)
 
     return cycles
+
+
+def _menu_backed_items(world: dict) -> dict[str, dict]:
+    """Map tracked-item id → {name, options} for items whose per-character
+    ``initialPCValue`` is an array (a pick-one selection menu).
+
+    When ``initialPCValue`` is a string array the player picks exactly one
+    option at character selection, and that single choice becomes the item's
+    active value — the item never holds every option at once. Options are
+    unioned across all characters that offer a menu for the item.
+    """
+    menu: dict[str, dict] = {}
+    for ch in world.get("possibleCharacters", []):
+        for itv in ch.get("initialTrackedItemValues", []):
+            value = itv.get("initialPCValue")
+            if not isinstance(value, list):
+                continue
+            tid = itv.get("id")
+            if not tid:
+                continue
+            entry = menu.setdefault(tid, {"name": itv.get("name", tid), "options": []})
+            for opt in value:
+                if isinstance(opt, str) and opt not in entry["options"]:
+                    entry["options"].append(opt)
+    return menu
+
+
+def _iter_leaf_conditions(conditions: Any) -> Iterator[dict]:
+    """Yield leaf trigger conditions, descending into compound logic groups.
+
+    A compound condition has ``category == "logic"`` and a list ``data`` of
+    sub-conditions; leaves carry a ``type`` (e.g. ``triggerOnTrackedItem``).
+    """
+    if not isinstance(conditions, list):
+        return
+    for cond in conditions:
+        if not isinstance(cond, dict):
+            continue
+        if cond.get("category") == "logic" and isinstance(cond.get("data"), list):
+            yield from _iter_leaf_conditions(cond["data"])
+        else:
+            yield cond
 
 
 def audit_world(world_path: str) -> str:
@@ -271,6 +314,50 @@ def audit_world(world_path: str) -> str:
                         "suggestion": (
                             "Add initialTrackedItemValues entries for per-character tracked items."
                         ),
+                    }
+                )
+
+    # triggerOnTrackedItem conditions that test a menu-backed (pick-one) item.
+    # The condition evaluates the player's single CHOSEN value, so it is not
+    # always-true just because the option array lists requiredValue. Surfacing
+    # the menu here prevents the common "always clobbered at game start" misread.
+    menu_items = _menu_backed_items(world)
+    if menu_items:
+        for te in world.get("triggerEvents", []):
+            tname = te.get("name", te.get("id", "?"))
+            for cond in _iter_leaf_conditions(te.get("triggerConditions", [])):
+                if cond.get("type") != "triggerOnTrackedItem":
+                    continue
+                raw_data = cond.get("data")
+                data = raw_data if isinstance(raw_data, dict) else {}
+                tid = cond.get("trackedItemID") or data.get("trackedItemID")
+                if tid not in menu_items:
+                    continue
+                item = menu_items[tid]
+                options = item["options"]
+                comparison = data.get("textComparison") or data.get("inequality") or "?"
+                required = data.get("requiredValue", "?")
+                findings.append(
+                    {
+                        "type": "menu_backed_condition",
+                        "severity": "info",
+                        "summary": (
+                            f"Trigger '{tname}' tests menu-backed tracked item "
+                            f"'{item['name']}' (player picks one of {options})"
+                        ),
+                        "detail": (
+                            f"'{item['name']}' ({tid}) is a per-character pick-one selection "
+                            f"menu: the player selects exactly one of {options} at character "
+                            f"selection, and that single choice becomes the active value. The "
+                            f"condition ({comparison} '{required}') is evaluated against the "
+                            "player's chosen value, so it fires ONLY for players whose choice "
+                            f"matches — it is NOT always-true merely because the menu lists "
+                            f"'{required}'. Reason about which single option satisfies it before "
+                            "concluding the trigger always (or never) fires."
+                        ),
+                        "trigger": tname,
+                        "trackedItem": item["name"],
+                        "options": options,
                     }
                 )
 
