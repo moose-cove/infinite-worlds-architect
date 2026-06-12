@@ -41,7 +41,7 @@ A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, an
 
 Then:
 
-1. **Bump the `version` attribute on the copy.** Read the target's `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving any zero-padding. Skip if the world has no `version` field.
+1. **Bump the `version` attribute on the copy, and move it to the top of the file.** Read the target's `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving any zero-padding. Then **relocate that same (now-bumped) `version` line so it is the first property** of the JSON object (typically two `Edit`s: remove it from its current position, then re-insert it right after the opening `{`), so the author sees the variant's version the moment they open the raw file. Key order never changes how IW interprets a world, but IW renormalizes top-level order to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`), so this is a local pre-import readability convenience. Skip both the bump and the move if the world has no `version` field.
 2. Call `validate_world(target_path)` to confirm the copy is clean.
 
 ## Step 3 — Suggest variant directions

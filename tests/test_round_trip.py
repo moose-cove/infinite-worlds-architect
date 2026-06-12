@@ -124,6 +124,26 @@ def test_scaffold_passes_validator(tmp_path):
     )
 
 
+def test_scaffold_version_is_first_key(tmp_path):
+    """`version` must be the first key a scaffolded world writes to disk.
+
+    Key order is cosmetic to the platform, but the plugin deliberately surfaces
+    `version` at the top so authors see it the moment they open the raw JSON. This
+    guards that convention against an accidental reorder of _DEFAULT_SCAFFOLD.
+    json.dumps serializes dict keys in insertion order, so the first key on disk is
+    the first key of the scaffold dict.
+    """
+    from iw_architect.tools.helpers import create_new_world_json
+
+    output = tmp_path / "scaffold_order.json"
+    create_new_world_json(str(output), title="Test World")
+
+    world = json.loads(output.read_text())
+    assert next(iter(world)) == "version", (
+        f"expected 'version' as the first key, got '{next(iter(world))}'"
+    )
+
+
 def test_schema_coverage():
     """Walk the fixture and verify every top-level key is known to the schema model."""
     from iw_architect.schema_model import SCHEMA_SUMMARY

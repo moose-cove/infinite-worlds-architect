@@ -69,6 +69,16 @@ def mint_ids(kind: str, count: int = 1) -> str:
 
 
 _DEFAULT_SCAFFOLD: dict[str, Any] = {
+    # `version` is intentionally the FIRST key so an author can see the world's
+    # version at a glance the moment they open the raw JSON. Key order has no effect
+    # on how IW interprets a world (it parses the file into an object), but IW does
+    # renormalize top-level order to its own canonical order on import — where `version`
+    # actually sorts near the end, before `designNotes`. So this front-placement is a
+    # local, pre-import authoring convenience that IW undoes on import; it never reaches
+    # exported worlds. See references/mechanics/PLATFORM_BEHAVIOR_NOTES.md ("Canonical
+    # JSON Field Ordering"). The modify/spinoff flows relocate `version` to the top too,
+    # so hand-edited drafts match scaffolded ones.
+    "version": "1.00",
     "schemaVersion": KNOWN_SCHEMA_VERSION,
     "title": "",
     "description": "",
@@ -115,7 +125,6 @@ _DEFAULT_SCAFFOLD: dict[str, Any] = {
     "allowChangeCharacterNewPortrait": False,
     "permissionsOnceShared": {"sharing": True, "editing": True},
     "autoAdvanceVersion": True,
-    "version": "1.00",
 }
 
 
