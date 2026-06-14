@@ -305,6 +305,45 @@ def format_world_for_review(world_path: str) -> str:
     return json.dumps({"success": str(output_path)})
 
 
+# Story-extraction tools surfaced for discoverability via get_schema_summary (D4).
+# These are tools, not world fields, so they are merged into the summary output
+# here rather than added to the schema JSON (which is derived solely from the world
+# schema). Kept inline — not imported from tools.story_tools — to avoid a circular
+# import, since story_tools imports _load_world from this module.
+_STORY_TOOL_SUMMARIES: list[dict[str, str]] = [
+    {
+        "name": "extract_story_data",
+        "purpose": (
+            "Parse Infinite Worlds story-export .txt files into structured JSON "
+            "(manifest, metadata, turn index, tracked-item snapshots, optional "
+            "character index) for building a sequel world."
+        ),
+    },
+    {
+        "name": "query_story_data",
+        "purpose": (
+            "Read back a slice of an extraction directory by category (manifest | "
+            "metadata | turn_index | tracked_state | turn_detail | character_index), "
+            "optionally filtered to specific turns."
+        ),
+    },
+    {
+        "name": "get_character_list",
+        "purpose": (
+            "Derive a starting character list (player characters + NPCs) from an "
+            "original world JSON, for confirmation before character indexing."
+        ),
+    },
+]
+
+
 def get_schema_summary() -> str:
-    """Return the canonical schema as structured JSON — entity types, fields, enums, etc."""
-    return json.dumps(SCHEMA_SUMMARY, indent=2)
+    """Return the canonical schema as structured JSON — entity types, fields, enums, etc.
+
+    Also surfaces an ``availableTools`` list of the story-extraction tools so the
+    sequel-world workflow can discover them without a separate prompt (design
+    decision D4). They are merged into the output here rather than added to the
+    schema JSON because they are tools, not world fields.
+    """
+    summary = {**SCHEMA_SUMMARY, "availableTools": _STORY_TOOL_SUMMARIES}
+    return json.dumps(summary, indent=2)
