@@ -32,7 +32,7 @@ src/iw_architect/
 ├── schema_model.py    # Deriver: builds SCHEMA_SUMMARY from the JSON Schema at import time
 └── tools/
     ├── inspection.py  # read_world_field, format_world_for_review, get_schema_summary
-    ├── helpers.py     # create_new_world_json, mint_ids, confirm_path
+    ├── helpers.py     # create_new_world_json, make_draft_world, mint_ids, confirm_path
     └── analysis.py    # audit_world, compare_worlds, get_diff_summary
 
 tests/

@@ -9,7 +9,12 @@ Tools registered alphabetically per the design brief.
 from mcp.server.fastmcp import FastMCP
 
 from iw_architect.tools.analysis import audit_world, compare_worlds, get_diff_summary
-from iw_architect.tools.helpers import confirm_path, create_new_world_json, mint_ids
+from iw_architect.tools.helpers import (
+    confirm_path,
+    create_new_world_json,
+    make_draft_world,
+    mint_ids,
+)
 from iw_architect.tools.inspection import (
     format_world_for_review,
     get_schema_summary,
@@ -26,6 +31,7 @@ mcp.tool()(confirm_path)
 mcp.tool()(format_world_for_review)
 mcp.tool()(get_diff_summary)
 mcp.tool()(get_schema_summary)
+mcp.tool()(make_draft_world)
 mcp.tool()(mint_ids)
 mcp.tool()(read_world_field)
 mcp.tool()(create_new_world_json)

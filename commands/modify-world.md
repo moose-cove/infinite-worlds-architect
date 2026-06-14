@@ -28,18 +28,10 @@ Call `confirm_path(path)` with that absolute path. Present the resolved path and
 
 ## Step 2 — Make a working draft copy (never edit the source)
 
-**The source world JSON the author handed you is sacrosanct — never edit it.** It is the clean baseline you will diff your changes against. The *first* thing you do with any existing world is copy it to a new draft file, and all subsequent work happens on that draft.
+**The source world JSON the author handed you is sacrosanct — never edit it.** It is the clean baseline you will diff your changes against. The *first* thing you do with any existing world is copy it to a draft, and all subsequent work happens on that draft.
 
-1. **Derive the draft path** from the confirmed source path:
-   - **Always** append `_draft` before the `.json` extension.
-   - If the filename already carries a version token (e.g. `_v1.21`), **increment its trailing dot-separated numeric group by 1 as an integer**, preserving any zero-pad width: `world_v1.21.json` → `world_v1.22_draft.json`; `world_v2.09.json` → `world_v2.10_draft.json`; `world_v1.99.json` → `world_v1.100_draft.json`. If there is no version token, just append `_draft`: `world.json` → `world_draft.json`.
-2. **Copy with a shell copy command** — **never** by reading the whole file into context and writing it back out:
-   ```
-   cp "<source_path>" "<draft_path>"
-   ```
-   A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, and any unknown platform-managed fields exactly, and costs no tokens. (`cp` takes no JSON *content* on the command line, so the heredoc-escaping hazard that otherwise bans Bash for JSON surgery does not apply.)
-3. **Bump the in-file `version` attribute on the draft** — a *separate* bump from the filename version token in sub-step 1. Read the draft's current `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving zero-padding. If the world has no `version` field, skip this.
-4. Call `validate_world(draft_path)` to confirm the copy is clean.
+1. **Call `make_draft_world(source_path)`** with the confirmed absolute source path — omit the second argument so the tool derives the `_draft` copy. This is the Draft-copy guard from the agent guide above; the tool's own description covers what it does (copies the source untouched, bumps `version`, surfaces it first). Use the `draft_path` it returns for everything below.
+2. Call `validate_world(draft_path)` to confirm the copy is clean.
 
 From here on, **every** `Read`, `Edit`, `validate_world`, and `audit_world` call targets the **draft path**. The original source file is never touched again — it stays as the diff baseline.
 
