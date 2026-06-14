@@ -173,10 +173,32 @@ class TestGetCharacterList:
         assert "The Warden" in names
         assert out["source_count"] == 2
 
-    def test_aliases_default_empty(self, tmp_path):
+    def test_player_character_aliases_default_empty(self, tmp_path):
+        # possibleCharacters have no alias field in the schema → aliases stay [].
         world = {"possibleCharacters": [{"name": "Petra Voss"}], "NPCs": []}
         out = json.loads(get_character_list(_write_world(tmp_path, world)))
         assert out["character_list"][0]["aliases"] == []
+
+    def test_npc_aliases_seeded_from_names(self, tmp_path):
+        # IW NPCs carry a `names` field (schema: "alternative names the NPC may go
+        # by"); it must seed the character-index alias list.
+        world = {
+            "possibleCharacters": [],
+            "NPCs": [{"name": "Finnegan Mosswood", "names": ["Finn", "Mosswood"]}],
+        }
+        out = json.loads(get_character_list(_write_world(tmp_path, world)))
+        entry = out["character_list"][0]
+        assert entry["name"] == "Finnegan Mosswood"
+        assert entry["aliases"] == ["Finn", "Mosswood"]
+
+    def test_npc_aliases_exclude_canonical_name_and_dedupe(self, tmp_path):
+        world = {
+            "possibleCharacters": [],
+            "NPCs": [{"name": "Finn", "names": ["Finn", "Finnegan", "Finnegan", ""]}],
+        }
+        out = json.loads(get_character_list(_write_world(tmp_path, world)))
+        # The canonical name, duplicates, and blank entries are dropped.
+        assert out["character_list"][0]["aliases"] == ["Finnegan"]
 
     def test_player_characters_before_npcs(self, tmp_path):
         world = {
@@ -215,6 +237,13 @@ class TestGetCharacterList:
         assert out["source_count"] == 1
         assert out["character_list"][0]["name"] == "Petra Voss"
 
+    def test_non_list_character_fields_tolerated(self, tmp_path):
+        # Defensive: a malformed world where the character fields aren't lists.
+        world = {"possibleCharacters": "bogus", "NPCs": {"name": "X"}}
+        out = json.loads(get_character_list(_write_world(tmp_path, world)))
+        assert out["character_list"] == []
+        assert out["source_count"] == 0
+
     def test_relative_path_errors(self):
         out = json.loads(get_character_list("world.json"))
         assert "error" in out
@@ -241,6 +270,19 @@ class TestDiscoverabilityAndRegistration:
         summary = json.loads(get_schema_summary())
         tool_names = {t["name"] for t in summary["availableTools"]}
         assert {"extract_story_data", "query_story_data", "get_character_list"} <= tool_names
+
+    def test_available_tools_match_registered_tool_names(self):
+        # Guard against the hand-maintained _STORY_TOOL_SUMMARIES drifting from the
+        # actual registered tool function names (they live in separate modules).
+        import iw_architect.server as server
+
+        listed = {t["name"] for t in json.loads(get_schema_summary())["availableTools"]}
+        registered = {
+            server.extract_story_data.__name__,
+            server.query_story_data.__name__,
+            server.get_character_list.__name__,
+        }
+        assert listed == registered
 
     def test_schema_summary_still_has_schema(self):
         # The availableTools merge must not displace the underlying schema content.

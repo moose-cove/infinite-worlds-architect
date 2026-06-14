@@ -110,11 +110,14 @@ def get_character_list(world_path: str) -> str:
 
     Pulls player characters (``possibleCharacters`` — the protagonist lives here,
     so it is never omitted) and ``NPCs``, returning each as
-    ``{"name": str, "aliases": []}`` with an empty alias list for the author to
-    augment in the sequel-world command step. Entries without a usable name are
-    skipped (the character index matches names against the story text, so a
-    nameless entry could not be indexed); names are de-duplicated, preserving first
-    appearance (player characters before NPCs).
+    ``{"name": str, "aliases": [...]}``. NPC aliases are seeded from the world's
+    ``names`` field (the schema's "alternative names the NPC may go by"), so short
+    forms or surnames used in the story prose still match during character indexing;
+    player characters have no equivalent schema field, so their alias list starts
+    empty. The author can augment any alias list in the sequel-world command step.
+    Entries without a usable name are skipped (the character index matches names
+    against the story text, so a nameless entry could not be indexed); names are
+    de-duplicated, preserving first appearance (player characters before NPCs).
 
     world_path: absolute path to the original world JSON.
 
@@ -132,16 +135,33 @@ def get_character_list(world_path: str) -> str:
 
     character_list: list[dict] = []
     seen: set[str] = set()
-    for entry in [*world.get("possibleCharacters", []), *world.get("NPCs", [])]:
-        if not isinstance(entry, dict):
-            continue
-        name = entry.get("name")
-        if not isinstance(name, str) or not name.strip():
-            continue
-        if name in seen:
-            continue
-        seen.add(name)
-        character_list.append({"name": name, "aliases": []})
+
+    def _collect(entries: object, *, npc: bool) -> None:
+        if not isinstance(entries, list):
+            return
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("name")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            aliases: list[str] = []
+            if npc:
+                # IW NPCs carry a `names` field ("alternative names the NPC may go
+                # by"); seed it as aliases so the character index matches short forms
+                # / surnames in the prose. possibleCharacters have no such field.
+                for alt in entry.get("names", []) or []:
+                    if not isinstance(alt, str) or not alt.strip():
+                        continue
+                    if alt != name and alt not in aliases:
+                        aliases.append(alt)
+            character_list.append({"name": name, "aliases": aliases})
+
+    _collect(world.get("possibleCharacters", []), npc=False)
+    _collect(world.get("NPCs", []), npc=True)
 
     return json.dumps(
         {"character_list": character_list, "source_count": len(character_list)},
