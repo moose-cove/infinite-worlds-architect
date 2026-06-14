@@ -29,20 +29,18 @@ If `$ARGUMENTS` contains two paths (source then target, space-separated), use th
 3. Call `confirm_path` on the target path. Its parent must exist; warn if the file already exists.
 4. Present both resolved paths and wait for confirmation before proceeding.
 
-## Step 2 — Copy the source (with a copy command, never Read + Write)
+## Step 2 — Copy the source to the variant target (via `make_draft_world`)
 
-**Never modify the source world.** Duplicate it to the target path with a shell **copy** command — do **not** read the whole file into context and write it back out:
+**Never modify the source world.** Call `make_draft_world(source_path, target_path)` with both absolute paths — the variant's `target_path` is the author's chosen name from Step 1, passed explicitly so the tool copies there instead of deriving a `_draft` name.
 
-```
-cp "<source_path>" "<target_path>"
-```
+`make_draft_world` does the whole copy step deterministically:
 
-A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, and any unknown platform-managed fields exactly, and costs no tokens. (`cp` takes no JSON *content* on the command line, so the heredoc-escaping hazard that otherwise bans Bash for JSON surgery does not apply here — the ban is on shell heredocs and inline scripts that manipulate JSON *content*, not on a plain file copy.)
+- byte-copies the source to the target (preserving key order, formatting, and any unknown platform-managed fields exactly — no Read-then-`Write` round-trip);
+- bumps the copy's in-file `version` (increments the trailing component, e.g. `"1.04"` → `"1.05"`, preserving zero-padding) and relocates `version` to the first key, so the author sees the variant's version the moment they open the raw file. (If the world has no `version` field, the tool leaves it absent — it never injects one.)
 
-Then:
+Front-placing `version` is a local pre-import readability convenience — key order never changes how IW interprets a world, and IW renormalizes to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`).
 
-1. **Bump the `version` attribute on the copy, and move it to the top of the file.** Read the target's `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving any zero-padding. Then **relocate that same (now-bumped) `version` line so it is the first property** of the JSON object (typically two `Edit`s: remove it from its current position, then re-insert it right after the opening `{`), so the author sees the variant's version the moment they open the raw file. Key order never changes how IW interprets a world, but IW renormalizes top-level order to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`), so this is a local pre-import readability convenience. Skip both the bump and the move if the world has no `version` field.
-2. Call `validate_world(target_path)` to confirm the copy is clean.
+Then call `validate_world(target_path)` to confirm the copy is clean.
 
 ## Step 3 — Suggest variant directions
 

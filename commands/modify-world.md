@@ -30,16 +30,13 @@ Call `confirm_path(path)` with that absolute path. Present the resolved path and
 
 **The source world JSON the author handed you is sacrosanct — never edit it.** It is the clean baseline you will diff your changes against. The *first* thing you do with any existing world is copy it to a new draft file, and all subsequent work happens on that draft.
 
-1. **Derive the draft path** from the confirmed source path:
-   - **Always** append `_draft` before the `.json` extension.
-   - If the filename already carries a version token (e.g. `_v1.21`), **increment its trailing dot-separated numeric group by 1 as an integer**, preserving any zero-pad width: `world_v1.21.json` → `world_v1.22_draft.json`; `world_v2.09.json` → `world_v2.10_draft.json`; `world_v1.99.json` → `world_v1.100_draft.json`. If there is no version token, just append `_draft`: `world.json` → `world_draft.json`.
-2. **Copy with a shell copy command** — **never** by reading the whole file into context and writing it back out:
-   ```
-   cp "<source_path>" "<draft_path>"
-   ```
-   A real `cp` is a byte-for-byte duplicate: it preserves key order, formatting, and any unknown platform-managed fields exactly, and costs no tokens. (`cp` takes no JSON *content* on the command line, so the heredoc-escaping hazard that otherwise bans Bash for JSON surgery does not apply.)
-3. **Bump the in-file `version` attribute on the draft, and move it to the top of the file** — a *separate* bump from the filename version token in sub-step 1. Read the draft's current `version` string (e.g. `"1.04"`) and `Edit` it to increment the trailing component by 1 (`"1.04"` → `"1.05"`), preserving zero-padding. Then **relocate that same (now-bumped) `version` line so it is the first property** of the JSON object (typically two `Edit`s: remove it from its current position, then re-insert it right after the opening `{`), so the author sees the world's version the moment they open the raw file. Key order never changes how IW interprets a world, but IW *does* renormalize top-level order to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`), so this front-placement is a local pre-import readability convenience, not a change IW preserves. If the world has no `version` field, skip both the bump and the move (don't inject one).
-4. Call `validate_world(draft_path)` to confirm the copy is clean.
+1. **Call `make_draft_world(source_path)`** with the confirmed absolute source path. The tool does the whole draft step deterministically, so you don't hand-edit any of it:
+   - byte-copies the source (preserving key order, formatting, and any unknown platform-managed fields exactly — no Read-then-`Write` round-trip);
+   - derives the draft path — appends `_draft` before `.json`, incrementing any trailing `_v<ver>` filename token as an integer with zero-pad preserved (`world_v1.21.json` → `world_v1.22_draft.json`; `world_v1.99.json` → `world_v1.100_draft.json`; `world.json` → `world_draft.json`);
+   - bumps the draft's in-file `version` (increments the trailing component, e.g. `"1.04"` → `"1.05"`) and relocates `version` to the first key, so the author sees the world's version the moment they open the raw file. (If the world has no `version` field, the tool leaves it absent — it never injects one.)
+
+   It returns the `draft_path`; use that for everything below. Front-placing `version` is a local pre-import readability convenience — key order never changes how IW interprets a world, and IW renormalizes to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`).
+2. Call `validate_world(draft_path)` to confirm the copy is clean.
 
 From here on, **every** `Read`, `Edit`, `validate_world`, and `audit_world` call targets the **draft path**. The original source file is never touched again — it stays as the diff baseline.
 
