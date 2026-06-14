@@ -124,6 +124,244 @@ def test_scaffold_passes_validator(tmp_path):
     )
 
 
+def test_scaffold_version_is_first_key(tmp_path):
+    """`version` must be the first key a scaffolded world writes to disk.
+
+    Key order is cosmetic to the platform, but the plugin deliberately surfaces
+    `version` at the top so authors see it the moment they open the raw JSON. This
+    guards that convention against an accidental reorder of _DEFAULT_SCAFFOLD.
+    json.dumps serializes dict keys in insertion order, so the first key on disk is
+    the first key of the scaffold dict.
+    """
+    from iw_architect.tools.helpers import create_new_world_json
+
+    output = tmp_path / "scaffold_order.json"
+    create_new_world_json(str(output), title="Test World")
+
+    world = json.loads(output.read_text())
+    assert next(iter(world)) == "version", (
+        f"expected 'version' as the first key, got '{next(iter(world))}'"
+    )
+
+
+# ── make_draft_world tests ─────────────────────────────────────────────────────
+
+
+def test_make_draft_world_copies_bumps_and_fronts_version(tmp_path):
+    """Happy path: copy the fixture, bump `version`, surface it first, stay valid.
+
+    Exercises the real fixture (where `version` sits second-to-last, before
+    `designNotes`, with a trailing comma) — the common modify/spinoff case.
+    """
+    from iw_architect.tools.helpers import make_draft_world
+    from iw_architect.validator import validate_world
+
+    source = tmp_path / "world.json"
+    source.write_text(FIXTURE_PATH.read_text())
+    source_bytes_before = source.read_bytes()
+
+    result = json.loads(make_draft_world(str(source)))
+    assert result["status"] == "drafted", result
+    draft = Path(result["draft_path"])
+    assert draft == tmp_path / "world_draft.json"
+
+    world = json.loads(draft.read_text())
+    assert next(iter(world)) == "version", "version must be the first key in the draft"
+    assert world["version"] == "1.05", "fixture version 1.04 must bump to 1.05"
+    assert result["version"] == {"from": "1.04", "to": "1.05"}
+
+    # The source is the protected baseline: byte-for-byte unchanged.
+    assert source.read_bytes() == source_bytes_before
+
+    # The draft still validates clean.
+    assert json.loads(validate_world(str(draft)))["errors"] == []
+
+
+def test_make_draft_world_preserves_passthrough_fields(tmp_path):
+    """Unknown platform-managed fields and every non-version value survive the draft."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "w.json"
+    source.write_text(
+        "{\n"
+        '  "title": "T",\n'
+        '  "schemaVersion": 2.1,\n'
+        '  "futurePlatformField": {"nested": [1, 2, 3]},\n'
+        '  "version": "1.04",\n'
+        '  "designNotes": "keep me"\n'
+        "}\n"
+    )
+
+    result = json.loads(make_draft_world(str(source), str(tmp_path / "out.json")))
+    assert result["status"] == "drafted", result
+
+    draft = json.loads(Path(result["draft_path"]).read_text())
+    assert next(iter(draft)) == "version"
+    assert draft["version"] == "1.05"
+    # Everything else is preserved verbatim, including the unknown field.
+    assert draft["title"] == "T"
+    assert draft["schemaVersion"] == 2.1
+    assert draft["futurePlatformField"] == {"nested": [1, 2, 3]}
+    assert draft["designNotes"] == "keep me"
+
+
+def test_make_draft_world_handles_version_as_last_property(tmp_path):
+    """When `version` is the last property (no trailing comma), the move must not
+
+    leave a dangling comma on the new last property — json.loads succeeding proves it.
+    """
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "w.json"
+    source.write_text('{\n  "title": "T",\n  "schemaVersion": 2.1,\n  "version": "1.09"\n}\n')
+
+    result = json.loads(make_draft_world(str(source), str(tmp_path / "out.json")))
+    assert result["status"] == "drafted", result
+
+    draft = json.loads(Path(result["draft_path"]).read_text())  # would raise if comma broke
+    assert next(iter(draft)) == "version"
+    assert draft["version"] == "1.10"
+    assert draft == {"version": "1.10", "title": "T", "schemaVersion": 2.1}
+
+
+def test_make_draft_world_handles_version_as_sole_property(tmp_path):
+    """A degenerate world where `version` is the only key must still yield valid JSON.
+
+    The relocated line must not carry a trailing comma when no other property follows it
+    (`{"version": "1.05",}` would be invalid). Unreachable for a real IW world, but the
+    surgery must never emit malformed output.
+    """
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "w.json"
+    source.write_text('{\n  "version": "1.04"\n}\n')
+
+    result = json.loads(make_draft_world(str(source), str(tmp_path / "out.json")))
+    assert result["status"] == "drafted", result
+
+    draft = json.loads(Path(result["draft_path"]).read_text())  # raises if comma broke it
+    assert draft == {"version": "1.05"}
+
+
+def test_make_draft_world_no_version_field_copies_unchanged(tmp_path):
+    """A source without a `version` field is copied as-is; no key is injected."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "w.json"
+    original = '{\n  "title": "T",\n  "schemaVersion": 2.1\n}\n'
+    source.write_text(original)
+
+    result = json.loads(make_draft_world(str(source), str(tmp_path / "out.json")))
+    assert result["status"] == "drafted"
+    assert result["version"] is None
+
+    draft = Path(result["draft_path"])
+    assert json.loads(draft.read_text()) == {"title": "T", "schemaVersion": 2.1}
+    assert "version" not in json.loads(draft.read_text())
+
+
+def test_make_draft_world_derives_draft_path(tmp_path):
+    """The default draft path appends `_draft` and increments a `_v<ver>` filename token."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    cases = {
+        "world.json": "world_draft.json",
+        "world_v1.21.json": "world_v1.22_draft.json",
+        "world_v2.09.json": "world_v2.10_draft.json",
+        "world_v1.99.json": "world_v1.100_draft.json",
+    }
+    for src_name, expected_draft in cases.items():
+        source = tmp_path / src_name
+        source.write_text('{\n  "version": "1.00",\n  "title": "T"\n}\n')
+        result = json.loads(make_draft_world(str(source)))
+        assert Path(result["draft_path"]).name == expected_draft, (
+            f"{src_name} → {Path(result['draft_path']).name}, expected {expected_draft}"
+        )
+
+
+def test_make_draft_world_respects_explicit_dest(tmp_path):
+    """An explicit draft_path (the spinoff flow) is used verbatim, not derived."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "origin.json"
+    source.write_text('{\n  "version": "1.00",\n  "title": "T"\n}\n')
+    dest = tmp_path / "my_variant.json"
+
+    result = json.loads(make_draft_world(str(source), str(dest)))
+    assert Path(result["draft_path"]) == dest
+    assert dest.exists()
+    assert json.loads(dest.read_text())["version"] == "1.01"
+
+
+def test_make_draft_world_refuses_to_overwrite(tmp_path):
+    """An existing destination is never clobbered — the tool errors instead."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "origin.json"
+    source.write_text('{\n  "version": "1.00"\n}\n')
+    dest = tmp_path / "taken.json"
+    dest.write_text("DO NOT TOUCH")
+
+    result = json.loads(make_draft_world(str(source), str(dest)))
+    assert "error" in result
+    assert "overwrite" in result["error"].lower()
+    assert dest.read_text() == "DO NOT TOUCH"
+
+
+def test_make_draft_world_rejects_relative_and_missing(tmp_path):
+    """Relative paths and a non-existent source both return error envelopes."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    assert "error" in json.loads(make_draft_world("relative/world.json"))
+    missing = json.loads(make_draft_world(str(tmp_path / "nope.json")))
+    assert "error" in missing
+    assert "not found" in missing["error"].lower()
+
+
+def test_make_draft_world_leaves_non_numeric_version_untouched(tmp_path):
+    """A non-numeric trailing version component is copied as-is — not bumped or moved."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "w.json"
+    source.write_text('{\n  "title": "T",\n  "version": "1.0-beta"\n}\n')
+
+    result = json.loads(make_draft_world(str(source), str(tmp_path / "out.json")))
+    assert result["status"] == "drafted"
+    assert result["version"] == {"from": "1.0-beta", "to": "1.0-beta"}
+    assert "non-numeric" in result["message"]
+
+    draft = json.loads(Path(result["draft_path"]).read_text())
+    assert draft["version"] == "1.0-beta"
+    # Not moved to the top — title stays first since version couldn't be safely relocated.
+    assert next(iter(draft)) == "title"
+
+
+def test_make_draft_world_copies_invalid_json_and_reports(tmp_path):
+    """Invalid-JSON source is still copied, but flagged — no surgery is attempted."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "bad.json"
+    source.write_text("{not valid json")
+    dest = tmp_path / "out.json"
+
+    result = json.loads(make_draft_world(str(source), str(dest)))
+    assert result["status"] == "copied"
+    assert result["version"] is None
+    assert "not valid json" in result["message"].lower()
+    assert dest.read_text() == "{not valid json"
+
+
+def test_bump_version_component():
+    """Trailing-component increment preserves zero-pad width and handles carry."""
+    from iw_architect.tools.helpers import _bump_version_component
+
+    assert _bump_version_component("1.04") == "1.05"
+    assert _bump_version_component("2.09") == "2.10"
+    assert _bump_version_component("1.99") == "1.100"
+    assert _bump_version_component("5") == "6"
+    assert _bump_version_component("1.0-beta") is None  # non-numeric tail → left alone
+
+
 def test_schema_coverage():
     """Walk the fixture and verify every top-level key is known to the schema model."""
     from iw_architect.schema_model import SCHEMA_SUMMARY
