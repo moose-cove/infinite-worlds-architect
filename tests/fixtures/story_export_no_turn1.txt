@@ -1,0 +1,68 @@
+== The Iron Gate ==
+
+
+-- Story Background --
+
+A locked estate holds secrets its last owner took to the grave.
+
+
+-- Character --
+
+Name
+----
+Petra Voss
+
+Background
+----------
+A sharp-tongued archivist who never met a locked door she couldn't open — eventually.
+
+Skills
+------
+Research: 4 (Highly skilled)
+Lockpicking: 3 (Competent)
+Charisma: 2 (Unskilled)
+
+
+-- Turn 3 --
+
+Action
+------
+Go to the east wing.
+
+Outcome
+-------
+The east wing is dark and smells of old paper.
+
+Secret Information
+------------------
+The rival is watching from the shadows.
+
+Tracked Items
+-------------
+Gold Coins:
+8
+
+Notes:
+Scrap of paper found.
+
+-- Turn 4 --
+
+Action
+------
+Examine the third painting.
+
+Outcome
+-------
+Behind it: an envelope sealed with red wax.
+
+Secret Information
+------------------
+The envelope contains the will.
+
+Tracked Items
+-------------
+Gold Coins:
+8
+
+Notes:
+Scrap of paper found.
