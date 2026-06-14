@@ -31,14 +31,7 @@ If `$ARGUMENTS` contains two paths (source then target, space-separated), use th
 
 ## Step 2 — Copy the source to the variant target (via `make_draft_world`)
 
-**Never modify the source world.** Call `make_draft_world(source_path, target_path)` with both absolute paths — the variant's `target_path` is the author's chosen name from Step 1, passed explicitly so the tool copies there instead of deriving a `_draft` name.
-
-`make_draft_world` does the whole copy step deterministically:
-
-- byte-copies the source to the target (preserving key order, formatting, and any unknown platform-managed fields exactly — no Read-then-`Write` round-trip);
-- bumps the copy's in-file `version` (increments the trailing component, e.g. `"1.04"` → `"1.05"`, preserving zero-padding) and relocates `version` to the first key, so the author sees the variant's version the moment they open the raw file. (If the world has no `version` field, the tool leaves it absent — it never injects one.)
-
-Front-placing `version` is a local pre-import readability convenience — key order never changes how IW interprets a world, and IW renormalizes to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`).
+**Never modify the source world.** Call `make_draft_world(source_path, target_path)` with both absolute paths — pass the author's chosen `target_path` from Step 1 explicitly, so the tool copies there (the spinoff exception noted in the Draft-copy guard above) instead of deriving a `_draft` name. The tool's own description covers what it does (copies the source untouched, bumps `version`, surfaces it first).
 
 Then call `validate_world(target_path)` to confirm the copy is clean.
 

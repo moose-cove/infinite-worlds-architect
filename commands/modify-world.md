@@ -28,14 +28,9 @@ Call `confirm_path(path)` with that absolute path. Present the resolved path and
 
 ## Step 2 — Make a working draft copy (never edit the source)
 
-**The source world JSON the author handed you is sacrosanct — never edit it.** It is the clean baseline you will diff your changes against. The *first* thing you do with any existing world is copy it to a new draft file, and all subsequent work happens on that draft.
+**The source world JSON the author handed you is sacrosanct — never edit it.** It is the clean baseline you will diff your changes against. The *first* thing you do with any existing world is copy it to a draft, and all subsequent work happens on that draft.
 
-1. **Call `make_draft_world(source_path)`** with the confirmed absolute source path. The tool does the whole draft step deterministically, so you don't hand-edit any of it:
-   - byte-copies the source (preserving key order, formatting, and any unknown platform-managed fields exactly — no Read-then-`Write` round-trip);
-   - derives the draft path — appends `_draft` before `.json`, incrementing any trailing `_v<ver>` filename token as an integer with zero-pad preserved (`world_v1.21.json` → `world_v1.22_draft.json`; `world_v1.99.json` → `world_v1.100_draft.json`; `world.json` → `world_draft.json`);
-   - bumps the draft's in-file `version` (increments the trailing component, e.g. `"1.04"` → `"1.05"`) and relocates `version` to the first key, so the author sees the world's version the moment they open the raw file. (If the world has no `version` field, the tool leaves it absent — it never injects one.)
-
-   It returns the `draft_path`; use that for everything below. Front-placing `version` is a local pre-import readability convenience — key order never changes how IW interprets a world, and IW renormalizes to its canonical order on import (where `version` sorts near the end — see `references/mechanics/PLATFORM_BEHAVIOR_NOTES.md`).
+1. **Call `make_draft_world(source_path)`** with the confirmed absolute source path — omit the second argument so the tool derives the `_draft` copy. This is the Draft-copy guard from the agent guide above; the tool's own description covers what it does (copies the source untouched, bumps `version`, surfaces it first). Use the `draft_path` it returns for everything below.
 2. Call `validate_world(draft_path)` to confirm the copy is clean.
 
 From here on, **every** `Read`, `Edit`, `validate_world`, and `audit_world` call targets the **draft path**. The original source file is never touched again — it stays as the diff baseline.
