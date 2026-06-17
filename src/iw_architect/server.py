@@ -20,6 +20,11 @@ from iw_architect.tools.inspection import (
     get_schema_summary,
     read_world_field,
 )
+from iw_architect.tools.story_tools import (
+    extract_story_data,
+    get_character_list,
+    query_story_data,
+)
 from iw_architect.validator import validate_world
 
 mcp = FastMCP("iw-json-tools")
@@ -28,13 +33,16 @@ mcp = FastMCP("iw-json-tools")
 mcp.tool()(audit_world)
 mcp.tool()(compare_worlds)
 mcp.tool()(confirm_path)
+mcp.tool()(create_new_world_json)
+mcp.tool()(extract_story_data)
 mcp.tool()(format_world_for_review)
+mcp.tool()(get_character_list)
 mcp.tool()(get_diff_summary)
 mcp.tool()(get_schema_summary)
 mcp.tool()(make_draft_world)
 mcp.tool()(mint_ids)
+mcp.tool()(query_story_data)
 mcp.tool()(read_world_field)
-mcp.tool()(create_new_world_json)
 mcp.tool()(validate_world)
 
 
