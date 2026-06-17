@@ -18,7 +18,7 @@ You are helping an author create a **sequel** to an existing Infinite Worlds wor
 
 ## Step 1 — Confirm paths
 
-If `$ARGUMENTS` is supplied, parse it as space-separated paths: first path = source world JSON, last path = target output path, all paths in between = story export `.txt` files. If any path is missing, ask the user for it in turn.
+If `$ARGUMENTS` is supplied, parse it as space-separated paths: first path = source world JSON, last path = target output world JSON, all paths in between = story export `.txt` files. If any path is missing, ask the user for it in turn. If user provides non-JSON or non-TXT files, clarify that you only accept JSON files for worlds and txt files for story exports.
 
 **Resolve every path to an absolute path before passing it to any tool.** The MCP server process has a different working directory from your session. If the user gave you a relative path, join it with your session's current working directory — e.g. run `realpath -m "<path>"` (the `-m` flag resolves not-yet-created paths; or take `pwd` and prepend it manually). A leading `~` is fine; the tools expand it.
 
@@ -33,7 +33,7 @@ If `$ARGUMENTS` is supplied, parse it as space-separated paths: first path = sou
 
 ## Step 2 — Copy source to sequel target (via `make_draft_world`)
 
-**Never modify the source world.** Call `make_draft_world(source_path, target_path)` with both absolute paths — pass the author's chosen `target_path` explicitly so the tool copies there (the same spinoff idiom: supplying the target overrides the `_draft` naming). The tool copies the source untouched, bumps `version`, and surfaces it first.
+**Never modify the source world.** Call `make_draft_world(source_path, target_path)` with both confirmed absolute paths — pass the author's chosen `target_path` explicitly so the tool copies there (the same spinoff idiom: supplying the target overrides the `_draft` naming). The tool copies the source untouched, bumps `version`, and surfaces it first.
 
 Then call `validate_world(target_path)` to confirm the copy is clean.
 
@@ -91,11 +91,11 @@ Explain it to the author and ask, e.g.:
 
 > "I'm about to go field-by-field through the sequel world with you. This is a good time to turn on the **Citation Gate** — while it's on, every value I propose comes in this format:
 >
-> ```
+> 
 > **Field:** <field name>
 > **Proposed Value:** <value>
 > **Evidence:** <where it came from>
-> ```
+> 
 >
 > That keeps every proposal grounded in the story export, the original world, or your explicit direction — never invented. You can tell me to turn it off at any time. Want me to turn it on now?"
 
