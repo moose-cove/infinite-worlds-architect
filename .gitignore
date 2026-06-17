@@ -2,6 +2,9 @@ claude-scratchpad/
 .idea/
 *.iml
 
+# Per-session citation gate arming flags (created/removed by sequel-world command)
+/.claude/sequel-world-active/
+
 # Python
 __pycache__/
 *.pyc

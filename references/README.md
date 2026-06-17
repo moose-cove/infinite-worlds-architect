@@ -17,6 +17,7 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 |---|---|
 | `mechanics/AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
 | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
+| `mechanics/STORY_EXTRACTION_TOOL.md` | Using `extract_story_data`, `query_story_data`, or `get_character_list` in the sequel-world workflow. Covers all tool signatures, category values, turn resolution, and output file shapes. |
 
 ## `guidance/` — Authoring principles
 
@@ -25,6 +26,9 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 | `guidance/FIELD_ALLOCATION_STRATEGY.md` | Populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world. |
 | `guidance/CHARACTER_AUTHORING_GUARDRAILS.md` | Writing any character. The no-fabrication discipline — never invent `img_appearance` or `img_clothing`. |
 | `guidance/LAYERED_KNOWLEDGE_ISOLATION.md` | Designing worlds with complex NPC knowledge isolation, perception tiers, or ensemble casts where NPCs must not share information they shouldn't have. |
+| `guidance/CITATION_METHODOLOGY.md` | Proposing any field value during a `sequel-world` flow. The four accepted evidence formats, the mandated proposal template, and good vs. bad citation examples. The citation gate hook enforces this. |
+| `guidance/STORY_ACCURACY_GUARDRAILS.md` | Building sequel worlds from story exports. No-fabrication discipline: don't invent events, don't fill gaps with genre defaults, say `NO_STORY_EVIDENCE:` when data is absent. |
+| `guidance/STORY_CONTEXT_DISTRIBUTION.md` | Deciding which `query_story_data` call to make for each sequel world field. Tiered loading sequence, field-to-source mapping, query budget guideline (3–7 `turn_detail` calls), and the `objective` carry-forward rule. |
 
 ## `fields/` — Per-field authoring judgment notes
 
@@ -95,6 +99,10 @@ Use this when the author's request doesn't map obviously to a field name:
 | EIB length, selectedAIProfiles, token budget, model-gating | `templates/USAGE_NOTES.md` |
 | NPC omniscience, knowledge isolation, perception tiers | `guidance/LAYERED_KNOWLEDGE_ISOLATION.md` |
 | Import behavior, ID renaming, JSON field order, World Debug, Export | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` |
+| Sequel world building, continuing a story, sequel-world command | `guidance/STORY_CONTEXT_DISTRIBUTION.md` |
+| Evidence citation, citing story exports, evidence formats | `guidance/CITATION_METHODOLOGY.md` |
+| Story accuracy, no-fabrication for sequels, story evidence gaps | `guidance/STORY_ACCURACY_GUARDRAILS.md` |
+| Story extraction tools, extract_story_data, query_story_data | `mechanics/STORY_EXTRACTION_TOOL.md` |
 
 ## ID formats (charsets from the canonical fixture; length bounds from KB import testing)
 
