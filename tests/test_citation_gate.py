@@ -83,6 +83,21 @@ MULTI_BAD_SECOND = """\
 
 NO_PROPOSAL_MESSAGE = "Just a regular message with no proposals at all."
 
+# Fail-closed cases: **Proposed Value:** present but structurally unanchored.
+# (a) No **Field:** line at all — regex matches zero structured blocks.
+BAD_MESSAGE_NO_FIELD_HEADER = """\
+**Proposed Value:** The Dragon's Keep
+**Evidence:** From Story Metadata
+"""
+
+# (b) Blank line between **Field:** and **Proposed Value:** breaks the regex.
+BAD_MESSAGE_BLANK_LINE_BETWEEN = """\
+**Field:** title
+
+**Proposed Value:** The Dragon's Keep
+**Evidence:** From Story Metadata
+"""
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -216,6 +231,43 @@ def test_armed_multi_block_one_bad_blocks(armed_dir):
     assert result["decision"] == "block"
     # The second field "description" is missing evidence.
     assert "description" in result["reason"]
+
+
+# ---------------------------------------------------------------------------
+# Fail-closed: unanchored **Proposed Value:** blocks → always block
+# ---------------------------------------------------------------------------
+
+
+def test_armed_no_field_header_blocks(armed_dir):
+    """**Proposed Value:** with no **Field:** line must block (zero structured matches)."""
+    _, project_dir = armed_dir
+    result = evaluate(_payload(message=BAD_MESSAGE_NO_FIELD_HEADER), project_dir)
+    assert result is not None
+    assert result["decision"] == "block"
+    assert "malformed" in result["reason"]
+
+
+def test_armed_blank_line_between_field_and_value_blocks(armed_dir):
+    """Blank line between **Field:** and **Proposed Value:** breaks structural match → block."""
+    _, project_dir = armed_dir
+    result = evaluate(_payload(message=BAD_MESSAGE_BLANK_LINE_BETWEEN), project_dir)
+    assert result is not None
+    assert result["decision"] == "block"
+    assert "malformed" in result["reason"]
+
+
+def test_armed_well_formed_single_block_regression(armed_dir):
+    """Regression: a normal well-formed single-block message still passes."""
+    _, project_dir = armed_dir
+    result = evaluate(_payload(message=GOOD_MESSAGE_STORY), project_dir)
+    assert result is None
+
+
+def test_armed_well_formed_multi_block_regression(armed_dir):
+    """Regression: a normal well-formed multi-block message still passes."""
+    _, project_dir = armed_dir
+    result = evaluate(_payload(message=MULTI_GOOD), project_dir)
+    assert result is None
 
 
 # ---------------------------------------------------------------------------

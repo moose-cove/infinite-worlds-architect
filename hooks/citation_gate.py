@@ -129,7 +129,9 @@ def evaluate(payload: dict, project_dir: str | None) -> dict | None:
 
     # --- Parse all proposal blocks and verify each has valid evidence ---
     bad_fields: list[str] = []
+    structured_count = 0
     for match in _PROPOSAL_BLOCK_RE.finditer(message):
+        structured_count += 1
         field_name = match.group("field").strip()
         after_block = match.group("after")
 
@@ -141,6 +143,18 @@ def evaluate(payload: dict, project_dir: str | None) -> dict | None:
         body = evidence_match.group("body")
         if not _is_valid_evidence(body):
             bad_fields.append(field_name)
+
+    # Fail-closed: if there are more raw "**Proposed Value:**" occurrences than
+    # structured blocks matched (e.g. a **Proposed Value:** with no preceding
+    # **Field:** line, or a blank line between them), the unmatched proposals
+    # cannot be verified — treat each unaccounted occurrence as a violation.
+    raw_proposal_count = message.count("**Proposed Value:**")
+    unanchored = raw_proposal_count - structured_count
+    for _ in range(unanchored):
+        bad_fields.append(
+            "<malformed proposal block (missing **Field:** header or unexpected"
+            " blank line before **Proposed Value:**)>"
+        )
 
     if not bad_fields:
         return None  # all proposals are well-cited

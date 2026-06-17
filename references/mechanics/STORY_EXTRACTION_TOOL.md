@@ -99,7 +99,7 @@ extract_story_data(
 
 **Notes:**
 - All paths must be absolute (the MCP server process has a different working directory from the agent session).
-- Multiple `.txt` files are merged in modification-time order before parsing.
+- Multiple `.txt` files are merged in modification-time order before parsing. When the same turn number appears in more than one file, the entry from the newest-mtime file wins; the story header is also taken from the newest file.
 - The tool is idempotent: re-running with the same inputs overwrites the extraction directory's files atomically.
 
 ---

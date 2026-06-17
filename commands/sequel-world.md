@@ -122,7 +122,7 @@ All three lines are required for every proposal. The gate checks every `**Propos
 **Key field notes:**
 
 - `objective` has **no story-export source** (the metadata `objective` is always null). Always cite `CARRY_FORWARD:` (same goal as original world) or `USER_DIRECTED:` (author provided new goal).
-- `img_appearance` and `img_clothing` for characters are author-input only — the story export contains no image prompts. Stop and ask the author if these need to be set.
+- NPC `img_appearance` and `img_clothing` are author-input only (`$defs.npc` in the schema; not present on player characters). Player characters use `portraitPromptDetails` instead — also author-input only. The story export contains no image-generation prompts for either. Stop and ask the author if these need to be set. See `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` §2.
 - `instructions`, `authorStyle`, `triggerEvents`, `instructionBlocks`, `loreBookEntries`, `imageStyle*` all carry forward from the source world unless the author directs otherwise.
 
 **Approval loop (same as `modify-world`):**

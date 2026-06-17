@@ -16,7 +16,7 @@ Every field proposal in a sequel-world session MUST use this exact block structu
 **Evidence:** <evidence in one of the 4 accepted formats below>
 ```
 
-All three lines are required. The `**Evidence:**` line must immediately follow `**Proposed Value:**` — no blank lines between them. Only the `**Evidence:**` line is inspected by the gate; the others are structural anchors.
+All three lines are required. The `**Evidence:**` line should appear within the same proposal block — before the next `**Field:**` heading. The gate does not enforce strict line-adjacency between `**Proposed Value:**` and `**Evidence:**`, but it does require both `**Field:**` and `**Proposed Value:**` to be present with no blank line between them (a blank line there breaks the structural match and causes the gate to treat the proposal as unverifiable). Only the `**Evidence:**` line is inspected for content; `**Field:**` and `**Proposed Value:**` are structural anchors.
 
 > **Evidence is shown in chat prose only.** It is never written to the world JSON. The JSON file receives the value, not the citation.
 

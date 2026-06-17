@@ -65,7 +65,7 @@ The `"last"` keyword resolves to `manifest.total_turns` and is useful for grabbi
 | `objective` | **No story-export source — see below** | — | Must be `CARRY_FORWARD:` or `USER_DIRECTED:`. |
 | `possibleCharacters[*].name` | `metadata.character.name` | `metadata` | Protagonist name from the played session. |
 | `possibleCharacters[*].description` | Original world + author direction | — | Story export doesn't contain character descriptions. |
-| `possibleCharacters[*].skills` | `metadata.character.skills` | `metadata` | Skill list from the session header. |
+| `possibleCharacters[*].skills` | `metadata.character.skills` | `metadata` | Skill list from the session header. **Type mismatch:** `metadata.character.skills` is a raw `str \| None` (the header line as written); the world `skills` field is a `{skill: value}` object. Do not copy directly — parse the string and map to the world's existing `skills` keys. |
 | `trackedItems[*]` (final values) | `tracked_state` (last snapshot) | `tracked_state` | Use snapshots where `toTurn == manifest.total_turns`. |
 | `trackedItems[*]` (labels/instructions) | Original world (carry forward) | — | Tracked item structure doesn't appear in exports. |
 | `NPCs[*].detail` | `character_index` + `turn_detail` | `character_index`, `turn_detail` | What the story actually showed about each NPC. Use carry-forward for anything not shown. |

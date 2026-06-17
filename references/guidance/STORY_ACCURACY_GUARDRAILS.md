@@ -76,7 +76,7 @@ All character fields (player characters and NPCs) carry the no-fabrication disci
 
 Specific rules that interact with story exports:
 
-- **`img_appearance` and `img_clothing` are author-input only.** The story export never contains image-generation prompts. Do not infer these from narrative turn outcomes. Always ask the author.
+- **`img_appearance` and `img_clothing` are NPC-only author-input fields** (`$defs.npc` in the schema; player characters use `portraitPromptDetails` instead — also author-input only). The story export never contains image-generation prompts for either. Do not infer these from narrative turn outcomes. Always ask the author. See [CHARACTER_AUTHORING_GUARDRAILS.md §2](./CHARACTER_AUTHORING_GUARDRAILS.md) for the full rule.
 - **Character `detail` and `secret_info`:** The export may reveal new facts about a character (e.g., a secret revealed in `secretInfo`). These can update the sequel's NPC dossier — but only the explicitly revealed content, not inferred backstory.
 - **Character mentions in the character index** confirm a character was referenced in the story, but not what happened to them. Use `query_story_data(category="turn_detail")` to get the actual context of any mention before making claims about a character's arc.
 

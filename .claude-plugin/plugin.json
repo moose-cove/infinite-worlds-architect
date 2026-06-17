@@ -22,5 +22,5 @@
       ]
     }
   },
-  "hooks": "${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json"
+  "hooks": "./hooks/hooks.json"
 }
