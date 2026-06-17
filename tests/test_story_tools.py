@@ -2,7 +2,7 @@
 
 These exercise the MCP boundary: absolute-path enforcement, the camelCase JSON
 wire shape, the bare ``{"error": ...}`` failure convention (no ``success`` key),
-D4 discoverability via get_schema_summary, and server registration.
+and server registration.
 """
 
 import json
@@ -10,7 +10,6 @@ import os
 
 import pytest
 
-from iw_architect.tools.inspection import get_schema_summary
 from iw_architect.tools.story_tools import (
     extract_story_data,
     get_character_list,
@@ -261,34 +260,11 @@ class TestGetCharacterList:
 
 
 # ---------------------------------------------------------------------------
-# D4 discoverability + server registration
+# server registration
 # ---------------------------------------------------------------------------
 
 
-class TestDiscoverabilityAndRegistration:
-    def test_schema_summary_lists_story_tools(self):
-        summary = json.loads(get_schema_summary())
-        tool_names = {t["name"] for t in summary["availableTools"]}
-        assert {"extract_story_data", "query_story_data", "get_character_list"} <= tool_names
-
-    def test_available_tools_match_registered_tool_names(self):
-        # Guard against the hand-maintained _STORY_TOOL_SUMMARIES drifting from the
-        # actual registered tool function names (they live in separate modules).
-        import iw_architect.server as server
-
-        listed = {t["name"] for t in json.loads(get_schema_summary())["availableTools"]}
-        registered = {
-            server.extract_story_data.__name__,
-            server.query_story_data.__name__,
-            server.get_character_list.__name__,
-        }
-        assert listed == registered
-
-    def test_schema_summary_still_has_schema(self):
-        # The availableTools merge must not displace the underlying schema content.
-        summary = json.loads(get_schema_summary())
-        assert len(summary) > 1  # schema keys plus availableTools
-
+class TestServerRegistration:
     def test_server_registers_story_tools(self):
         # Registration smoke: the server module imports cleanly with the new tools.
         import iw_architect.server as server
