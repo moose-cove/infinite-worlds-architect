@@ -17,14 +17,14 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 |---|---|
 | `mechanics/AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
 | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
-| `mechanics/STORY_EXTRACTION_STRATEGY.md` | Reading a played story with the `extract_story_data` / `query_story_data` / `get_character_list` tools — the tiered loading sequence and the `turn_detail` query budget. For any agent that needs to inspect a story export (e.g. a `modify-world` agent checking how a change played out), not only `sequel-world`. |
+| `mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` | Reading a played story with the `extract_story_data` / `query_story_data` / `get_character_list` tools — the tiered loading sequence and the `turn_detail` query budget. For any agent that needs to inspect a story export (e.g. a `modify-world` agent checking how a change played out), not only `sequel-world`. |
 
 ## `guidance/` — Authoring principles
 
 | File | Read when |
 |---|---|
 | `guidance/FIELD_ALLOCATION_STRATEGY.md` | Populating `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`. Read first when refactoring an existing world. |
-| `guidance/CHARACTER_AUTHORING_GUARDRAILS.md` | Writing any character. The no-fabrication discipline — never invent `img_appearance` or `img_clothing`. |
+| `guidance/CHARACTER_AUTHORING_GUARDRAILS.md` | Writing any character. The no-fabrication discipline — ground every detail in author input or a source, never genre tropes. |
 | `guidance/LAYERED_KNOWLEDGE_ISOLATION.md` | Designing worlds with complex NPC knowledge isolation, perception tiers, or ensemble casts where NPCs must not share information they shouldn't have. |
 
 ## `fields/` — Per-field authoring judgment notes
@@ -97,7 +97,7 @@ Use this when the author's request doesn't map obviously to a field name:
 | NPC omniscience, knowledge isolation, perception tiers | `guidance/LAYERED_KNOWLEDGE_ISOLATION.md` |
 | Import behavior, ID renaming, JSON field order, World Debug, Export | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` |
 | Sequel world building, continuing a story, evidence citation, no-fabrication for sequels | `/infinite-worlds-architect:sequel-world` command (carries the citation + sourcing discipline inline) |
-| Reading/inspecting a played story, story extraction tools, query strategy/budget | `mechanics/STORY_EXTRACTION_STRATEGY.md` |
+| Reading/inspecting a played story, story extraction tools, query strategy/budget | `mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` |
 
 ## ID formats (charsets from the canonical fixture; length bounds from KB import testing)
 

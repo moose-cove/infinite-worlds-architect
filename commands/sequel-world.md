@@ -11,23 +11,20 @@ You are helping an author create a **sequel** to an existing Infinite Worlds wor
 
 **Before you start, also read:**
 
-- `references/mechanics/STORY_EXTRACTION_STRATEGY.md` — how to drive the `extract_story_data` / `query_story_data` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
-- `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` — the no-fabrication discipline for characters. (Its §2 sequel exception for appearance fields is reproduced in this command's sourcing rules.)
+- `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` — how to drive the `extract_story_data` / `query_story_data` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
+- `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` — the no-fabrication discipline for characters.
 
 ---
 
 ## Step 1 — Confirm paths
 
-If `$ARGUMENTS` is supplied, parse it as space-separated paths: first path = source world JSON, last path = target output world JSON, all paths in between = story export `.txt` files. If any path is missing, ask the user for it in turn. If user provides non-JSON or non-TXT files, clarify that you only accept JSON files for worlds and txt files for story exports.
+Resolve every path to an **absolute** path before passing it to a tool — the MCP server runs in a different working directory from your session (join a relative path with `pwd`, or run `realpath -m "<path>"`; a leading `~` is fine, the tools expand it). If `$ARGUMENTS` is supplied it's space-separated: first = source world JSON, last = target output world JSON, the rest = story export `.txt` files. Only `.json` worlds and `.txt` exports are accepted — if the author offers anything else, tell them.
 
-**Resolve every path to an absolute path before passing it to any tool.** The MCP server process has a different working directory from your session. If the user gave you a relative path, join it with your session's current working directory — e.g. run `realpath -m "<path>"` (the `-m` flag resolves not-yet-created paths; or take `pwd` and prepend it manually). A leading `~` is fine; the tools expand it.
-
-1. Call `confirm_path` on the **source world path** (absolute). It must exist.
-2. Confirm each **story export path** (absolute). Each must exist (these are `.txt` files exported from IW).
-3. Ask the user for the **target output path** for the sequel world (if not supplied via arguments).
-4. Call `confirm_path` on the **target path**. Its parent must exist; warn if the file already exists.
-5. Decide on an **extraction directory** — a directory adjacent to the target for the structured extraction output (e.g., if the target is `/path/to/sequel_world.json`, use `/path/to/extracted_story/`). Tell the user where it will be written.
-6. Present all resolved paths and wait for confirmation before proceeding.
+1. `confirm_path` the **source world JSON** (must exist).
+2. `confirm_path` each **story export `.txt`** (must exist).
+3. Ask for the **target output path** if not supplied, then `confirm_path` it — its parent must exist; warn if the file already exists.
+4. Choose an **extraction directory** adjacent to the target (e.g. target `/path/sequel.json` → `/path/extracted_story/`); tell the author where it will be written.
+5. Present all resolved paths and wait for confirmation before proceeding.
 
 ---
 
@@ -91,11 +88,9 @@ Explain it to the author and ask, e.g.:
 
 > "I'm about to go field-by-field through the sequel world with you. This is a good time to turn on the **Citation Gate** — while it's on, every value I propose comes in this format:
 >
-> 
 > **Field:** <field name>
 > **Proposed Value:** <value>
 > **Evidence:** <where it came from>
-> 
 >
 > That keeps every proposal grounded in the story export, the original world, or your explicit direction — never invented. You can tell me to turn it off at any time. Want me to turn it on now?"
 
@@ -115,11 +110,11 @@ mkdir -p "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active"
 touch "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active/${CLAUDE_CODE_SESSION_ID}"
 ```
 
-The second command uses `CLAUDE_CODE_SESSION_ID` (not `CLAUDE_SESSION_ID`) — the environment variable that holds the current session's UUID. If either command fails, report the error to the author before proceeding.
+The second command uses `CLAUDE_CODE_SESSION_ID` (not `CLAUDE_SESSION_ID`) — the environment variable that holds the current session's UUID. If either command fails, report the error to the author and ask them what they'd like to do before proceeding.
 
 **If the author says no**, continue without arming. Still follow the proposal contract below by hand — the gate simply won't enforce it.
 
-**Turning it off later.** If the author asks to turn the gate off at any point (or once the field-by-field pass is done), disarm it immediately — see Step 8. You can re-arm it the same way if they change their mind.
+**Turning it off later.** If the author asks to turn the gate off at any point, disarm it immediately — see Step 7. You can re-arm it the same way if they change their mind.
 
 > The gate mechanism is flow-agnostic (it keys on the per-session marker file, not on "sequel"). This command is the only one that arms it today; if another command ever needs the same evidence discipline, lift the proposal contract below into a shared reference at that point.
 
@@ -147,7 +142,7 @@ All three lines are required. Keep `**Field:**` and `**Proposed Value:**` on con
    - `From Turn #<N> Outcome: <quote or paraphrase>`
    - `From Turn #<N> Secret Info: <…>`
    - `From Turn #<N> Tracked Item <name>: <value>`
-   - `From Story Metadata` (value comes from the extract's `metadata`: title, story background, character name/skills/background)
+   - `From Story Metadata: field <field name>` (e.g. the title, story background, or character name/skills/background)
 
    Cite only turns you have actually queried (verify via `turn_index`).
 2. **`USER_DIRECTED: <what the author said>`** — the author gave a direct instruction this session.
@@ -163,6 +158,7 @@ Propose **one field per message** by default: one block, then wait for approval.
 - **Tracked item** (`trackedItems[*]`): (1) `name`, `dataType`, `visibility`; (2) `description`, `autoUpdate`, `updateInstructions` (only meaningful when `autoUpdate` is true); (3) `initialValue`, `initialValueBasedOnPC`. Beyond the structural fields below (`id`, `positionInList`), the schema also requires `autoUpdate` — don't let it slip through batch (2) unset, or `validate_world` rejects the item.
 - **Keyword Instruction Block** (`loreBookEntries[*]`): `name`, `keywords`, `content` — one message.
 - **Extra Instruction Block** (`instructionBlocks[*]`): `name`, `content` — one message.
+- **Player character** (`possibleCharacters[*]`): (1) `name`, `description`, `skills`; (2) `portraitPromptDetails`, `initialTrackedItemValues`.
 - **NPC** (`NPCs[*]`): (1) `name`, `names`, `location`, `one_liner`; (2) `detail`, `secret_info`; (3) `appearance` plus the portrait prompts `img_appearance` / `img_clothing`.
 - **Trigger event** (`triggerEvents[*]`): (1) `name`, `triggerConditions` (may be empty for a start-of-game / always-fire trigger — only `triggerEffects` is schema-required); (2) `triggerEffects`.
 
@@ -202,9 +198,7 @@ The story export is the evidence floor. Valid sources, strongest first: (1) the 
 
 ## Step 6 — Query story data, then propose fields
 
-Run the Tier-1 queries first (`manifest`, `metadata`, `turn_index`), then pull Tier-2/3 data on demand — see `references/mechanics/STORY_EXTRACTION_STRATEGY.md` for the full sequence and the 3–7 `turn_detail` budget.
-
-Propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
+Load the story data following `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` (Tier-1 first, then Tier-2/3 on demand within the 3–7 `turn_detail` budget), then propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
 
 ### Sourcing rules (per field)
 
@@ -230,31 +224,26 @@ Propose each field per the proposal contract above. **This is a sequel — let t
 1. Show the current value from the source world (or "not set").
 2. Propose the new value with its evidence block.
 3. Wait for the author to approve or revise.
-4. `Edit` the target world in place — use `Edit` (not full `Write`) so platform-managed fields survive. Always `Read` before `Edit`.
+4. If the author asks you to revise anything at all, return to step 1. If they approve, move to step 5.
+5. `Edit` the target world in place — use `Edit` (not full `Write`) so platform-managed fields survive. Always `Read` before `Edit`.
 
 Validate after each batch of 3–5 related edits with `validate_world(target_path)`; fix errors before continuing.
 
 ---
 
-## Step 7 — Validate, audit, and compare
+## Step 7 — Disarm the gate, then validate, audit, and compare
 
-Once the author has approved all proposed changes:
-
-1. Call `validate_world(target_path)` — fix any remaining errors.
-2. Call `audit_world(target_path)` — share the findings with the author.
-3. Call `compare_worlds(source_path, target_path)` and `get_diff_summary(source_path, target_path)` — present a clear narrative of what changed from source to sequel.
-
----
-
-## Step 8 — Disarm the citation gate
-
-If you armed the gate in Step 5, disarm it when the field-by-field pass is done — and **immediately** if the author asks you to turn it off mid-flow, or on any early exit or abort:
+The field-by-field pass is over, so **disarm the citation gate first** — otherwise it keeps inspecting every remaining response (validation summaries, the diff narrative) for a proposal template they won't have. Also disarm immediately if the author asks to turn it off mid-flow, or on any early exit/abort; `rm -f` is safe even if the gate was never armed.
 
 ```bash
 rm -f "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active/${CLAUDE_CODE_SESSION_ID}"
 ```
 
-`rm -f` is safe to run even if the gate was never armed. Leaving the marker in place keeps the gate nagging for the proposal template on later turns of this session, so don't skip it. (If the author later wants the gate back on, re-arm it with the Step 5 commands.)
+Then, once the author has approved all changes:
+
+1. `validate_world(target_path)` — fix any remaining errors.
+2. `audit_world(target_path)` — share the findings with the author.
+3. `compare_worlds(source_path, target_path)` and `get_diff_summary(source_path, target_path)` — present a clear narrative of what changed from source to sequel.
 
 ---
 

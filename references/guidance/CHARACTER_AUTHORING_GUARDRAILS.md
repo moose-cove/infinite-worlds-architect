@@ -27,12 +27,11 @@ If a detail is missing and you can't get it from the author, **leave the field b
 
 ---
 
-## 2. Identity and appearance *(canonical `img_appearance` / `img_clothing` rule)*
+## 2. Identity and appearance
 
 - **Use the author's own language.** When the author describes how a character looks or speaks, reproduce those phrases. Paraphrasing invites distortion — you'll polish a vivid description into a generic one, or quietly swap one detail for an adjacent one.
 - **No genre defaults.** If a character's appearance is never described, leave `appearance` and `img_appearance` empty, or note "not described" in `appearance`. Do not substitute tropes.
-- **Distinguish `appearance` from `img_appearance`.** `appearance` is narrative prose the AI uses in `outcomeDescription`. `img_appearance` is image-generation prompt text — it follows different conventions (concrete visual descriptors, comma-separated tags, often LoRA-friendly phrasing). Authors frequently want one but not the other. **Always ask explicitly.**
-- **`img_appearance` and `img_clothing` are author input only** *(in new-world / modify-world / spinoff)*. These drive the visual identity of the character via image generation. Wrong text here produces wildly wrong portraits. The agent must not invent these — prompt the author for the actual descriptors they want, even if it means stopping the workflow to ask. **Sequel exception:** the `sequel-world` flow has a story export, which usually narrates appearance; there these fields carry forward from the source world or are synthesized from the story's own description (cited to a turn) before the agent falls back to asking. See the `/infinite-worlds-architect:sequel-world` command's sourcing rules.
+- **Distinguish `appearance` from `img_appearance`.** `appearance` is narrative prose the AI uses in `outcomeDescription`. `img_appearance` is image-generation prompt text — it follows different conventions (concrete visual descriptors, comma-separated tags, often LoRA-friendly phrasing).
 
 ---
 
@@ -59,7 +58,7 @@ The default failure mode in `new-world` is the agent inventing characters to "fi
 **Mandatory checks before populating any character field:**
 
 1. **Ask, don't infer.** For each character, prompt the author for: name, role in the story, physical description (or "skip"), personality (or "skip"), starting location, anything they should know that the player should not.
-2. **Ask separately about images.** "Do you want me to write image-generation prompts (`img_appearance`, `img_clothing`) for this character? If yes, please describe how you want them to look — specific clothing items, hair color, posture, etc." Image prompts are not generated from `appearance` prose by default; they require their own crafted text.
+2. **Image prompts.** You can draft `img_appearance` / `img_clothing` from the author's description (or the character's `appearance` prose) and confirm them — they don't have to be author-supplied verbatim. Keep them grounded in what the author actually described, not genre defaults.
 3. **Leave skipped fields blank, not invented.** If the author says "skip personality," the `detail` field can describe role + situation, but must not include personality claims.
 
 For `possibleCharacters`, the same rules apply, plus: the `description` field is shown to the player on the character chooser. Authors usually want a tight, voice-y blurb here — confirm tone before drafting.
@@ -82,7 +81,7 @@ Spinoffs inherit a source world's characters. The temptation is to "complete" th
 
 - **Source dossiers are the floor, not a starting point to embellish.** If the source world's `NPCs[*].detail` says only "Mira: serves the duke" — the spinoff inherits that limited information. Don't invent her backstory unless the *author* (this is the new author of the spinoff) explicitly provides it.
 - **Premise changes don't license character changes.** If the spinoff premise is "same world, 100 years later," the original characters may not even exist in the spinoff. Ask the author which characters carry forward, who replaces whom, and what (if anything) the surviving characters now know.
-- **Image prompts often need to change.** Aging, attire shifts, regional variants — `img_appearance` and `img_clothing` are likely to differ between source and spinoff even if the character is "the same person." Re-ask.
+- **Image prompts often need to change.** Aging, attire shifts, regional variants — `img_appearance` and `img_clothing` are likely to differ between source and spinoff even if the character is "the same person." Revisit and update them.
 
 ---
 
@@ -91,7 +90,7 @@ Spinoffs inherit a source world's characters. The temptation is to "complete" th
 Before considering a character complete:
 
 - [ ] Every claim in `detail`, `appearance`, `secret_info`, `location`, `names` traces to author input or the source world.
-- [ ] `img_appearance` and `img_clothing` were author-supplied (or explicitly left blank).
+- [ ] `img_appearance` and `img_clothing` are grounded in the author's description or the character's `appearance`, not genre defaults.
 - [ ] `appearance` uses the author's phrasing, not paraphrased generic descriptors.
 - [ ] No faction/relationship is asserted that wasn't stated.
 - [ ] Numeric state (health, currency, reputation) is in `trackedItems`, not duplicated in the dossier.

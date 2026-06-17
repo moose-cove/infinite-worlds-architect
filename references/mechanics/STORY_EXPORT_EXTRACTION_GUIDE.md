@@ -1,4 +1,4 @@
-# Story Extraction Strategy
+# Story Export Extraction Guide
 
 A guide for **any** plugin agent that needs to read a played Infinite Worlds story — not only the `sequel-world` command. For example, a `modify-world` agent can extract a story export to check how a world change actually played out, or to ground a revision in what happened during a session.
 

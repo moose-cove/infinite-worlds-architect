@@ -24,6 +24,7 @@
   - [5.2 `new-world`](#52-new-world)
   - [5.3 `modify-world`](#53-modify-world)
   - [5.4 `spinoff-world`](#54-spinoff-world)
+  - [5.5 `sequel-world`](#55-sequel-world)
 - [6. Testing strategy](#6-testing-strategy)
   - [6.1 Fixture round-trip](#61-fixture-round-trip)
   - [6.2 Schema coverage test](#62-schema-coverage-test)
@@ -209,6 +210,18 @@ Derive a variant world from an existing one. Workflow:
 3. Run a `modify-world`-style iteration on the copy, with the agent suggesting variant directions (different setting, different protagonist, different mechanics)
 4. Run `validate_world` and `audit_world` on the result
 5. Use `compare_worlds` between source and result to summarize what diverged
+
+### 5.5 `sequel-world`
+
+*Added after the v2 design — a port of the original (Node) plugin's sequel capability; see the sequel-world port plan in `claude-scratchpad/sequel-world-work/`.* Build a sequel world from an existing world **plus one or more played story-export `.txt` files**, evolving fields from what actually happened in play. Workflow:
+
+1. Confirm the source world, the story export(s), and the target output path
+2. Copy the source to the target via `make_draft_world`
+3. Extract the story with `extract_story_data`; query it with `query_story_data` (and optionally `get_character_list` for a character index)
+4. Iterate field-by-field, proposing each evolved value with **cited evidence** — optionally enforced by the consent-armed citation-gate `Stop` hook (`hooks/citation_gate.py`)
+5. Run `validate_world`, `audit_world`, and `compare_worlds` on the result
+
+The full contract (proposal template, evidence formats, per-field sourcing) lives inline in `commands/sequel-world.md`; general story-extraction-tool usage is in `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md`.
 
 ---
 
