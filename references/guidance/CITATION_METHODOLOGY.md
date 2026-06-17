@@ -18,6 +18,8 @@ Every field proposal in a sequel-world session MUST use this exact block structu
 
 All three lines are required. The `**Evidence:**` line should appear within the same proposal block — before the next `**Field:**` heading. The gate does not enforce strict line-adjacency between `**Proposed Value:**` and `**Evidence:**`, but it does require both `**Field:**` and `**Proposed Value:**` to be present with no blank line between them (a blank line there breaks the structural match and causes the gate to treat the proposal as unverifiable). Only the `**Evidence:**` line is inspected for content; `**Field:**` and `**Proposed Value:**` are structural anchors.
 
+**Propose one field per message by default.** A single field, one block, then wait for approval. The exception is complex entities with several sub-fields — NPCs, tracked items, trigger events, and instruction blocks — which are proposed in small ordered batches of blocks; see [§4](#4-how-many-fields-per-message--and-complex-field-batching).
+
 > **Evidence is shown in chat prose only.** It is never written to the world JSON. The JSON file receives the value, not the citation.
 
 ---
@@ -38,6 +40,8 @@ From Story Metadata
 ```
 
 `From Story Metadata` applies when the value comes from `metadata.json` fields (title, story background, character name/skills/background).
+
+> The gate validates the **prefix** only — `From Turn #<N>` or `From Story Metadata`. The `Outcome:` / `Secret Info:` / `Tracked Item <name>:` suffix is a readability convention (tell the author *where* in the turn the evidence is), not something the hook enforces. Use it anyway — it's what makes a citation auditable.
 
 **Examples:**
 
@@ -93,7 +97,7 @@ CARRY_FORWARD: <brief explanation of why it carries forward unchanged>
 
 ---
 
-### Format 4 — GAP FOUND
+### Format 4 — NO STORY EVIDENCE
 
 Use when you have checked the story export and found no evidence for a field, and you are not carrying a value forward from the source world.
 
@@ -130,25 +134,57 @@ Empty-body citations are rejected. Each prefix must be followed by at least one 
 
 ---
 
-## 4. Multiple Proposals in One Message
+## 4. How many fields per message — and complex-field batching
 
-When proposing several fields in one message, each proposal block is checked independently. All must be well-formed:
+**Default: one field per message.** Propose a single field, wait for the author to approve or revise, then move to the next. One block per message keeps each evidence line easy to audit and each approval unambiguous.
+
+**The exception: complex entities with several sub-fields.** Some world objects — NPCs, tracked items, trigger events, and instruction blocks — are built from related sub-fields that only make sense together; proposing them one-per-message would hide the shape of the whole entity. Propose them in the small, ordered batches below. Each batch is still **one message containing several proposal blocks**, and the gate checks every block independently — so every sub-field in the batch needs its own well-formed `**Evidence:**` line. **Approve each batch before proposing the next**, so the author can course-correct early.
+
+Field names below are the schema's (`world_v2.1.schema.json`). The IW editor's author-facing labels differ slightly (e.g. "Brief Summary" = `one_liner`, "Full List of Names" = `names`) — use whichever naming is clearest to the author, but make sure each value lands in the right JSON field.
+
+### Tracked item (`trackedItems[*]`)
+1. `name`, `dataType` (storage type), `visibility` (who can see it).
+2. `description`, `autoUpdate` (whether the AI updates it each turn), `updateInstructions` (only meaningful when `autoUpdate` is true).
+3. Any remaining relevant fields (`initialValue`, `initialValueBasedOnPC`).
+
+> Schema-required tracked-item fields are `name`, `dataType`, `visibility`, **and `autoUpdate`** — every tracked item must end up with all four, or `validate_world` will reject it. Don't let `autoUpdate` slip through batch 2 unset.
+
+### Keyword Instruction Block (`loreBookEntries[*]`)
+1. `name`, `keywords` (the activating terms), and `content` — in one message.
+
+### Extra Instruction Block (`instructionBlocks[*]`)
+1. `name` and `content` — in one message.
+
+### NPC (`NPCs[*]`)
+1. `name`, `names` (full list of alternative names / aliases), `location`, `one_liner` (brief summary).
+2. `detail` (character detail) and `secret_info`.
+3. `appearance` (narrative physical description) and the portrait prompts `img_appearance` / `img_clothing`.
+
+### Trigger event (`triggerEvents[*]`)
+1. `name` and the `triggerConditions` (when it fires). `triggerConditions` may be empty for a start-of-game / always-fire trigger (`triggerOnStartOfGame`); only `triggerEffects` is schema-required.
+2. The `triggerEffects` (what it does).
+
+**Worked example — a single NPC batch-1 message:**
 
 ```
-**Field:** title
-**Proposed Value:** The Iron Throne — Second Age
-**Evidence:** From Story Metadata
+**Field:** NPC "Mira" — name
+**Proposed Value:** Mira
+**Evidence:** CARRY_FORWARD: Same NPC as the source world.
 
-**Field:** objective
-**Proposed Value:** Reclaim the kingdom
-**Evidence:** CARRY_FORWARD: Same overarching goal carried from the source world; story export shows ongoing struggle.
+**Field:** NPC "Mira" — names (aliases)
+**Proposed Value:** ["Mira", "the Courier"]
+**Evidence:** From Turn #8 Outcome: A guard addressed her as "the Courier".
 
-**Field:** background
-**Proposed Value:** A generation has passed since the war…
-**Evidence:** From Turn #1 Outcome: The narrator described a twenty-year interval since the events of the first game.
+**Field:** NPC "Mira" — location
+**Proposed Value:** The river docks
+**Evidence:** From Turn #14 Outcome: Mira was last seen leaving the river docks.
+
+**Field:** NPC "Mira" — one_liner
+**Proposed Value:** A courier who now runs the dock smugglers.
+**Evidence:** From Turn #14 Secret Info: Mira had taken over the smuggling ring.
 ```
 
-If any single block lacks a well-formed evidence line, the gate blocks the entire response and names the offending field(s).
+If any single block in a batch lacks a well-formed evidence line, the gate blocks the whole message and names the offending sub-field(s).
 
 ---
 
@@ -180,5 +216,4 @@ If any single block lacks a well-formed evidence line, the gate blocks the entir
 
 - **No-fabrication discipline for sequels** → [STORY_ACCURACY_GUARDRAILS.md](./STORY_ACCURACY_GUARDRAILS.md)
 - **Which fields map to which story data** → [STORY_CONTEXT_DISTRIBUTION.md](./STORY_CONTEXT_DISTRIBUTION.md)
-- **Querying extracted data** → [mechanics/STORY_EXTRACTION_TOOL.md](../mechanics/STORY_EXTRACTION_TOOL.md)
 - **Character authoring discipline** → [CHARACTER_AUTHORING_GUARDRAILS.md](./CHARACTER_AUTHORING_GUARDRAILS.md)

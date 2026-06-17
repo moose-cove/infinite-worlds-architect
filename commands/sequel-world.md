@@ -9,15 +9,16 @@ argument-hint: "[source_world_path] [story_export_path...] [target_path]"
 
 You are helping an author create a **sequel** to an existing Infinite Worlds world — building a new world file that begins where the story export left off, informed by what actually happened in play.
 
-## Recommended reading
+## Required reading
 
-The references in `references/` cover the sequel-specific disciplines:
+Read **all four** of these references before proposing any field value — they are not optional, and each governs a discipline this workflow depends on.
 
-- **Before proposing any field value** → read `references/guidance/CITATION_METHODOLOGY.md`. Every `**Proposed Value:**` block must be immediately followed by a well-formed `**Evidence:**` line in one of the four accepted formats. The citation gate Stop hook enforces this automatically.
-- **For no-fabrication discipline** → read `references/guidance/STORY_ACCURACY_GUARDRAILS.md`. If the story export doesn't show evidence for a field, use `NO_STORY_EVIDENCE:` — don't invent.
-- **For which tool call maps to which field** → read `references/guidance/STORY_CONTEXT_DISTRIBUTION.md`. Follow the tiered loading sequence; budget 3–7 `turn_detail` queries total.
-- **For tool signatures and output shapes** → read `references/mechanics/STORY_EXTRACTION_TOOL.md`.
-- **For character authoring** → read `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`. Story export data can inform character updates but never licenses fabricating dossier details.
+(The story-extraction MCP tools themselves — `extract_story_data`, `query_story_data`, `get_character_list` — are self-describing: call them and read their tool descriptions directly; there is no separate tool reference to load.)
+
+- **Citation discipline** → `references/guidance/CITATION_METHODOLOGY.md`. The mandated proposal template, the four accepted evidence formats, and the batching rules for complex multi-field entities (NPCs, tracked items, triggers, instruction blocks). The citation gate Stop hook enforces the template whenever it is armed.
+- **No-fabrication discipline** → `references/guidance/STORY_ACCURACY_GUARDRAILS.md`. If the story export doesn't show evidence for a field, cite the gap (`NO_STORY_EVIDENCE:`) — don't invent.
+- **Field-to-source mapping** → `references/guidance/STORY_CONTEXT_DISTRIBUTION.md`. Which extracted data informs which world field, the tiered loading sequence, and the `turn_detail` query budget (3–7 total).
+- **Character authoring** → `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`. Story data can inform character updates, but only to the extent the export explicitly shows it.
 
 ---
 
@@ -50,13 +51,23 @@ From here on, all edits target the **sequel copy** at `target_path`. The source 
 
 Call `get_character_list(world_path=<source_path_absolute>)`.
 
-Present the returned `character_list` to the author. Ask:
-- Are there characters missing from this list (e.g., characters introduced during the story who aren't in the original world)?
-- Are there aliases or short forms that appear in the story text for any character (e.g., "Daro" for "Lord Daro")?
+Present the returned `character_list` to the author as a short table so they can see exactly what was found and how aliases will be matched against the story text, e.g.:
 
-The author may also choose to skip the character list entirely (extraction will still run; only `character_index.json` is skipped).
+| Character | Aliases (matched in story text) |
+|---|---|
+| Kira | — |
+| Lord Daro | Daro, the Lord |
 
-Wait for confirmation before proceeding to Step 4.
+Then use the **`AskUserQuestion`** tool to get the author's decision — don't ask in free prose. Structure it as:
+
+- **Question:** "Here are the characters I found in the source world. How should I handle character indexing for the story export?"
+- **Header:** "Characters"
+- **Options:**
+  - **"Use this list as-is"** — index the export against exactly these names and aliases.
+  - **"Add characters or aliases"** — there are characters introduced during the story, or short forms (e.g., "Daro" for "Lord Daro"), missing from the list. If the author picks this, follow up to collect exactly which names and aliases to add.
+  - **"Skip character indexing"** — extraction still runs; only `character_index.json` is skipped.
+
+If the author adds characters or aliases, confirm the final list back to them before continuing. Wait for the decision before proceeding to Step 4.
 
 ---
 
@@ -78,9 +89,29 @@ Share the extraction summary with the author (total turns, turn range, warnings,
 
 ---
 
-## Step 5 — Arm the citation gate
+## Step 5 — Offer to arm the citation gate
 
-The citation gate Stop hook will verify that every field proposal you make cites its evidence source. Arm it now by running these two commands separately (do NOT chain them with `&&`):
+Before you start proposing field values, **offer** to turn on the citation gate — don't arm it silently. The gate is a Stop hook that inspects any response containing a `**Proposed Value:**` block and blocks it unless every proposed value carries a well-formed `**Evidence:**` line. (Ordinary responses — questions, summaries, side discussions with no proposal block — pass through untouched, but turning the gate on is the natural signal that you're entering field-by-field mode.)
+
+Explain it to the author and ask, e.g.:
+
+> "I'm about to go field-by-field through the sequel world with you. This is a good time to turn on the **Citation Gate** — while it's on, every value I propose comes in this format:
+>
+> ```
+> **Field:** <field name>
+> **Proposed Value:** <value>
+> **Evidence:** <where it came from>
+> ```
+>
+> That keeps every proposal grounded in the story export, the original world, or your explicit direction — never invented. You can tell me to turn it off at any time. Want me to turn it on now?"
+
+Use the **`AskUserQuestion`** tool for the decision:
+
+- **Question:** "Turn on the Citation Gate for the field-by-field pass?"
+- **Header:** "Citations" *(keep the header ≤ 12 characters — "Citation Gate" is too long for the chip label)*
+- **Options:** **"Turn it on"** / **"Leave it off"**
+
+**If the author says yes**, arm it by running these two commands separately (do NOT chain them with `&&`):
 
 ```bash
 mkdir -p "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active"
@@ -90,24 +121,17 @@ mkdir -p "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active"
 touch "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active/${CLAUDE_CODE_SESSION_ID}"
 ```
 
-The second command uses `CLAUDE_CODE_SESSION_ID` (not `CLAUDE_SESSION_ID`) — this is the environment variable that holds the current session's UUID.
+The second command uses `CLAUDE_CODE_SESSION_ID` (not `CLAUDE_SESSION_ID`) — the environment variable that holds the current session's UUID. If either command fails, report the error to the author before proceeding.
 
-If either command fails, report the error to the author before proceeding. Do not begin field proposals without the gate armed.
+**If the author says no**, continue without arming. Still follow the proposal template and citation discipline by hand — the gate simply won't enforce it.
 
-> The gate will also fire on session exit. If you need to exit early (error, abort, or author request), disarm the gate first — see Step 8.
+**Turning it off later.** If the author asks to turn the gate off at any point (or once the field-by-field pass is done), disarm it immediately — see Step 8. You can re-arm it the same way if they change their mind.
 
 ---
 
 ## Step 6 — Query story data and propose fields
 
-Load story data using the tiered sequence in `references/guidance/STORY_CONTEXT_DISTRIBUTION.md`:
-
-**Always load first (Tier 1 — run all three):**
-1. `query_story_data(extraction_dir=<dir>, category="manifest")`
-2. `query_story_data(extraction_dir=<dir>, category="metadata")`
-3. `query_story_data(extraction_dir=<dir>, category="turn_index")`
-
-Then use on-demand (Tier 2–3) queries for specific fields that need deeper data.
+Follow the **tiered loading sequence in `references/guidance/STORY_CONTEXT_DISTRIBUTION.md`** — start with the three Tier-1 queries (`manifest`, `metadata`, `turn_index`), then pull Tier-2/Tier-3 data on demand. That document also carries the full field-to-source mapping; consult it per field rather than guessing which query feeds which value.
 
 **For each field, propose using EXACTLY this template:**
 
@@ -117,15 +141,11 @@ Then use on-demand (Tier 2–3) queries for specific fields that need deeper dat
 **Evidence:** <evidence in one of the 4 formats from CITATION_METHODOLOGY.md>
 ```
 
-All three lines are required for every proposal. The gate checks every `**Proposed Value:**` block for a following `**Evidence:**` line.
+All three lines are required for every proposal. The default is **one field per message**. The exception is complex entities with several sub-fields — NPCs, tracked items, trigger events, and instruction blocks — which you propose in the small, ordered batches defined in `CITATION_METHODOLOGY.md` ("How many fields per message — and complex-field batching"). When the gate is armed it checks **every** `**Proposed Value:**` block in a message, so each batched sub-field still needs its own `**Evidence:**` line.
 
-**Key field notes:**
+**This is a sequel — let the world evolve.** Don't reflexively carry every field forward; the whole point is to reflect what happened in play. In particular, `instructions` usually needs to be **rewritten** to account for where the story now stands, and triggers, lore, and instruction blocks often need story-informed updates too. Carry a value forward (`CARRY_FORWARD:`) only when the story genuinely didn't change it. The field-to-source mapping in `STORY_CONTEXT_DISTRIBUTION.md` marks which fields are true carry-forwards (e.g. `authorStyle`, image/illustration style) versus which should be revisited against the story.
 
-- `objective` has **no story-export source** (the metadata `objective` is always null). Always cite `CARRY_FORWARD:` (same goal as original world) or `USER_DIRECTED:` (author provided new goal).
-- NPC `img_appearance` and `img_clothing` are author-input only (`$defs.npc` in the schema; not present on player characters). Player characters use `portraitPromptDetails` instead — also author-input only. The story export contains no image-generation prompts for either. Stop and ask the author if these need to be set. See `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` §2.
-- `instructions`, `authorStyle`, `triggerEvents`, `instructionBlocks`, `loreBookEntries`, `imageStyle*` all carry forward from the source world unless the author directs otherwise.
-
-**Approval loop (same as `modify-world`):**
+**Approval loop:**
 
 1. Show the current value from the source world (or "not set").
 2. Propose the new value with the evidence block.
@@ -154,13 +174,13 @@ Once the author has approved all proposed changes:
 
 ## Step 8 — Disarm the citation gate
 
-After the session concludes (whether complete, early exit, or abort), disarm the gate:
+If you armed the gate in Step 5, disarm it when the field-by-field pass is done — and **immediately** if the author asks you to turn it off mid-flow, or on any early exit or abort:
 
 ```bash
 rm -f "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active/${CLAUDE_CODE_SESSION_ID}"
 ```
 
-This prevents the gate from firing in future sessions that don't involve a sequel-world flow. Run this command on normal completion AND on any early exit or abort — the gate must not be left armed after the session ends.
+`rm -f` is safe to run even if the gate was never armed. Leaving the marker in place keeps the gate nagging for the proposal template on later turns of this session, so don't skip it. (If the author later wants the gate back on, re-arm it with the Step 5 commands.)
 
 ---
 

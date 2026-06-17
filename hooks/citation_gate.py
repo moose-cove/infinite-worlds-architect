@@ -25,7 +25,7 @@ Evidence formats (any of four accepted)
 1. STORY CITATION  — starts with ``From Turn #<N>`` or ``From Story Metadata``
 2. USER DIRECTED   — starts with ``USER_DIRECTED:`` followed by non-empty text
 3. CARRY FORWARD   — starts with ``CARRY_FORWARD:`` followed by non-empty text
-4. GAP FOUND       — starts with ``NO_STORY_EVIDENCE:`` followed by non-empty text
+4. NO STORY EVIDENCE — starts with ``NO_STORY_EVIDENCE:`` followed by non-empty text
 
 Pure stdlib only.  No third-party imports.  Target: <10 ms.
 """
@@ -63,7 +63,7 @@ _EVIDENCE_LINE_RE = re.compile(r"\*\*Evidence:\*\*\s*(?P<body>.+)", re.MULTILINE
 _STORY_CITATION_RE = re.compile(r"^From (Turn #\d+|Story Metadata)")
 _USER_DIRECTED_RE = re.compile(r"^USER_DIRECTED:\s*\S")
 _CARRY_FORWARD_RE = re.compile(r"^CARRY_FORWARD:\s*\S")
-_GAP_FOUND_RE = re.compile(r"^NO_STORY_EVIDENCE:\s*\S")
+_NO_STORY_EVIDENCE_RE = re.compile(r"^NO_STORY_EVIDENCE:\s*\S")
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ def _is_valid_evidence(body: str) -> bool:
         _STORY_CITATION_RE.match(b)
         or _USER_DIRECTED_RE.match(b)
         or _CARRY_FORWARD_RE.match(b)
-        or _GAP_FOUND_RE.match(b)
+        or _NO_STORY_EVIDENCE_RE.match(b)
     )
 
 

@@ -76,7 +76,7 @@ All character fields (player characters and NPCs) carry the no-fabrication disci
 
 Specific rules that interact with story exports:
 
-- **`img_appearance` and `img_clothing` are NPC-only author-input fields** (`$defs.npc` in the schema; player characters use `portraitPromptDetails` instead — also author-input only). The story export never contains image-generation prompts for either. Do not infer these from narrative turn outcomes. Always ask the author. See [CHARACTER_AUTHORING_GUARDRAILS.md §2](./CHARACTER_AUTHORING_GUARDRAILS.md) for the full rule.
+- **`img_appearance` / `img_clothing` (NPCs) and `portraitPromptDetails` (player characters) have a source hierarchy in sequels.** The export won't contain ready-made image-generation *prompts*, but it usually *narrates* how characters look. So, in order: (1) **carry forward** from the source world if it already has them; (2) if not, **synthesize** them from how the story describes the character, citing the turn (`From Turn #N Outcome: …`) — re-expressing a narrated description as portrait-prompt text is grounding, not fabrication; (3) ask the author only when neither the source world nor the story provides anything. This is the sequel-specific extension of the general rule in [CHARACTER_AUTHORING_GUARDRAILS.md §2](./CHARACTER_AUTHORING_GUARDRAILS.md) (which is "author-input only" in new-world/modify/spinoff precisely because those flows have no story to draw on). What's still forbidden: inventing appearance the story never showed.
 - **Character `detail` and `secret_info`:** The export may reveal new facts about a character (e.g., a secret revealed in `secretInfo`). These can update the sequel's NPC dossier — but only the explicitly revealed content, not inferred backstory.
 - **Character mentions in the character index** confirm a character was referenced in the story, but not what happened to them. Use `query_story_data(category="turn_detail")` to get the actual context of any mention before making claims about a character's arc.
 
@@ -114,4 +114,3 @@ Before proposing any field value in a sequel-world session:
 - **Citation formats and the proposal template** → [CITATION_METHODOLOGY.md](./CITATION_METHODOLOGY.md)
 - **Character no-fabrication** → [CHARACTER_AUTHORING_GUARDRAILS.md](./CHARACTER_AUTHORING_GUARDRAILS.md)
 - **Which story data maps to which field** → [STORY_CONTEXT_DISTRIBUTION.md](./STORY_CONTEXT_DISTRIBUTION.md)
-- **Querying story data** → [mechanics/STORY_EXTRACTION_TOOL.md](../mechanics/STORY_EXTRACTION_TOOL.md)

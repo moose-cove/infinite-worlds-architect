@@ -50,17 +50,21 @@ Load all three of these before starting field proposals. They fit in context and
 
 The `"last"` keyword resolves to `manifest.total_turns` and is useful for grabbing the final turn without knowing the exact turn number in advance.
 
+`turn_detail` is the only category that does **not** read from a stored extraction file — it re-reads the raw lines from the original `.txt` export (using the line ranges in `turn_index.json`). The source `.txt` files must therefore still exist at the same paths they had at extraction time, or `turn_detail` will fail.
+
 ---
 
 ## 3. Field-to-source mapping
+
+**Carry-forward is not the default — evolution is.** A sequel exists to reflect what happened in play, so for most fields the question is "how did the story change this?", not "can I copy it?". Only a few fields are genuinely story-independent and should be copied as-is: **`authorStyle`** (the writing voice doesn't change) and the **image/illustration style** fields (`imageStyle*` / `illustrationStyle*`). Everything else — especially `instructions` — should be revisited against the story and updated where the story moved it; carry a value forward (`CARRY_FORWARD:`) only when the story genuinely left it untouched.
 
 | Sequel world field | Primary source | Category | Notes |
 |---|---|---|---|
 | `title` | `metadata.title` | `metadata` | Often the world's original title; may need sequel suffix. |
 | `description` | `metadata.story_background` | `metadata` | Story background text. |
 | `background` | `metadata.story_background` + relevant turn outcomes | `metadata`, `turn_detail` | Background is the scene-setter; blend world background with how the story ended. |
-| `instructions` | Original world (carry forward) | — | Carry forward; story export doesn't contain instruction text. |
-| `authorStyle` | Original world (carry forward) | — | Carry forward. |
+| `instructions` | Original world **+ story state** | `turn_index`, `turn_detail` | **Usually rewrite, don't carry forward.** The export has no instruction *text*, but the sequel's runtime instructions must account for where the story now stands (events that already happened, the new starting situation, resolved or changed stakes). Treat the original as a starting draft to revise against the story, not a value to copy. |
+| `authorStyle` | Original world (carry forward) | — | True carry-forward; the writing voice doesn't change between games. |
 | `firstInput` | Last turn outcome / author direction | `turn_detail` (turns=["last"]) | The sequel's opening premise; the last turn is the best anchor. |
 | `objective` | **No story-export source — see below** | — | Must be `CARRY_FORWARD:` or `USER_DIRECTED:`. |
 | `possibleCharacters[*].name` | `metadata.character.name` | `metadata` | Protagonist name from the played session. |
@@ -70,16 +74,18 @@ The `"last"` keyword resolves to `manifest.total_turns` and is useful for grabbi
 | `trackedItems[*]` (labels/instructions) | Original world (carry forward) | — | Tracked item structure doesn't appear in exports. |
 | `NPCs[*].detail` | `character_index` + `turn_detail` | `character_index`, `turn_detail` | What the story actually showed about each NPC. Use carry-forward for anything not shown. |
 | `NPCs[*].secret_info` | `turn_index` / `turn_detail` (secret info sections) | `turn_index`, `turn_detail` | Secret info per-turn; only update what the export revealed. |
-| `triggerEvents` | Original world (carry forward) | — | Story export contains no trigger data; carry forward and adapt as needed. |
-| `instructionBlocks` | Original world (carry forward) | — | Carry forward. |
-| `loreBookEntries` | Original world + author direction | — | Carry forward; update if story revealed new lore. |
-| `imageStyle*` / `illustrationStyle*` | Original world (carry forward) | — | Story export contains no image settings. |
+| `NPCs[*].appearance`, `img_appearance`, `img_clothing` | Original world, **or** story-narrated appearance | `turn_index`, `turn_detail` | Carry forward if the source world already has them. If not, **synthesize from how the story describes the character** (cite the turn) — the export won't contain image-prompt text, but it usually narrates appearance. Ask the author only when neither the source world nor the story provides it. `appearance` is narrative prose; `img_appearance`/`img_clothing` are portrait-prompt text the narrative description can seed. |
+| `possibleCharacters[*].portraitPromptDetails` | Original world, or author direction | — | The player-character equivalent of NPC image prompts. Carry forward if present; otherwise synthesize from any story-narrated PC appearance, or ask the author. |
+| `triggerEvents` | Original world **+ story state** | `turn_index`, `turn_detail` | The export has no trigger *data*, but don't blanket carry-forward: disable or rewrite triggers the story already resolved or that no longer fit the sequel premise, and add new ones the sequel needs. |
+| `instructionBlocks` (Extra Instruction Blocks) | Original world **+ story state** | — | Revisit against the story — phase/state EIBs in particular may need their content updated for where the sequel begins. Carry forward only the ones the story left untouched. |
+| `loreBookEntries` (Keyword Instruction Blocks) | Original world + story reveals | `turn_index`, `turn_detail` | Carry forward existing lore; add or update entries for lore the story revealed. |
+| `imageStyle*` / `illustrationStyle*` | Original world (carry forward) | — | True carry-forward; the export has no image settings and visual style doesn't change. |
 
 ---
 
 ## 4. The `objective` field — no story-export source
 
-There is no Objective section in IW story exports. The export format does not carry the world's `objective` field, and no story turn section provides an equivalent. The `metadata.objective` field in the extraction is always `null`.
+**Why is `metadata.objective` always `null`?** Because IW story exports simply have no Objective section to read. The export records the *header* (title, story background, character) and the *turns* (action, outcome, secret info, tracked items) — it never serializes the world's `objective` field, and no turn section is equivalent to it. The header parser therefore emits `objective: null` unconditionally: it's a structural absence in the export format, not a parsing miss or a property of any particular world. (The field exists on the metadata model only so a sequel's objective can be represented if it later carries forward as a string.)
 
 **Rule:** The sequel's `objective` must always be cited as:
 - `CARRY_FORWARD: <reason>` — the original world's objective still applies, or
@@ -103,5 +109,5 @@ The `turn_index` already contains per-turn `action`, `outcome`, `secretInfo`, an
 
 - **Citation formats** → [CITATION_METHODOLOGY.md](./CITATION_METHODOLOGY.md)
 - **No-fabrication discipline** → [STORY_ACCURACY_GUARDRAILS.md](./STORY_ACCURACY_GUARDRAILS.md)
-- **Tool signatures and output file formats** → [mechanics/STORY_EXTRACTION_TOOL.md](../mechanics/STORY_EXTRACTION_TOOL.md)
+- **Tool behaviour** → the `extract_story_data` / `query_story_data` / `get_character_list` MCP tool descriptions (self-describing; no separate reference)
 - **Field authoring judgment** → matching file in `references/fields/`

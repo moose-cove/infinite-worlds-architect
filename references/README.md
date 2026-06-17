@@ -17,7 +17,6 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 |---|---|
 | `mechanics/AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
 | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
-| `mechanics/STORY_EXTRACTION_TOOL.md` | Using `extract_story_data`, `query_story_data`, or `get_character_list` in the sequel-world workflow. Covers all tool signatures, category values, turn resolution, and output file shapes. |
 
 ## `guidance/` — Authoring principles
 
@@ -102,7 +101,6 @@ Use this when the author's request doesn't map obviously to a field name:
 | Sequel world building, continuing a story, sequel-world command | `guidance/STORY_CONTEXT_DISTRIBUTION.md` |
 | Evidence citation, citing story exports, evidence formats | `guidance/CITATION_METHODOLOGY.md` |
 | Story accuracy, no-fabrication for sequels, story evidence gaps | `guidance/STORY_ACCURACY_GUARDRAILS.md` |
-| Story extraction tools, extract_story_data, query_story_data | `mechanics/STORY_EXTRACTION_TOOL.md` |
 
 ## ID formats (charsets from the canonical fixture; length bounds from KB import testing)
 
