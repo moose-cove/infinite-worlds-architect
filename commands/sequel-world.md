@@ -7,18 +7,12 @@ argument-hint: "[source_world_path] [story_export_path...] [target_path]"
 
 @${CLAUDE_PLUGIN_ROOT}/agents/world-architect.md
 
-You are helping an author create a **sequel** to an existing Infinite Worlds world — building a new world file that begins where the story export left off, informed by what actually happened in play.
+You are helping an author create a **sequel** to an existing Infinite Worlds world — a new world file that begins where the story export left off, informed by what actually happened in play. This command carries its own citation and no-fabrication discipline inline (see "The proposal contract" below); there is no separate citation reference to load.
 
-## Required reading
+**Before you start, also read:**
 
-Read **all four** of these references before proposing any field value — they are not optional, and each governs a discipline this workflow depends on.
-
-(The story-extraction MCP tools themselves — `extract_story_data`, `query_story_data`, `get_character_list` — are self-describing: call them and read their tool descriptions directly; there is no separate tool reference to load.)
-
-- **Citation discipline** → `references/guidance/CITATION_METHODOLOGY.md`. The mandated proposal template, the four accepted evidence formats, and the batching rules for complex multi-field entities (NPCs, tracked items, triggers, instruction blocks). The citation gate Stop hook enforces the template whenever it is armed.
-- **No-fabrication discipline** → `references/guidance/STORY_ACCURACY_GUARDRAILS.md`. If the story export doesn't show evidence for a field, cite the gap (`NO_STORY_EVIDENCE:`) — don't invent.
-- **Field-to-source mapping** → `references/guidance/STORY_CONTEXT_DISTRIBUTION.md`. Which extracted data informs which world field, the tiered loading sequence, and the `turn_detail` query budget (3–7 total).
-- **Character authoring** → `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`. Story data can inform character updates, but only to the extent the export explicitly shows it.
+- `references/mechanics/STORY_EXTRACTION_STRATEGY.md` — how to drive the `extract_story_data` / `query_story_data` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
+- `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` — the no-fabrication discipline for characters. (Its §2 sequel exception for appearance fields is reproduced in this command's sourcing rules.)
 
 ---
 
@@ -123,42 +117,122 @@ touch "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active/${CLAUDE_CODE_SESSION_I
 
 The second command uses `CLAUDE_CODE_SESSION_ID` (not `CLAUDE_SESSION_ID`) — the environment variable that holds the current session's UUID. If either command fails, report the error to the author before proceeding.
 
-**If the author says no**, continue without arming. Still follow the proposal template and citation discipline by hand — the gate simply won't enforce it.
+**If the author says no**, continue without arming. Still follow the proposal contract below by hand — the gate simply won't enforce it.
 
 **Turning it off later.** If the author asks to turn the gate off at any point (or once the field-by-field pass is done), disarm it immediately — see Step 8. You can re-arm it the same way if they change their mind.
 
+> The gate mechanism is flow-agnostic (it keys on the per-session marker file, not on "sequel"). This command is the only one that arms it today; if another command ever needs the same evidence discipline, lift the proposal contract below into a shared reference at that point.
+
 ---
 
-## Step 6 — Query story data and propose fields
+## The proposal contract (read before Step 6)
 
-Follow the **tiered loading sequence in `references/guidance/STORY_CONTEXT_DISTRIBUTION.md`** — start with the three Tier-1 queries (`manifest`, `metadata`, `turn_index`), then pull Tier-2/Tier-3 data on demand. That document also carries the full field-to-source mapping; consult it per field rather than guessing which query feeds which value.
+Whenever you propose a field value in this flow, follow one discipline: **propose a value, cite where it came from, never invent.** The citation gate enforces the shape of this when armed; the discipline applies even when it isn't.
 
-**For each field, propose using EXACTLY this template:**
+### The proposal template
+
+Propose each field value as this exact block:
 
 ```
 **Field:** <field name>
 **Proposed Value:** <value>
-**Evidence:** <evidence in one of the 4 formats from CITATION_METHODOLOGY.md>
+**Evidence:** <one of the four formats below>
 ```
 
-All three lines are required for every proposal. The default is **one field per message**. The exception is complex entities with several sub-fields — NPCs, tracked items, trigger events, and instruction blocks — which you propose in the small, ordered batches defined in `CITATION_METHODOLOGY.md` ("How many fields per message — and complex-field batching"). When the gate is armed it checks **every** `**Proposed Value:**` block in a message, so each batched sub-field still needs its own `**Evidence:**` line.
+All three lines are required. Keep `**Field:**` and `**Proposed Value:**` on consecutive lines with **no blank line between them** — a blank line there breaks the gate's structural match and the proposal is treated as uncited and blocked. The `**Evidence:**` line may follow after the value; only it is inspected for content. Evidence is shown in chat only — it is **never** written to the world JSON.
 
-**This is a sequel — let the world evolve.** Don't reflexively carry every field forward; the whole point is to reflect what happened in play. In particular, `instructions` usually needs to be **rewritten** to account for where the story now stands, and triggers, lore, and instruction blocks often need story-informed updates too. Carry a value forward (`CARRY_FORWARD:`) only when the story genuinely didn't change it. The field-to-source mapping in `STORY_CONTEXT_DISTRIBUTION.md` marks which fields are true carry-forwards (e.g. `authorStyle`, image/illustration style) versus which should be revisited against the story.
+### The four evidence formats
 
-**Approval loop:**
+1. **Story citation** — supported by extracted story data. The gate validates the prefix `From Turn #<N>` or `From Story Metadata`; the suffix is a readability convention you should still use:
+   - `From Turn #<N> Outcome: <quote or paraphrase>`
+   - `From Turn #<N> Secret Info: <…>`
+   - `From Turn #<N> Tracked Item <name>: <value>`
+   - `From Story Metadata` (value comes from the extract's `metadata`: title, story background, character name/skills/background)
+
+   Cite only turns you have actually queried (verify via `turn_index`).
+2. **`USER_DIRECTED: <what the author said>`** — the author gave a direct instruction this session.
+3. **`CARRY_FORWARD: <why it's unchanged>`** — the value comes from the **original world JSON** and no story event changed it. This is how *every* static field the export doesn't touch is sourced (`objective`, `authorStyle`, image style, an unaddressed NPC's `detail`, …).
+4. **`NO_STORY_EVIDENCE: <what you looked for and didn't find>`** — you checked the export, found nothing, and are not carrying a value forward. Prefer this honest gap over silence or invention.
+
+Each prefix must be followed by real text — an empty `CARRY_FORWARD:` / `USER_DIRECTED:` / `NO_STORY_EVIDENCE:` is rejected, as is any line with no recognized prefix (`Based on context`, `From the story`, `I inferred this`).
+
+### One field per message — except complex entities
+
+Propose **one field per message** by default: one block, then wait for approval. The exception is multi-sub-field entities, which you propose in small **ordered batches** (one message, several blocks — each block still needs its own `**Evidence:**` line; approve each batch before the next). Field names below are the schema's; the IW editor's labels differ slightly ("Brief Summary" = `one_liner`, "Full List of Names" = `names`).
+
+- **Tracked item** (`trackedItems[*]`): (1) `name`, `dataType`, `visibility`; (2) `description`, `autoUpdate`, `updateInstructions` (only meaningful when `autoUpdate` is true); (3) `initialValue`, `initialValueBasedOnPC`. Beyond the structural fields below (`id`, `positionInList`), the schema also requires `autoUpdate` — don't let it slip through batch (2) unset, or `validate_world` rejects the item.
+- **Keyword Instruction Block** (`loreBookEntries[*]`): `name`, `keywords`, `content` — one message.
+- **Extra Instruction Block** (`instructionBlocks[*]`): `name`, `content` — one message.
+- **NPC** (`NPCs[*]`): (1) `name`, `names`, `location`, `one_liner`; (2) `detail`, `secret_info`; (3) `appearance` plus the portrait prompts `img_appearance` / `img_clothing`.
+- **Trigger event** (`triggerEvents[*]`): (1) `name`, `triggerConditions` (may be empty for a start-of-game / always-fire trigger — only `triggerEffects` is schema-required); (2) `triggerEffects`.
+
+> **Structural fields (set mechanically, not cited).** Every *new* entity also needs an `id` — mint it with `mint_ids`, never hand-write — and a `positionInList` (its ordinal index in its list). The schema requires these, but they aren't evidence-backed values, so set them when you create the entity rather than proposing them; carried-forward entities already have both. For the complete required-field set of any entity, see `references/WORLD_JSON_SCHEMA_v2.1.md` or `references/world_v2.1.schema.json`.
+
+Worked example — one NPC batch-1 message:
+
+```
+**Field:** NPC "Mira" — name
+**Proposed Value:** Mira
+**Evidence:** CARRY_FORWARD: Same NPC as the source world.
+
+**Field:** NPC "Mira" — names (aliases)
+**Proposed Value:** ["Mira", "the Courier"]
+**Evidence:** From Turn #8 Outcome: A guard addressed her as "the Courier".
+
+**Field:** NPC "Mira" — location
+**Proposed Value:** The river docks
+**Evidence:** From Turn #14 Outcome: Mira was last seen leaving the river docks.
+
+**Field:** NPC "Mira" — one_liner
+**Proposed Value:** A courier who now runs the dock smugglers.
+**Evidence:** From Turn #14 Secret Info: Mira had taken over the smuggling ring.
+```
+
+### No-fabrication discipline
+
+The story export is the evidence floor. Valid sources, strongest first: (1) the author's direct statement this session; (2) extracted story data (turn outcomes, secret info, tracked-item states, metadata); (3) the original world JSON (carry-forward). **Never** acceptable: your sense of what "probably" happened between beats, genre/sequel tropes, inferences from a name or role, or training-data narrative conventions.
+
+- **Query before proposing, not after.** Pull the relevant extract data, see what it shows, then propose — don't draft from intuition and backfill a citation.
+- **Empty or unchanged stays so.** If the export doesn't show a field changing, carry the original world's value (`CARRY_FORWARD:`); don't synthesize a "likely" sequel state. (Especially tracked-item labels/instructions, NPC `detail`/`secret_info`, factions, relationship and arc states.)
+- **Don't invent events or resolve what the story left open.** A cliffhanger or unresolved arc is inherited as-is — flag it unresolved in `detail`, don't paper over it.
+- **No evidence → say so.** Use `NO_STORY_EVIDENCE:` and name what you checked; let the author decide.
+- **Characters:** follow `CHARACTER_AUTHORING_GUARDRAILS.md`. A character appearing in a turn does not license rewriting their dossier — only the explicitly revealed content updates it.
+
+---
+
+## Step 6 — Query story data, then propose fields
+
+Run the Tier-1 queries first (`manifest`, `metadata`, `turn_index`), then pull Tier-2/3 data on demand — see `references/mechanics/STORY_EXTRACTION_STRATEGY.md` for the full sequence and the 3–7 `turn_detail` budget.
+
+Propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
+
+### Sourcing rules (per field)
+
+| Field | Where the value comes from |
+|---|---|
+| `title` | `metadata.title` (often the original title; may want a sequel suffix). |
+| `description` | `metadata.storyBackground`. |
+| `background` | `metadata.storyBackground` blended with how the story ended (relevant turn outcomes). |
+| `instructions` | **Usually rewrite.** The export has no instruction text, but the sequel's runtime instructions must reflect where the story now stands (events that happened, the new starting situation, changed stakes). Treat the original as a draft to revise, not a value to copy. |
+| `firstInput` | The last turn's outcome (`turn_detail`, `turns=["last"]`) and/or author direction — the sequel's opening premise. |
+| `objective` | The **original world JSON** (`CARRY_FORWARD:`), exactly like any other static field — or `USER_DIRECTED:` if the author sets a new goal. (The export has no Objective section, so the extract's `metadata.objective` is always null; read `objective` from the source world, not the extract.) |
+| `possibleCharacters[*].name` | `metadata.character.name`. |
+| `possibleCharacters[*].skills` | `metadata.character.skills` — but it's a raw string; parse it and map onto the world's existing `skills` object, don't copy verbatim. |
+| `possibleCharacters[*].description`, `portraitPromptDetails` | Original world; for portrait details, carry forward if present, else synthesize from any story-narrated PC appearance, else ask. |
+| `trackedItems[*]` (final values) | `tracked_state` last snapshot (`toTurn == manifest.totalTurns`). Labels/structure carry forward from the original. |
+| `NPCs[*].detail`, `secret_info` | `character_index` + `turn_detail`; update only what the export revealed, carry forward the rest. |
+| `NPCs[*].appearance`, `img_appearance`, `img_clothing` | Carry forward if the source world has them; else **synthesize from story-narrated appearance** (cite the turn — re-expressing a described look is grounding, not fabrication); else ask. `appearance` is narrative prose; `img_*` are portrait prompts it can seed. |
+| `triggerEvents`, `instructionBlocks` (EIBs), `loreBookEntries` (KIBs) | Revisit against the story — disable/rewrite what the story resolved or made stale, add what the sequel needs, carry forward the rest. |
+| `authorStyle`, `imageStyle*` / `illustrationStyle*` | **True carry-forwards** — the export has no equivalent and writing/visual style doesn't change between games. |
+
+### Approval loop
 
 1. Show the current value from the source world (or "not set").
-2. Propose the new value with the evidence block.
+2. Propose the new value with its evidence block.
 3. Wait for the author to approve or revise.
 4. `Edit` the target world in place — use `Edit` (not full `Write`) so platform-managed fields survive. Always `Read` before `Edit`.
 
-**Validate after each batch of 3–5 related edits:**
-
-```
-validate_world(target_path)
-```
-
-Fix any errors before continuing.
+Validate after each batch of 3–5 related edits with `validate_world(target_path)`; fix errors before continuing.
 
 ---
 
@@ -184,6 +258,4 @@ rm -f "${CLAUDE_PROJECT_DIR}/.claude/sequel-world-active/${CLAUDE_CODE_SESSION_I
 
 ---
 
-Never modify the source world. All edits go to the copy at the target path. Use `Edit` (not full `Write`) on the target so platform-managed fields survive.
-
-The sequel's evidence is only as good as the story data. If the export doesn't show it, don't assert it — cite the gap.
+The sequel's evidence is only as good as the story data. If the export doesn't show it, don't assert it — carry it forward from the source world or cite the gap.

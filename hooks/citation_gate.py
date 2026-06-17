@@ -167,8 +167,7 @@ def evaluate(payload: dict, project_dir: str | None) -> dict | None:
         "'From Turn #<N> Outcome: ...' / 'From Story Metadata', "
         "'USER_DIRECTED: <reason>', "
         "'CARRY_FORWARD: <reason>', or "
-        "'NO_STORY_EVIDENCE: <reason>'. "
-        "See references/guidance/CITATION_METHODOLOGY.md."
+        "'NO_STORY_EVIDENCE: <reason>'."
     )
     return {"decision": "block", "reason": reason}
 
