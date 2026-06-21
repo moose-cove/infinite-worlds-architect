@@ -21,6 +21,5 @@
         "iw_architect.server"
       ]
     }
-  },
-  "hooks": "./hooks/hooks.json"
+  }
 }
