@@ -88,9 +88,9 @@ Explain it to the author and ask, e.g.:
 
 > "I'm about to go field-by-field through the sequel world with you. This is a good time to turn on the **Citation Gate** — while it's on, every value I propose comes in this format:
 >
-> **Field:** <field name>
-> **Proposed Value:** <value>
-> **Evidence:** <where it came from>
+> **Field:** `<field name>`
+> **Proposed Value:** `<value>`
+> **Evidence:** `<where it came from>`
 >
 > That keeps every proposal grounded in the story export, the original world, or your explicit direction — never invented. You can tell me to turn it off at any time. Want me to turn it on now?"
 
