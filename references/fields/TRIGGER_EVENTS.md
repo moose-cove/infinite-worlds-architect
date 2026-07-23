@@ -2,7 +2,7 @@
 
 JSON key: `triggerEvents` — array of trigger objects.
 
-For the canonical list of v2.1 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
+For the canonical list of v2.2 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
 
 ---
 
@@ -132,6 +132,9 @@ permanently in the new state for the rest of the playthrough.
 |---|---|
 | `effectSetTrackedItemValue` | Single-item update. Data shape varies by `action`: `set` / `add` / `subtract` for numbers; `set` / `add` (append) / `subtract` (remove if present) / `replace` (find-and-replace via `replaceWith`) for text/XML. Supports `<<item_name>>` interpolation in values. **`replaceWith` must be present in `data` for every action** (use `""` when unused) — omitting it may break import. It is only *consumed* by the `replace` action, but the field itself is required regardless of action type. |
 | `effectModifyTrackedItemDetails` | Modify the item's *definition* (name, description, visibility, updateInstructions, autoUpdate) — not its value. Override flags control which fields are changed. |
+| `effectRunScript` (v2.2) | Bulk or structured mutation across one or more tracked items. `data` is a PawScript string that runs when the trigger fires. **Can only mutate tracked items** — no narrative output, no world-field changes, no calling other effects. Transactional: if the script errors partway through, the whole run is rolled back (no partial mutation), the error is logged to World Debug, and the game continues normally. No unbounded loops — iterate over list/map contents (`for each $x in $list`) or a bounded `range(n)`, never an open-ended condition. |
+
+**Choosing between `effectSetTrackedItemValue` and `effectRunScript`:** use `effectSetTrackedItemValue` for a single scalar set/add/subtract on one tracked item — it's simpler to author and read in the trigger list. Reach for `effectRunScript` once the update is deterministic bookkeeping across *multiple* values or *structured* (YAML) data — incrementing several stats in one pass, updating every entry in a list, or mutating nested fields on a YAML tracked item. Anywhere the update logic would otherwise require several `effectSetTrackedItemValue` effects chained together, or would require the AI to compute the new value itself via `updateInstructions`, `effectRunScript` gets the same result deterministically and in one effect. See [`SURVIVAL_STATS.md`](../patterns/SURVIVAL_STATS.md) for a worked example of migrating AI-computed bookkeeping to a scripted, deterministic pattern.
 
 ### Interactive effects (blocking — pause until player responds)
 
@@ -173,4 +176,4 @@ comparison.
 
 ## Variable replacement in effect data
 
-The `<<item_name>>` syntax works in all effect data string fields. References resolve at runtime using the current value of the named tracked item (spaces become underscores, lowercase). Math and dice functions also work — `<<1d20>>`, `<<gold * 2>>`, `<<round(turn_number/3)>>`. See [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#9-template-variable-system) §9 for the full template-variable system.
+The `<<item_name>>` syntax works in all effect data string fields. References resolve at runtime using the current value of the named tracked item (spaces become underscores, lowercase). Math and dice functions also work — `<<1d20>>`, `<<gold * 2>>`, `<<round(turn_number/3)>>`. See [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#9-template-variable-system) §9 for the full template-variable system.

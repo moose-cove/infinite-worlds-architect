@@ -1,7 +1,7 @@
 {
   "name": "infinite-worlds-architect",
-  "version": "0.14.0",
-  "description": "MCP tools and an autonomous agent for building and editing Infinite Worlds story worlds. Validates world JSON against the v2.1 schema, scaffolds new worlds, audits quality, and provides structured world-building workflows.",
+  "version": "0.15.0",
+  "description": "MCP tools and an autonomous agent for building and editing Infinite Worlds story worlds. Validates world JSON against the v2.2 schema, scaffolds new worlds, audits quality, and provides structured world-building workflows.",
   "author": {
     "name": "moose-cove",
     "email": "622268+moose-cove@users.noreply.github.com"

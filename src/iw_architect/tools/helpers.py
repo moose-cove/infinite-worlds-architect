@@ -16,7 +16,7 @@ from typing import Any
 from iw_architect import KNOWN_SCHEMA_VERSION
 from iw_architect.paths import RelativePathError, relative_path_message, require_absolute
 
-# Platform ID formats derived from the v2.1 fixture samples:
+# Platform ID formats derived from the v2.2 fixture samples:
 #   8-char: characters, triggers       — alphanumeric (A-Za-z0-9)
 #   9-char: NPCs, trackedItems, instruction/lore blocks — same character set
 #   UUID:   trigger conditions and effects
@@ -97,6 +97,7 @@ _DEFAULT_SCAFFOLD: dict[str, Any] = {
     "enableAISpecificInstructionBlocks": False,
     "recommendedAIModel": None,
     "hideSkillSystem": False,
+    "showPawScriptButtons": False,
     "imageModel": "manticore",
     "imageStyle": "photo_1",
     "imageStyleCharacterPre": "A beautiful medium shot photographic portrait of",

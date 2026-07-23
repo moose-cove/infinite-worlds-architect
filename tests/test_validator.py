@@ -310,6 +310,54 @@ def test_non_unique_position_in_list():
     assert any("positionInList" in e for e in result["errors"])
 
 
+def test_non_unique_position_in_list_mixed_types_does_not_crash():
+    # Regression: duplicate positions of unorderable mixed types (null + number)
+    # must not crash the validator's sort — it should still report the dupe.
+    # Previously `sorted({None, 1})` raised TypeError and took down validate_world.
+    base = {
+        "id": "ITEM00001",
+        "name": "A",
+        "positionInList": None,
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+    }
+    world = _base_world()
+    world["trackedItems"] = [
+        base,
+        {**base, "id": "ITEM00002", "name": "B", "positionInList": None},
+        {**base, "id": "ITEM00003", "name": "C", "positionInList": 1},
+        {**base, "id": "ITEM00004", "name": "D", "positionInList": 1},
+    ]
+    # Must not raise; the report is still produced.
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("non-unique positionInList" in e for e in result["errors"])
+
+
+def test_non_unique_position_in_list_unhashable_does_not_crash():
+    # Regression: duplicated UNHASHABLE positionInList values (dict/list) must not
+    # crash the dedup step — a plain set() raises "unhashable type: 'dict'". The
+    # dupe is still reported.
+    base = {
+        "id": "ITEM00001",
+        "name": "A",
+        "positionInList": {"x": 1},
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+    }
+    world = _base_world()
+    world["trackedItems"] = [
+        base,
+        {**base, "id": "ITEM00002", "name": "B", "positionInList": {"x": 1}},
+    ]
+    # Must not raise.
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("non-unique positionInList" in e for e in result["errors"])
+
+
 # ── Cross-field invariants ────────────────────────────────────────────────────
 
 
@@ -600,7 +648,7 @@ def test_audit_world_fixture():
     """audit_world must return findings (not error) on the canonical fixture."""
     from iw_architect.tools.analysis import audit_world
 
-    fixture = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
+    fixture = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
     result = json.loads(audit_world(str(fixture)))
     assert "findings" in result
     assert isinstance(result["findings"], list)
@@ -1110,3 +1158,225 @@ def test_set_tracked_item_value_with_replace_with_no_warning():
     ]
     result = _validate(world)
     assert not any("replaceWith" in w for w in result["warnings"]), result["warnings"]
+
+
+# ── schema v2.2: PawScript + YAML tracked items ──────────────────────────────
+
+
+def _yaml_item(variable_name: str = "puppies", **overrides) -> dict:
+    """A minimal dataType='yaml' tracked item, with a variableName for PawScript."""
+    item = {
+        "id": "ITEM00001",
+        "name": "Puppies",
+        "positionInList": 0,
+        "dataType": "yaml",
+        "visibility": "everyone",
+        "autoUpdate": False,
+        "variableName": variable_name,
+    }
+    item.update(overrides)
+    return item
+
+
+def _script_world(script: str, tracked_items: list[dict]) -> dict:
+    """A world with one effectRunScript trigger carrying the given PawScript body."""
+    world = _base_world()
+    world["trackedItems"] = tracked_items
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Script Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectRunScript",
+                    "data": script,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+def test_variable_name_bad_format_warns():
+    # A variableName that is not snake_case → WARNING
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(variable_name="BadName")]
+    result = _validate(world)
+    assert result["valid"]
+    assert any("variableName" in w and "BadName" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_variable_name_duplicate_warns():
+    # Two tracked items sharing a variableName → WARNING
+    world = _base_world()
+    world["trackedItems"] = [
+        _yaml_item(variable_name="dup"),
+        _yaml_item(variable_name="dup", id="ITEM00002", name="Kittens", positionInList=1),
+    ]
+    result = _validate(world)
+    assert result["valid"]
+    assert any("Duplicate" in w and "dup" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_pawscript_undeclared_variable_warns():
+    # A $root that is not a variableName / native / loop var → WARNING
+    world = _script_world(
+        "$puppies.count += 1\n$unknown_var = 5",
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert any(
+        "unknown_var" in w and "effectRunScript references" in w for w in result["warnings"]
+    ), result["warnings"]
+    # The real variableName must NOT be flagged.
+    assert not any(
+        "$puppies" in w and "effectRunScript references" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_pawscript_loop_variable_not_flagged():
+    # A `for each` loop variable is locally bound and must NOT warn.
+    world = _script_world(
+        "for each $p in $puppies\n  $p.friendliness += 1",
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("effectRunScript references" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_pawscript_set_variable_not_flagged():
+    # A `set $x = ...` scratch variable is locally bound and must NOT warn.
+    world = _script_world(
+        "set $total = 0\nfor each $p in $puppies\n  set $total = $total + $p.friendliness",
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("effectRunScript references" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_pawscript_set_to_native_warns():
+    # `set $player = ...` reuses a reserved read-only native as a set variable → WARNING.
+    world = _script_world(
+        'set $player = "Bob"',
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert any("set $player" in w and "reserved read-only" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+def test_pawscript_comment_lines_ignored():
+    # `#` comment lines (e.g. containing URLs) must not contribute identifiers.
+    world = _script_world(
+        "# see https://infiniteworlds.app/pawscript-reference for $syntax\n$puppies.count += 1",
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("effectRunScript references" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_pawscript_write_to_native_warns():
+    # Assigning to $player (a read-only native) → WARNING
+    world = _script_world(
+        '$player.name = "Bob"',
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert any("player" in w and "read-only" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_enforce_format_without_schema_warns():
+    # enforceFormat true with an empty formatSchema → WARNING
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(enforceFormat=True, formatSchema="")]
+    result = _validate(world)
+    assert result["valid"]
+    assert any("enforceFormat" in w and "formatSchema" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_enforce_format_with_schema_no_warning():
+    # enforceFormat true with a non-empty formatSchema → no warning
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(enforceFormat=True, formatSchema="- name: text\n  ...:")]
+    result = _validate(world)
+    assert not any("enforceFormat" in w and "formatSchema" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
+def test_yaml_invalid_initial_value_errors():
+    # dataType 'yaml' with an unparseable initialValue → ERROR
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(initialValue="foo: [1, 2")]  # unclosed flow sequence
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("initialValue" in e and "YAML" in e for e in result["errors"]), result["errors"]
+
+
+def test_yaml_valid_initial_value_no_error():
+    # dataType 'yaml' with parseable YAML → no YAML error
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(initialValue="- name: Spot\n  friendliness: 5")]
+    result = _validate(world)
+    assert not any("YAML" in e for e in result["errors"]), result["errors"]
+
+
+def test_yaml_deeply_nested_does_not_crash():
+    # Regression: pathologically deep YAML must be reported as invalid, not crash
+    # the validator with an uncaught RecursionError (PyYAML is not depth-limited,
+    # even under safe_load).
+    import sys
+
+    depth = sys.getrecursionlimit() + 5000
+    deep = "[" * depth + "]" * depth
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(initialValue=deep)]
+    # Must not raise.
+    result = _validate(world)
+    assert any("initialValue" in e and "YAML" in e for e in result["errors"]), result["errors"]
+
+
+def test_xml_datatype_deprecation_warns():
+    # dataType 'xml' → deprecation WARNING (never an error)
+    world = _base_world()
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Grudges",
+            "positionInList": 0,
+            "dataType": "xml",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
+    result = _validate(world)
+    assert result["valid"]  # deprecation is a warning, not an error
+    assert any("xml" in w.lower() and "deprecated" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_effect_run_script_no_unknown_effect_warning():
+    # effectRunScript must be registered — no "unknown effect type" warning
+    world = _script_world("$puppies.count += 1", [_yaml_item(variable_name="puppies")])
+    result = _validate(world)
+    assert not any("effectRunScript" in w and "unknown" in w for w in result["warnings"]), result[
+        "warnings"
+    ]

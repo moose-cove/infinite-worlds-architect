@@ -1,8 +1,18 @@
 # Field Guide: Tracked Items
 
-JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#4-trackeditems) §4.
+JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#4-trackeditems) §4.
 
 This file covers *authoring judgments* about tracked items: when to use them, how to choose `dataType` and `visibility`, what `updateInstructions` actually shape.
+
+> **XML is deprecated — use YAML.** As of v2.2, `dataType: "xml"` is no
+> longer recommended for structured/nested tracked items. Use
+> `dataType: "yaml"` instead for any new world. Existing `xml` items keep
+> working and should be preserved on round-trip, but don't author new
+> ones. See [`YAML_TRACKED_ITEMS.md`](./YAML_TRACKED_ITEMS.md) for YAML
+> authoring guidance (`formatExample`, `enforceFormat`, `formatSchema`)
+> and [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md) for how YAML
+> tracked items are read and mutated by PawScript scripts
+> (`effectRunScript`) via each item's `variableName` handle.
 
 ---
 
@@ -36,15 +46,16 @@ trigger that fired on turn N-1.
 |---|---|---|
 | `text` | Inventory lists, location names, qualitative states ("hungry", "wounded"), comma-separated tags | Most flexible. Text items support `contains` comparison in `triggerOnTrackedItem`. |
 | `number` | Health, gold, turn counters, skill scores, relationship meters | Required for arithmetic operations and the `at_least` / `is_exactly` / `at_most` operators. |
-| `xml` | Complex nested state — multi-dimensional spell effects, structured records, mini-databases | Authors must understand XML formatting. The AI handles XML literally — malformed XML stays malformed. |
+| `yaml` | Complex nested state — lists of records, multi-dimensional spell effects, structured mini-databases | **New in v2.2. Recommended for all new structured/nested tracked items.** Pair with `formatExample` and `formatSchema` to give the AI a concrete shape to imitate, and `enforceFormat: true` if the platform should enforce it. YAML items are also the ones scripts iterate over via `effectRunScript` (`for each $x in $item_variable_name`). See [`YAML_TRACKED_ITEMS.md`](./YAML_TRACKED_ITEMS.md) for full authoring guidance. |
+| `xml` | **Deprecated as of v2.2 — do not use for new items.** Legacy complex nested state (multi-dimensional spell effects, structured records, mini-databases) | Authors must understand XML formatting. The AI handles XML literally — malformed XML stays malformed. Preserve existing `xml` items on round-trip; migrate to `yaml` when practical, but there is no automatic conversion. |
 
-If you're uncertain whether something should be `number` or `text`: pick `number` if you'll ever compare it (`at_least 50` etc.). Pick `text` if you only need equality or substring matching.
+If you're uncertain whether something should be `number` or `text`: pick `number` if you'll ever compare it (`at_least 50` etc.). Pick `text` if you only need equality or substring matching. For structured/nested data, pick `yaml` — not `xml`.
 
 ---
 
 ## Choosing `visibility`
 
-The v2.1 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
+The v2.2 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 
 | Value | Who sees the value | When to use |
 |---|---|---|
@@ -100,4 +111,6 @@ The v2.1 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 
 **Cross-reference for trigger interaction.** Tracked items pair tightly with `triggerOnTrackedItem` conditions (for gating) and `effectSetTrackedItemValue` / `effectModifyTrackedItemDetails` effects (for modification). When designing a tracked item, consider what conditions will read it and what effects will write it — if neither exists, the item is dead weight.
 
-See also: [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md) on when to choose a tracked item vs. embedding state in `secretInfo` or `background`.
+**New in v2.2 — `effectRunScript`.** Tracked items can also be mutated by a PawScript script attached to a trigger via `effectRunScript`, referencing the item by its `variableName` handle (e.g., `$my_item_variable_name`). This is a third modification path alongside `effectSetTrackedItemValue` and `effectModifyTrackedItemDetails` — reach for it when the mutation needs script logic (loops over YAML entries, per-entry arithmetic) that a single effect can't express. See [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md).
+
+See also: [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md) on when to choose a tracked item vs. embedding state in `secretInfo` or `background`, and [`YAML_TRACKED_ITEMS.md`](./YAML_TRACKED_ITEMS.md) for the new v2.2 YAML dataType.
