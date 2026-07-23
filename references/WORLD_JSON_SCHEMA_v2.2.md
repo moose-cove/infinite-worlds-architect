@@ -1,7 +1,7 @@
 
-# Schema reference (derived from `test-files/example-world-schema-v2.1.json`)
+# Schema reference (derived from `test-files/example-world-schema-v2.2.json`)
 
-This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived from `example-world-schema-v2.1.json`. Where the fixture is silent on a field's exact semantics, that uncertainty is noted inline; the plugin's validator should warn (not error) on such fields and preserve their values verbatim on round-trip.
+This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived from `example-world-schema-v2.2.json`. Where the fixture is silent on a field's exact semantics, that uncertainty is noted inline; the plugin's validator should warn (not error) on such fields and preserve their values verbatim on round-trip.
 
 **Convention**: in the tables below, "Editable" means an author edits this directly. "Platform-managed" means the platform writes it (image URLs after image generation, IDs after entity creation, runtime state). "Hybrid" means the author provides input data but the platform may modify it.
 
@@ -13,7 +13,7 @@ This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived fr
 - [4 `trackedItems[*]`](#4-trackeditems)
 - [5 `triggerEvents[*]`](#5-triggerevents)
   - [`triggerConditions[*]`](#triggerconditions)
-  - [`triggerEffects[*]` — canonical list from v2.1 fixture](#triggereffects--canonical-list-from-v21-fixture)
+  - [`triggerEffects[*]` — canonical list from v2.2 fixture](#triggereffects--canonical-list-from-v22-fixture)
 - [6 Instruction blocks](#6-instruction-blocks)
 - [7 Player permissions](#7-player-permissions)
 - [8 Image prompt details (world + per-character)](#8-image-prompt-details-world--per-character)
@@ -25,7 +25,7 @@ This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived fr
 
 | Key | Type | Category | Notes |
 |---|---|---|---|
-| `schemaVersion` | number | Platform | `2.1` in current fixture. Read on input, write on output. Warn on unknown versions. |
+| `schemaVersion` | number | Platform | `2.2` in current fixture. Read on input, write on output. Warn on unknown versions. |
 | `title` | string | Editable | World name |
 | `description` | string | Editable | User-facing blurb shown in the world browser |
 | `background` | string | Editable | Initial story situation sent to the AI |
@@ -79,6 +79,7 @@ This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived fr
 | `favorite` | boolean | Platform | UI state (user starred this world) |
 | `version` | string | Platform | E.g., `"1.02"` — author's content version, bumped by the platform |
 | `autoAdvanceVersion` | boolean | Editable | Whether the platform auto-bumps version on edits |
+| `showPawScriptButtons` | boolean | Editable | New in v2.2. Fixture value `true`. Presumed to control whether the platform surfaces PawScript-related UI affordances (e.g., a button exposing script/debug output) to the player or author. Exact UI semantics are unconfirmed — **open question**; the validator should type-check only (accept any boolean) and preserve the value verbatim on round-trip. |
 
 ## 2 `possibleCharacters[*]` (player characters)
 
@@ -119,13 +120,18 @@ This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived fr
 | `id` | string | Platform | Unique ID |
 | `name` | string | Editable | Display name. Becomes a template variable `<<name_in_snake_case>>` |
 | `positionInList` | number | Editable | 0-based display order |
-| `dataType` | string | Editable | One of: `"text"`, `"number"`, `"xml"`. (XML items use embedded XML for structured state — see the fixture's "Secret Grudges" example) |
+| `dataType` | string | Editable | One of: `"text"`, `"number"`, `"xml"`, `"yaml"`. **`"yaml"` is new in v2.2** and is now the recommended format for structured/nested state — the fixture's `"Secret Grudges"` XML example explicitly notes `"XML ... is NO LONGER RECOMMENDED"` in favor of YAML. `"xml"` is **deprecated** but still valid to read/write for round-trip — new worlds should prefer `"yaml"`. See [`fields/TRACKED_ITEMS.md`](fields/TRACKED_ITEMS.md) for authoring guidance. |
 | `visibility` | string | Editable | One of: `"everyone"`, `"ai_only"`, `"ai_only_boring"`, `"player_only"`, `"hidden"`, `"hidden_boring"`. `"ai_only"` and `"ai_only_boring"` are equivalent and both may appear in real exports — accept either; preserve whichever the input used on round-trip. `"hidden"` = hidden from both player and AI. `"hidden_boring"` = AI cannot read the item (same readability as `"hidden"`); developer-confirmed; import survival KB-marked [PENDING TEST] as of May 2026 (Source: iw_knowledge_base_v2_8.md). |
 | `description` | string | Editable | Free-form description of what the item represents. May contain `<<template_variables>>` |
 | `updateInstructions` | string | Editable | Instructions to the AI for when/how to update this item. Empty string is valid (no auto-update) |
+| `formatExample` | string | Editable | New in v2.2. A concrete example of a well-formed value, shown to the AI (and, per `showPawScriptButtons`, possibly the author) as a model to imitate. Empty string is valid (no example provided). Most useful paired with `"yaml"` dataType. |
+| `enforceFormat` | boolean | Editable | New in v2.2. When `true`, the platform is expected to validate/enforce that AI-written updates conform to `formatSchema`. Fixture shows `false` for `text`/`number`/`xml` items and `true` for the `yaml` item — treat as author-controlled per item. |
+| `formatSchema` | string | Editable | New in v2.2. A pseudo-schema describing the expected shape of the item's value, one field per line as `field: text\|number`; a line `...:` means "more entries like this are allowed" (i.e. a repeating/array-like structure). Empty string is valid (no schema declared). See the fixture's YAML tracked item for a worked example. |
 | `initialValue` | string | Editable | World-default initial value. Per-character overrides live in `possibleCharacters[*].initialTrackedItemValues` |
 | `initialValueBasedOnPC` | string | Editable | One of: `"same"` (all characters share initial value), `"character"` (per-character defaults), `"player"` (player chooses at game start) |
 | `autoUpdate` | boolean | Editable | Whether the AI updates this item automatically each turn |
+| `variableName` | string | Editable | New in v2.2. A snake_case identifier, unique across `trackedItems`, that is this item's **PawScript handle** — referenced in `effectRunScript` scripts and PawScript expressions as `$variableName` (e.g., `$puppy_tracking_yaml_format_tracked_items`). Distinct from the `<<name_in_snake_case>>` template-variable form used in narrative text fields — `variableName` is specifically the script-facing binding. See [`mechanics/AI_RUNTIME_MECHANICS.md`](mechanics/AI_RUNTIME_MECHANICS.md) and `mechanics/PAWSCRIPT.md`. |
+| `driftAcknowledgedForName` | string \| null | Editable | New in v2.2. Only `null` observed in the fixture. **Open question** — likely tracks whether the author has acknowledged a rename/drift between `name` and `variableName`, but semantics are unconfirmed. Validator should type-check only (accept `null` or a string) and preserve the value verbatim on round-trip. |
 
 **`initialPCValue` array form**: in `possibleCharacters[*].initialTrackedItemValues`, the `initialPCValue` may be a string OR a string array. When it is an array (e.g., `["0", "900", "5"]`), the values are the **set of available choices the player picks from** at character selection — a pick-one menu. Treat the array as an unordered set of valid options — not a [min, max, default] tuple or a distribution. The player selects exactly one option and that single choice becomes the item's active value; the item never holds every option at once. Consequently a `triggerOnTrackedItem` condition is evaluated against the chosen value, so a `contains` test is not always-true merely because the menu lists the required string — see [`fields/TRIGGER_EVENTS.md`](fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
@@ -141,7 +147,7 @@ This is the canonical schema for the v2.1 Infinite Worlds world JSON, derived fr
 | `triggerConditions` | object[] | Editable | Conditions that gate when this trigger fires. See `triggerConditions[*]` below. |
 | `triggerEffects` | object[] | Editable | Effects applied when the trigger fires. See `triggerEffects[*]` below. |
 
-**Note**: in the v2.1 fixture, prerequisites and blockers appear only as `triggerPrereqs` / `triggerBlockers` condition types under `triggerConditions` (see below). Whether top-level `prerequisites` / `blockers` fields are also accepted by the platform is unverified — the plugin emits only the condition-type form.
+**Note**: in the v2.2 fixture, prerequisites and blockers appear only as `triggerPrereqs` / `triggerBlockers` condition types under `triggerConditions` (see below). Whether top-level `prerequisites` / `blockers` fields are also accepted by the platform is unverified — the plugin emits only the condition-type form.
 
 ### `triggerConditions[*]`
 
@@ -172,7 +178,7 @@ For `category: "logic"`:
 
 Logic conditions only render when `advancedLogic: true` is set on the trigger. The default trigger semantics outside logic is AND across all conditions.
 
-### `triggerEffects[*]` — canonical list from v2.1 fixture
+### `triggerEffects[*]` — canonical list from v2.2 fixture
 
 Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level fields.
 
@@ -196,12 +202,15 @@ Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level
 | `effectModifyInstructionBlock` | `{id, content}` | — | Modifies an Extra Instruction Block by ID |
 | `effectModifyKeywordBlock` | `{id, content, keywords}` | — | Modifies a Keyword Instruction Block by ID — replaces both content AND keywords |
 | `effectSetTrackedItemValue` | `{action, newValue, replaceWith, trackedItemID}` | `trackedItemID` | `action` one of: `set`, `add` (append), `subtract` (remove if present), `replace` (string-replace). **`replaceWith` must be present in `data` for all actions** (use `""` when unused); it is only *consumed* by the `replace` action (KB-empirical import requirement; Source: iw_knowledge_base_v2_8.md). Both the data object AND the effect object carry `trackedItemID`. |
-| `effectModifyTrackedItemDetails` | `{trackedItemID, override flags, new field values}` | `trackedItemID` | Modify the tracked item itself, not its value. The complete set of override flags (as of v2.1) is: `overrideName`, `overrideDescription`, `overrideUpdateInstructions`, `overrideVisibility`, `overrideAutoUpdate`. When a flag is true, the corresponding new value is applied. |
+| `effectModifyTrackedItemDetails` | `{trackedItemID, override flags, new field values}` | `trackedItemID` | Modify the tracked item itself, not its value. The complete set of override flags (as of v2.2) is: `overrideName`, `overrideDescription`, `overrideUpdateInstructions`, `overrideVisibility`, `overrideAutoUpdate`. When a flag is true, the corresponding new value is applied. Whether this effect also gains override flags for the new v2.2 tracked-item fields (`formatExample`, `enforceFormat`, `formatSchema`, `variableName`) is unconfirmed by the fixture — treat as unsupported until a fixture shows otherwise. |
 | `effectPresentChoice` | `{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId}` | — | Present a choice to the player. `choices` is newline-separated. `selectionMode`: `"single"` or `"multiple"`. `valueDelimiter`: `"newline"` or `"comma"` (how multi-selections are stored). `updateMode`: only `"replace"` is currently defined; the validator should warn (not error) on other values in case the platform adds new modes. `min/maxSelections`: integers or null. Result is written to `targetTrackedItemId`. Blocking — the game pauses until the player chooses. |
 | `effectRequestInput` | `{inputMode, requestText, requiresInput, targetTrackedItemId}` | — | Request free-text input from the player. `inputMode`: `"multi"` (multiline) or presumably `"single"`. `requiresInput`: boolean. Result is written to `targetTrackedItemId`. Blocking, same as `effectPresentChoice`. |
 | `effectFireRandomTrigger` | null or omitted | — | Fire a random trigger (selection pool/weighting unconfirmed). Historically absent from the schema but **confirmed working in real worlds** (KB-empirical; Source: iw_knowledge_base_v2_8.md 'Import Test Results'). **Stripped in Start-of-Game triggers** — use only in regular triggers. |
+| `effectRunScript` | string | — | **New in v2.2.** Runs a PawScript script (the effect's `data` is the raw script source) when this trigger fires. The script can **only mutate tracked items** — it cannot touch instructions, character fields, or other world state. Execution is **transactional**: if the script raises any error, none of its changes are applied, the error is logged to World Debug, and the game continues normally (the turn is not blocked). Scripts must not contain unbounded loops — `for each` over a tracked item's entries is the supported iteration form (see the fixture's example, which does `for each $puppy in $puppy_tracking_yaml_format_tracked_items` / `$puppy.friendliness += 1`). A tracked item's `variableName` is the `$handle` a script uses to reference it. See [`mechanics/AI_RUNTIME_MECHANICS.md`](mechanics/AI_RUNTIME_MECHANICS.md) and `mechanics/PAWSCRIPT.md` for the full scripting model; reference docs: https://infiniteworlds.app/pawscript-script-guide, https://infiniteworlds.app/pawscript-reference, https://infiniteworlds.app/pawscript-expressions-guide, https://infiniteworlds.app/yaml-guide. |
 
-**Forward compatibility**: the table above is the comprehensive set of effect types observed in v2.1 fixtures. Future schema versions may add new types. The validator must **warn** (not error) on unrecognized `type` values so unknown-but-platform-valid effects survive round-trips. The agent should refuse to emit unrecognized types until they appear in a verified fixture, but should leave existing unknown-type effects untouched when editing other fields of the world.
+**PawScript expressions vs. scripts.** `effectRunScript`'s `data` holds a full PawScript *script* (statements, mutation). Distinct from PawScript *expressions* (`<<…>>` read-only interpolations), which remain legal anywhere adventure text is typed (`instructions`, `descriptionRequest`, tracked-item `description`, etc.) — see §9.
+
+**Forward compatibility**: the table above is the comprehensive set of effect types observed in v2.2 fixtures. Future schema versions may add new types. The validator must **warn** (not error) on unrecognized `type` values so unknown-but-platform-valid effects survive round-trips. The agent should refuse to emit unrecognized types until they appear in a verified fixture, but should leave existing unknown-type effects untouched when editing other fields of the world.
 
 **v2.1 consolidation.** Pre-v2.1 worlds used a separate boolean field
 `canContinueEndedGame` to control continuation behavior on an end-game

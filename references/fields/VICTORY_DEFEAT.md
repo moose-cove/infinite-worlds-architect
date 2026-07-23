@@ -5,7 +5,7 @@ Covers both end-game systems available in v2.1:
   end-game system).
 - Trigger-based end-game via the `effectEndsGame` effect.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1 (top-level conditions) and §5 (effect types).
+For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#1-top-level-fields) §1 (top-level conditions) and §5 (effect types).
 
 ---
 

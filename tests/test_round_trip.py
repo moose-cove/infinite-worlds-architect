@@ -13,7 +13,9 @@ from pathlib import Path
 
 import pytest
 
-FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
+FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
+# The prior-version fixture is retained for the back-compat test below.
+FIXTURE_PATH_V21 = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
 
 
 @pytest.fixture
@@ -59,9 +61,49 @@ def test_fixture_passes_validator():
 
 
 def test_fixture_schema_version():
-    """Fixture must have schemaVersion 2.1."""
+    """Fixture must have schemaVersion 2.2."""
     fixture = json.loads(FIXTURE_PATH.read_text())
-    assert fixture["schemaVersion"] == 2.1
+    assert fixture["schemaVersion"] == 2.2
+
+
+def test_v21_fixture_still_validates_clean():
+    """Back-compat: the prior-version fixture must still validate with NO errors.
+
+    v2.1 worlds lack the v2.2 tracked-item fields (variableName, enforceFormat, …) and
+    must remain valid — the new fields are all optional. The only surfaced findings are
+    warnings (e.g. the 'schemaVersion 2.1 older than expected 2.2' notice, plus the
+    XML-deprecation warning for the fixture's XML tracked item).
+    """
+    from iw_architect.validator import validate_world
+
+    result = json.loads(validate_world(str(FIXTURE_PATH_V21)))
+    assert result["errors"] == [], (
+        "v2.1 fixture must still validate clean under the v2.2 validator:\n"
+        + "\n".join(f"  - {e}" for e in result["errors"])
+    )
+    assert any("older" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_fixture_pawscript_no_cross_reference_warnings():
+    """The fixture's own effectRunScript (loop var $puppy + a real variableName) must
+    produce zero PawScript cross-reference or read-only-native warnings."""
+    from iw_architect.validator import validate_world
+
+    result = json.loads(validate_world(str(FIXTURE_PATH)))
+    assert not any("effectRunScript references" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+    assert not any("read-only at runtime" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_scaffold_schema_version_is_2_2(tmp_path):
+    """create_new_world_json must emit schemaVersion 2.2."""
+    from iw_architect.tools.helpers import create_new_world_json
+
+    output = tmp_path / "scaffold_version.json"
+    create_new_world_json(str(output), title="Test World")
+    world = json.loads(output.read_text())
+    assert world["schemaVersion"] == 2.2
 
 
 def test_format_world_for_review_writes_file(tmp_path):
@@ -167,8 +209,8 @@ def test_make_draft_world_copies_bumps_and_fronts_version(tmp_path):
 
     world = json.loads(draft.read_text())
     assert next(iter(world)) == "version", "version must be the first key in the draft"
-    assert world["version"] == "1.05", "fixture version 1.04 must bump to 1.05"
-    assert result["version"] == {"from": "1.04", "to": "1.05"}
+    assert world["version"] == "1.07", "fixture version 1.06 must bump to 1.07"
+    assert result["version"] == {"from": "1.06", "to": "1.07"}
 
     # The source is the protected baseline: byte-for-byte unchanged.
     assert source.read_bytes() == source_bytes_before

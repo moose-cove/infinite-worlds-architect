@@ -66,12 +66,14 @@ For **each field or entity**, follow this loop:
 - For each NPC: `name`, `one_liner`, `detail`, `appearance`, `location`, `secret_info`, `names`, `img_appearance`, `img_clothing`
 - Mint an `id` with `mint_ids("npc", 1)`, assign `positionInList` sequentially
 
-**Tracked items** (see [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md)):
+**Tracked items** (see [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md) and [`references/fields/YAML_TRACKED_ITEMS.md`](../references/fields/YAML_TRACKED_ITEMS.md) for `dataType: "yaml"`):
 - For each item: `name`, `dataType`, `visibility`, `description`, `updateInstructions`, `initialValue`, `initialValueBasedOnPC`, `autoUpdate`
+- Prefer `dataType: "yaml"` over the deprecated `xml` for new items; when using `yaml`, also set a unique snake_case `variableName` (the PawScript `$handle`)
 - Mint an `id` with `mint_ids("trackedItem", 1)`, assign `positionInList` sequentially
 
-**Triggers** (see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md)):
+**Triggers** (see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) and [`references/mechanics/PAWSCRIPT.md`](../references/mechanics/PAWSCRIPT.md) for the `effectRunScript` effect):
 - For each trigger: `name`, `canTriggerMoreThanOnce`, `advancedLogic`, `triggerOnStartOfGame`, then define conditions and effects
+- If an effect needs to update tracked items together as one unit, consider `effectRunScript` — a transactional PawScript that may only reference existing tracked-item `variableName`s and must never write to `$player`/`$game`
 - Mint a trigger `id` with `mint_ids("triggerEvent", 1)`
 - Mint condition/effect `id`s with `mint_ids("triggerStep", n)`
 

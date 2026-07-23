@@ -61,7 +61,8 @@ Key fields that usually diverge in a spinoff (read the matching file in `referen
 - `title`, `description`, `background` (see [`references/fields/INTRODUCING_THE_STORY.md`](../references/fields/INTRODUCING_THE_STORY.md)) — identify the variant clearly
 - `designNotes` (see [`references/fields/MAIN_INSTRUCTIONS.md`](../references/fields/MAIN_INSTRUCTIONS.md)) — record why this variant exists (not sent to AI)
 - Character `name` and `description` (see [`references/fields/PLAYER_CHARACTERS.md`](../references/fields/PLAYER_CHARACTERS.md) and [`references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`](../references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md)) — if the protagonist changes
-- Tracked item initial values (see [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md)) — if mechanics differ
+- Tracked item initial values (see [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md)) — if mechanics differ; if the variant adds new tracked items, prefer `dataType: "yaml"` with a unique snake_case `variableName` over the deprecated `xml` (see [`references/fields/YAML_TRACKED_ITEMS.md`](../references/fields/YAML_TRACKED_ITEMS.md))
+- New or altered trigger logic (see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) and [`references/mechanics/PAWSCRIPT.md`](../references/mechanics/PAWSCRIPT.md)) — an `effectRunScript` effect may only reference existing tracked-item `variableName`s and must never write to `$player`/`$game`
 
 ## Step 5 — Validate and audit the variant
 

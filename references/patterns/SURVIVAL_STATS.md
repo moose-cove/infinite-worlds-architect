@@ -34,3 +34,61 @@ Example stat set: Hunger, Thirst, Sleep, Body Temperature, Stamina. Each stat en
   "initialValue": "Hunger: 80\nThirst: 80"
 }
 ```
+
+---
+
+### v2.2 note — deterministic version with YAML + `effectRunScript`
+
+The text-TI version above works, but the arithmetic is done by the AI
+every turn: it reads the current numbers out of freeform text, applies the
+decrease/increase rules itself, and re-writes the text. That's exactly the
+kind of mechanical bookkeeping the AI is prone to getting wrong under
+context pressure (drift, off-by-one accumulation, forgetting a rule for
+one stat but not another).
+
+As of v2.2, prefer a `yaml` tracked item holding the stats as structured
+fields, mutated by an `effectRunScript` trigger instead of AI narration:
+
+```json
+{
+  "id": "SrvStats",
+  "name": "Survival Stats",
+  "dataType": "yaml",
+  "variableName": "survival_stats",
+  "visibility": "ai_only",
+  "autoUpdate": false,
+  "initialValue": "hunger: 80\nthirst: 80"
+}
+```
+
+Trigger (fires every turn — `canTriggerMoreThanOnce: true`, no conditions
+needed beyond that):
+
+```
+$survival_stats.hunger -= 5
+if $survival_stats.hunger < 0:
+  $survival_stats.hunger = 0
+$survival_stats.thirst -= 8
+if $survival_stats.thirst < 0:
+  $survival_stats.thirst = 0
+```
+
+Meal/drink consumption still fires its own trigger (e.g. on
+`triggerOnEvent: "the player eats"`) with a script that does
+`$survival_stats.hunger += 30` and clamps to 100 the same way.
+
+**Why this is better:** the decrease/increase math and the clamping rules
+are now guaranteed correct every single turn — no AI arithmetic, no drift,
+no need to spell out "never exceed 100 or go below 0" as a hope-it-follows
+instruction. `updateInstructions` disappears entirely for this TI; `autoUpdate`
+turns off because the trigger does the mutation, not the AI.
+
+**When the text-TI version still makes sense:** stats with genuinely
+holistic, narrative-dependent interactions (e.g. "cold environment +
+insulating clothing = no Temperature decrease") that require the AI to
+read the current scene and decide whether a rule applies. Pure numeric
+decay/refill on fixed schedules is the case to migrate; conditional,
+scene-dependent interactions between stats still need the AI's judgment
+and are better left as `updateInstructions` text (or a hybrid: numeric
+stats on the YAML TI, with an `effectTellAIWhatToDo` effect providing the
+scene-dependent override on the turns it applies).

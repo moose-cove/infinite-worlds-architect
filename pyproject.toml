@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "iw-architect"
-version = "0.14.0"
+version = "0.15.0"
 description = "Infinite Worlds Architect — MCP plugin for building Infinite Worlds story worlds"
 requires-python = ">=3.12"
 dependencies = [
     "mcp>=1.0.0",
     "jsonschema>=4.23.0",
     "pydantic>=2.13.4",
+    "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
