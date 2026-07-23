@@ -4,7 +4,7 @@ A Claude Code plugin for building and editing [Infinite Worlds](https://infinite
 
 ## What this is
 
-Infinite Worlds is a third-party storytelling platform where authors design **worlds** — collections of characters, NPCs, instructions, tracked state, and conditional triggers that the platform uses to run interactive stories. A world is persisted as a single JSON file conforming to the v2.1 schema documented in [`references/WORLD_JSON_SCHEMA_v2.2.md`](./references/WORLD_JSON_SCHEMA_v2.2.md).
+Infinite Worlds is a third-party storytelling platform where authors design **worlds** — collections of characters, NPCs, instructions, tracked state, and conditional triggers that the platform uses to run interactive stories. A world is persisted as a single JSON file conforming to the v2.2 schema documented in [`references/WORLD_JSON_SCHEMA_v2.2.md`](./references/WORLD_JSON_SCHEMA_v2.2.md).
 
 This plugin assists an author who is building or editing such a world by talking to Claude in a Claude Code session. The plugin:
 
@@ -52,7 +52,7 @@ Once installed, the plugin contributes three things to your Claude Code session:
 
 ### 1. The `world-architect` agent
 
-This is an **autonomous subagent** that handles world authoring and debugging end-to-end. It knows the v2.1 schema deeply, can author new worlds, edit existing ones, debug trigger/tracked-item issues, and answer Infinite Worlds platform questions grounded in the schema → fixture → reference docs hierarchy. It will follow the edit-flow contract (read, plan, mint IDs, show diffs, edit, validate, audit) without being prompted for each step.
+This is an **autonomous subagent** that handles world authoring and debugging end-to-end. It knows the v2.2 schema deeply, can author new worlds, edit existing ones, debug trigger/tracked-item issues, and answer Infinite Worlds platform questions grounded in the schema → fixture → reference docs hierarchy. It will follow the edit-flow contract (read, plan, mint IDs, show diffs, edit, validate, audit) without being prompted for each step.
 
 The agent is reached two ways:
 
@@ -132,7 +132,7 @@ uv run python -m iw_architect.server
 | [`CLAUDE.md`](./CLAUDE.md) | Project conventions, file structure, pre-commit policy, and the workflow for adding a new platform feature. Loaded automatically into every Claude Code session in this repo. |
 | [`DESIGN_BRIEF_v2.md`](./DESIGN_BRIEF_v2.md) | The full design spec the implementation was built against. Architecture rationale, tool surface, validator check list, testing strategy. |
 | [`references/WORLD_JSON_SCHEMA_v2.2.md`](./references/WORLD_JSON_SCHEMA_v2.2.md) | Human-readable explanation of every field in the world JSON schema. The canonical JSON Schema artifact lives next to it at `references/world_v2.2.schema.json`. |
-| [`example-world-schema-v2.1.json`](./example-world-schema-v2.1.json) | The canonical fixture. Per design brief §3, this file is the ultimate source of truth — if `validate_world` rejects it, the validator is wrong. |
+| [`example-world-schema-v2.2.json`](./example-world-schema-v2.2.json) | The canonical fixture (schema v2.2). Per design brief §3, this file is the ultimate source of truth — if `validate_world` rejects it, the validator is wrong. `example-world-schema-v2.1.json` is retained alongside it as a back-compat fixture (must still validate with only warnings). |
 
 ## License
 

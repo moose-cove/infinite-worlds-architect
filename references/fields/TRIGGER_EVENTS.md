@@ -2,7 +2,7 @@
 
 JSON key: `triggerEvents` — array of trigger objects.
 
-For the canonical list of v2.1 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
+For the canonical list of v2.2 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
 
 ---
 

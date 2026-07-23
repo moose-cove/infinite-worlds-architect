@@ -335,6 +335,29 @@ def test_non_unique_position_in_list_mixed_types_does_not_crash():
     assert any("non-unique positionInList" in e for e in result["errors"])
 
 
+def test_non_unique_position_in_list_unhashable_does_not_crash():
+    # Regression: duplicated UNHASHABLE positionInList values (dict/list) must not
+    # crash the dedup step — a plain set() raises "unhashable type: 'dict'". The
+    # dupe is still reported.
+    base = {
+        "id": "ITEM00001",
+        "name": "A",
+        "positionInList": {"x": 1},
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+    }
+    world = _base_world()
+    world["trackedItems"] = [
+        base,
+        {**base, "id": "ITEM00002", "name": "B", "positionInList": {"x": 1}},
+    ]
+    # Must not raise.
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("non-unique positionInList" in e for e in result["errors"])
+
+
 # ── Cross-field invariants ────────────────────────────────────────────────────
 
 
@@ -1241,6 +1264,18 @@ def test_pawscript_set_variable_not_flagged():
     ]
 
 
+def test_pawscript_set_to_native_warns():
+    # `set $player = ...` reuses a reserved read-only native as a set variable → WARNING.
+    world = _script_world(
+        'set $player = "Bob"',
+        [_yaml_item(variable_name="puppies")],
+    )
+    result = _validate(world)
+    assert any("set $player" in w and "reserved read-only" in w for w in result["warnings"]), (
+        result["warnings"]
+    )
+
+
 def test_pawscript_comment_lines_ignored():
     # `#` comment lines (e.g. containing URLs) must not contribute identifiers.
     world = _script_world(
@@ -1301,6 +1336,21 @@ def test_yaml_valid_initial_value_no_error():
     world["trackedItems"] = [_yaml_item(initialValue="- name: Spot\n  friendliness: 5")]
     result = _validate(world)
     assert not any("YAML" in e for e in result["errors"]), result["errors"]
+
+
+def test_yaml_deeply_nested_does_not_crash():
+    # Regression: pathologically deep YAML must be reported as invalid, not crash
+    # the validator with an uncaught RecursionError (PyYAML is not depth-limited,
+    # even under safe_load).
+    import sys
+
+    depth = sys.getrecursionlimit() + 5000
+    deep = "[" * depth + "]" * depth
+    world = _base_world()
+    world["trackedItems"] = [_yaml_item(initialValue=deep)]
+    # Must not raise.
+    result = _validate(world)
+    assert any("initialValue" in e and "YAML" in e for e in result["errors"]), result["errors"]
 
 
 def test_xml_datatype_deprecation_warns():

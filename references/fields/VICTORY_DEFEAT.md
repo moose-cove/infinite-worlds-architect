@@ -1,6 +1,6 @@
 # Field Guide: Victory and Defeat Conditions
 
-Covers both end-game systems available in v2.1:
+Covers both end-game systems available in v2.2:
 - Top-level `victoryCondition` and `defeatCondition` fields (the built-in
   end-game system).
 - Trigger-based end-game via the `effectEndsGame` effect.
@@ -68,7 +68,7 @@ Either field may be set to `null` to disable that ending type. The platform won'
 
 ## System 2: Trigger-based end-game (`effectEndsGame`)
 
-Triggers can end the game directly via the `effectEndsGame` effect type. This is the v2.1 path for custom end conditions — multiple endings, conditional victory/defeat, or end-game logic that doesn't fit a single `condition` string.
+Triggers can end the game directly via the `effectEndsGame` effect type. This is the v2.2 path for custom end conditions — multiple endings, conditional victory/defeat, or end-game logic that doesn't fit a single `condition` string.
 
 ### Basic pattern
 

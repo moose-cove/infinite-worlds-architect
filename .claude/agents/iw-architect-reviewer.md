@@ -208,7 +208,7 @@ After all findings, include a SUMMARY section:
 
 ## EDGE CASES
 
-- **Future schema versions** — If a world or schema artifact declares a `schemaVersion` newer than v2.1, warn but do not error. Note that platform may have added fields.
+- **Future schema versions** — If a world or schema artifact declares a `schemaVersion` newer than v2.2, warn but do not error. Note that platform may have added fields.
 - **Unknown effect/condition types** — Warn but do not error; the platform may have added types the validator doesn't know yet. If the plugin change *adds* an unknown type, ask whether it should be registered.
 - **Wiki contradicts schema** — Schema wins. Add a WIKI-FLAG finding noting the discrepancy.
 - **Open questions in `DESIGN_BRIEF_v2.md` §9** — `illustrationStyle*HighPriority` / `LowPriority` coexistence and the full enum of valid `recommendedAIModel` values are unresolved. Preserve verbatim, don't validate beyond type-checking. Note their presence as "preserved per open-question rule."

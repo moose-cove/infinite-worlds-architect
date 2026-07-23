@@ -190,15 +190,20 @@ def _check_position_in_list(world: dict, errors: list[str], warnings: list[str])
             errors.append(f"{label}: {len(missing)} entities missing positionInList")
         dupes = [p for p in positions if positions.count(p) > 1]
         if dupes:
-            unique_dupes = set(dupes)
+            # positionInList should be numeric (Tier 1 enforces the type), but a
+            # malformed/hand-edited world can put anything here — including
+            # unhashable (dict/list) or unorderable (None/mixed) values. Dedupe
+            # with ``==`` (no hashing) and sort via a string key (no raw
+            # comparison) so this report never crashes on the bad value that the
+            # Tier 1 type error already flags.
+            distinct: list = []
+            for p in dupes:
+                if p not in distinct:
+                    distinct.append(p)
             try:
-                rendered = sorted(unique_dupes)
+                rendered = sorted(distinct)
             except TypeError:
-                # positionInList should be numeric (Tier 1 enforces the type), but a
-                # malformed world can mix numbers with nulls/strings. Sort defensively
-                # so this report never crashes on unorderable values — the Tier 1 type
-                # error already flags the real problem.
-                rendered = sorted(unique_dupes, key=lambda p: (p is None, type(p).__name__, str(p)))
+                rendered = sorted(distinct, key=lambda p: (p is None, type(p).__name__, str(p)))
             errors.append(f"{label}: non-unique positionInList values: {rendered}")
 
     _check_array(world.get("NPCs", []), "NPCs")
@@ -548,10 +553,18 @@ def _check_pawscript_scripts(world: dict, errors: list[str], warnings: list[str]
     - Warn on a ``$root`` that is neither a tracked-item variableName, a native
       ($player/$game), a ``for each`` loop variable, nor a ``set`` scratch
       variable (an undeclared reference).
-    - Warn on an assignment whose target root is a native ($player/$game are read-only).
+    - Warn on an assignment (including via ``set``) whose target root is a native
+      ($player/$game are read-only and must not be reused as a set variable).
 
     Comment (``#``) lines are stripped first so URLs and prose never contribute
     spurious identifiers.
+
+    This is a heuristic linter, not a PawScript parser. Two known limitations,
+    both benign for a warn-only check: it has no string-literal awareness (a
+    ``$name`` inside a quoted string is treated like a real reference), and it
+    does not enforce declaration order (a ``$x`` used before its ``set`` /
+    ``for each`` appears later in the script is still accepted, because loop and
+    set variables are collected from the whole body first).
     """
     variable_names = set(_collect_variable_names(world))
     for trigger in world.get("triggerEvents", []):
@@ -566,7 +579,10 @@ def _check_pawscript_scripts(world: dict, errors: list[str], warnings: list[str]
             lines = _strip_script_comments(script)
 
             # Bind locally-introduced variables (locally legal roots): `for each $x in ...`
-            # loop variables and `set $x = ...` scratch variables.
+            # loop variables and `set $x = ...` scratch variables. A `set` that
+            # targets a native name is flagged rather than bound — reusing the
+            # reserved read-only $player/$game as a scratch variable is an author
+            # error (whether it shadows or attempts to write the native).
             local_vars: set[str] = set()
             for ln in lines:
                 m = _SCRIPT_LOOP_RE.match(ln)
@@ -574,7 +590,14 @@ def _check_pawscript_scripts(world: dict, errors: list[str], warnings: list[str]
                     local_vars.add(m.group(1))
                 sm = _SCRIPT_SET_RE.match(ln)
                 if sm:
-                    local_vars.add(sm.group(1))
+                    if sm.group(1) in _SCRIPT_NATIVES:
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectRunScript uses "
+                            f"'set ${sm.group(1)}' — $player and $game are reserved read-only "
+                            "natives and must not be reused as a set variable"
+                        )
+                    else:
+                        local_vars.add(sm.group(1))
             legal = variable_names | _SCRIPT_NATIVES | local_vars
 
             seen_unknown: set[str] = set()
@@ -622,7 +645,11 @@ def _check_yaml_tracked_items(world: dict, errors: list[str], warnings: list[str
             if isinstance(val, str) and val.strip():
                 try:
                     yaml.safe_load(val)
-                except yaml.YAMLError as exc:
+                except (yaml.YAMLError, RecursionError) as exc:
+                    # RecursionError: PyYAML is not depth-limited even under
+                    # safe_load, so pathologically-nested author-controlled input
+                    # would otherwise crash the whole validator instead of being
+                    # reported here as an invalid-YAML error.
                     detail = str(exc).replace("\n", " ")
                     errors.append(
                         f"trackedItems[name={name!r}]: {field} is not valid YAML "

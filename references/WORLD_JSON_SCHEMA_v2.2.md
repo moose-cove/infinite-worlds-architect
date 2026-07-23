@@ -1,5 +1,5 @@
 
-# Schema reference (derived from `test-files/example-world-schema-v2.2.json`)
+# Schema reference (derived from `example-world-schema-v2.2.json`)
 
 This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived from `example-world-schema-v2.2.json`. Where the fixture is silent on a field's exact semantics, that uncertainty is noted inline; the plugin's validator should warn (not error) on such fields and preserve their values verbatim on round-trip.
 
@@ -131,7 +131,7 @@ This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived fr
 | `initialValueBasedOnPC` | string | Editable | One of: `"same"` (all characters share initial value), `"character"` (per-character defaults), `"player"` (player chooses at game start) |
 | `autoUpdate` | boolean | Editable | Whether the AI updates this item automatically each turn |
 | `variableName` | string | Editable | New in v2.2. A snake_case identifier, unique across `trackedItems`, that is this item's **PawScript handle** — referenced in `effectRunScript` scripts and PawScript expressions as `$variableName` (e.g., `$puppy_tracking_yaml_format_tracked_items`). Distinct from the `<<name_in_snake_case>>` template-variable form used in narrative text fields — `variableName` is specifically the script-facing binding. See [`mechanics/AI_RUNTIME_MECHANICS.md`](mechanics/AI_RUNTIME_MECHANICS.md) and `mechanics/PAWSCRIPT.md`. |
-| `driftAcknowledgedForName` | string \| null | Editable | New in v2.2. Only `null` observed in the fixture. **Open question** — likely tracks whether the author has acknowledged a rename/drift between `name` and `variableName`, but semantics are unconfirmed. Validator should type-check only (accept `null` or a string) and preserve the value verbatim on round-trip. |
+| `driftAcknowledgedForName` | string \| null | Platform | New in v2.2. Only `null` observed in the fixture. **Open question** — likely tracks whether the author has acknowledged a rename/drift between `name` and `variableName`, but semantics are unconfirmed. Validator should type-check only (accept `null` or a string) and preserve the value verbatim on round-trip. |
 
 **`initialPCValue` array form**: in `possibleCharacters[*].initialTrackedItemValues`, the `initialPCValue` may be a string OR a string array. When it is an array (e.g., `["0", "900", "5"]`), the values are the **set of available choices the player picks from** at character selection — a pick-one menu. Treat the array as an unordered set of valid options — not a [min, max, default] tuple or a distribution. The player selects exactly one option and that single choice becomes the item's active value; the item never holds every option at once. Consequently a `triggerOnTrackedItem` condition is evaluated against the chosen value, so a `contains` test is not always-true merely because the menu lists the required string — see [`fields/TRIGGER_EVENTS.md`](fields/TRIGGER_EVENTS.md#choosing-condition-types).
 

@@ -101,7 +101,7 @@ For content that is only relevant in specific game phases, or that needs to swap
   - Tracked item changes (`effectSetTrackedItemValue`).
   - Recurring story beats via `canTriggerMoreThanOnce: true`.
 
-For the full canonical list of v2.1 effect and condition types, see `WORLD_JSON_SCHEMA_v2.2.md` §5.
+For the full canonical list of v2.2 effect and condition types, see `WORLD_JSON_SCHEMA_v2.2.md` §5.
 
 **Latency implication.** Trigger effects and tracked-item auto-updates
 both happen at the end of the turn that triggers them — *after* the AI

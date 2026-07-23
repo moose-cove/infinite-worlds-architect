@@ -71,7 +71,7 @@ Author-provided prompt info used to generate the portrait. Same shape as the wor
 
 ## Player permissions
 
-Six top-level booleans control what the player can customize before starting the adventure. Note that v2.1 uses `allow*` field names (not the older `can*` form):
+Six top-level booleans control what the player can customize before starting the adventure. Note that v2.2 uses `allow*` field names (not the older `can*` form):
 
 | Field | Default | What it allows |
 |---|---|---|
