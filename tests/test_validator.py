@@ -310,6 +310,31 @@ def test_non_unique_position_in_list():
     assert any("positionInList" in e for e in result["errors"])
 
 
+def test_non_unique_position_in_list_mixed_types_does_not_crash():
+    # Regression: duplicate positions of unorderable mixed types (null + number)
+    # must not crash the validator's sort — it should still report the dupe.
+    # Previously `sorted({None, 1})` raised TypeError and took down validate_world.
+    base = {
+        "id": "ITEM00001",
+        "name": "A",
+        "positionInList": None,
+        "dataType": "number",
+        "visibility": "everyone",
+        "autoUpdate": False,
+    }
+    world = _base_world()
+    world["trackedItems"] = [
+        base,
+        {**base, "id": "ITEM00002", "name": "B", "positionInList": None},
+        {**base, "id": "ITEM00003", "name": "C", "positionInList": 1},
+        {**base, "id": "ITEM00004", "name": "D", "positionInList": 1},
+    ]
+    # Must not raise; the report is still produced.
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("non-unique positionInList" in e for e in result["errors"])
+
+
 # ── Cross-field invariants ────────────────────────────────────────────────────
 
 

@@ -190,7 +190,16 @@ def _check_position_in_list(world: dict, errors: list[str], warnings: list[str])
             errors.append(f"{label}: {len(missing)} entities missing positionInList")
         dupes = [p for p in positions if positions.count(p) > 1]
         if dupes:
-            errors.append(f"{label}: non-unique positionInList values: {sorted(set(dupes))}")
+            unique_dupes = set(dupes)
+            try:
+                rendered = sorted(unique_dupes)
+            except TypeError:
+                # positionInList should be numeric (Tier 1 enforces the type), but a
+                # malformed world can mix numbers with nulls/strings. Sort defensively
+                # so this report never crashes on unorderable values — the Tier 1 type
+                # error already flags the real problem.
+                rendered = sorted(unique_dupes, key=lambda p: (p is None, type(p).__name__, str(p)))
+            errors.append(f"{label}: non-unique positionInList values: {rendered}")
 
     _check_array(world.get("NPCs", []), "NPCs")
     _check_array(world.get("trackedItems", []), "trackedItems")
