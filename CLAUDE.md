@@ -47,7 +47,8 @@ references/                                          # On-demand authoring + sch
 ├── mechanics/                                       # Runtime and platform behaviour
 │   ├── AI_RUNTIME_MECHANICS.md                      # Runtime/turn-lifecycle behavior
 │   ├── PAWSCRIPT.md                                 # PawScript expressions + scripts (effectRunScript)
-│   └── PLATFORM_BEHAVIOR_NOTES.md                  # Import, ID renaming, World Debug, Export
+│   ├── PLATFORM_BEHAVIOR_NOTES.md                  # Import, ID renaming, World Debug, Export
+│   └── STORY_EXPORT_EXTRACTION_GUIDE.md             # Using the story-export extraction tools (any agent)
 ├── guidance/                                        # Authoring principles
 │   ├── FIELD_ALLOCATION_STRATEGY.md                 # Where content belongs
 │   ├── CHARACTER_AUTHORING_GUARDRAILS.md            # No-fabrication discipline
@@ -65,7 +66,12 @@ agents/
 commands/
 ├── new-world.md        # /infinite-worlds-architect:new-world  — guided world creation
 ├── modify-world.md     # /infinite-worlds-architect:modify-world — edit existing world
-└── spinoff-world.md    # /infinite-worlds-architect:spinoff-world — derive a variant
+├── spinoff-world.md    # /infinite-worlds-architect:spinoff-world — derive a variant
+└── sequel-world.md     # /infinite-worlds-architect:sequel-world — build a sequel from story export(s)
+
+hooks/
+├── citation_gate.py    # Stop hook: enforces evidence citations during a sequel-world flow
+└── hooks.json          # Hook registration (Stop → citation_gate.py)
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)

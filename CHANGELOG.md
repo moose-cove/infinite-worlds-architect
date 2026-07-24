@@ -10,6 +10,10 @@ lockstep with the change that warrants it.
 
 ## [Unreleased]
 
+### Added
+
+- **`/infinite-worlds-architect:sequel-world` command.** Builds a sequel world from an original world JSON plus one or more played story-export `.txt` files: copies the source untouched, extracts the story (`extract_story_data` / `query_story_data` / `get_character_list`), then walks the author field-by-field, proposing each evolved value with cited evidence. Ships with an optional, consent-armed **citation gate** (`hooks/citation_gate.py`, the plugin's first `Stop` hook) that enforces an evidence line on every field proposal, and a general `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` covering the story-extraction tools for any flow (e.g. a `modify-world` agent inspecting an export). (`commands/sequel-world.md`, `hooks/`, `references/`)
+
 ## [0.7.1] - 2026-06-03
 
 ### Fixed

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/citation_gate.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
