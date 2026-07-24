@@ -12,12 +12,13 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
+import yaml
 
 from iw_architect import KNOWN_SCHEMA_VERSION
 from iw_architect.paths import RelativePathError, require_absolute
 
 _PLUGIN_ROOT = Path(__file__).parent.parent.parent  # src/iw_architect/ → src/ → repo root
-_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.1.schema.json"
+_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.2.schema.json"
 _SCHEMA: dict | None = None
 
 _KNOWN_EFFECT_TYPES = {
@@ -45,6 +46,9 @@ _KNOWN_EFFECT_TYPES = {
     # rec 4 (KB-empirical): historically schema-absent but confirmed working in real worlds.
     # Source: iw_knowledge_base_v2_8.md "Import Test Results".
     "effectFireRandomTrigger",
+    # schema v2.2: PawScript. Runs a script that can only mutate tracked items.
+    # Source: https://infiniteworlds.app/pawscript-script-guide
+    "effectRunScript",
 }
 
 # rec 7: SoG = Start-of-Game (triggerOnStartOfGame: true on the trigger).
@@ -56,7 +60,7 @@ _REGULAR_ONLY_EFFECTS = {"effectGiveInfo", "effectFireRandomTrigger"}
 
 # rec 3: required data keys for player-interaction effects.
 # effectPresentChoice: all 8 keys must be present (even in single-select; min/max may be null).
-# Source: fixture + WORLD_JSON_SCHEMA_v2.1.md.
+# Source: fixture + WORLD_JSON_SCHEMA_v2.2.md.
 _EFFECT_PRESENT_CHOICE_REQUIRED_KEYS = {
     "message",
     "choices",
@@ -186,7 +190,21 @@ def _check_position_in_list(world: dict, errors: list[str], warnings: list[str])
             errors.append(f"{label}: {len(missing)} entities missing positionInList")
         dupes = [p for p in positions if positions.count(p) > 1]
         if dupes:
-            errors.append(f"{label}: non-unique positionInList values: {sorted(set(dupes))}")
+            # positionInList should be numeric (Tier 1 enforces the type), but a
+            # malformed/hand-edited world can put anything here — including
+            # unhashable (dict/list) or unorderable (None/mixed) values. Dedupe
+            # with ``==`` (no hashing) and sort via a string key (no raw
+            # comparison) so this report never crashes on the bad value that the
+            # Tier 1 type error already flags.
+            distinct: list = []
+            for p in dupes:
+                if p not in distinct:
+                    distinct.append(p)
+            try:
+                rendered = sorted(distinct)
+            except TypeError:
+                rendered = sorted(distinct, key=lambda p: (p is None, type(p).__name__, str(p)))
+            errors.append(f"{label}: non-unique positionInList values: {rendered}")
 
     _check_array(world.get("NPCs", []), "NPCs")
     _check_array(world.get("trackedItems", []), "trackedItems")
@@ -334,7 +352,7 @@ def _check_player_interaction_effect_shapes(
 
     Both effects are silently stripped if their data is malformed.
     All required keys must be present (minSelections/maxSelections may be null).
-    Source: fixture + WORLD_JSON_SCHEMA_v2.1.md + iw_knowledge_base_v2_8.md.
+    Source: fixture + WORLD_JSON_SCHEMA_v2.2.md + iw_knowledge_base_v2_8.md.
     """
     for trigger in world.get("triggerEvents", []):
         tname = trigger.get("name", trigger.get("id", "?"))
@@ -462,6 +480,191 @@ def _check_skills_not_empty(world: dict, errors: list[str], warnings: list[str])
                 "skills is empty — KB v2.8 asserts an empty skills array may break IW import; "
                 "seed at least one skill string (e.g. 'General') "
                 "(KB-empirical; iw_knowledge_base_v2_8.md)"
+            )
+
+
+# ── schema v2.2: PawScript + YAML tracked items ──────────────────────────────
+#
+# PawScript scripts (effectRunScript.data) can only mutate tracked items, referenced
+# as $<variableName>. The natives $player and $game are read-only. See
+# https://infiniteworlds.app/pawscript-script-guide and
+# https://infiniteworlds.app/pawscript-reference.
+
+_VARIABLE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+# Read-only PawScript natives — writing to them is rejected at runtime.
+_SCRIPT_NATIVES = {"player", "game"}
+# A `$root` reference (root = text before any `.`), e.g. $puppy.friendliness → "puppy".
+_SCRIPT_IDENT_RE = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
+# `for each $x in ...` introduces $x as a locally-bound (and assignable) loop variable.
+_SCRIPT_LOOP_RE = re.compile(r"^\s*for\s+each\s+\$([A-Za-z_][A-Za-z0-9_]*)\s+in\b")
+# `set $x = ...` introduces $x as a locally-bound scratch (working) variable.
+_SCRIPT_SET_RE = re.compile(r"^\s*set\s+\$([A-Za-z_][A-Za-z0-9_]*)\b")
+# An assignment statement: `$root(.field)* <op>= ...`. The `(?!=)` guard keeps `==`
+# (a comparison) from being read as an assignment.
+_SCRIPT_ASSIGN_RE = re.compile(
+    r"^\s*\$([A-Za-z_][A-Za-z0-9_]*)(?:\.[A-Za-z0-9_.]*)?\s*[+\-*/%]?=(?!=)"
+)
+
+
+def _collect_variable_names(world: dict) -> list[str]:
+    """Return the tracked items' non-empty string ``variableName`` values (schema v2.2)."""
+    names: list[str] = []
+    for ti in world.get("trackedItems", []):
+        vn = ti.get("variableName")
+        if isinstance(vn, str) and vn:
+            names.append(vn)
+    return names
+
+
+def _check_tracked_item_variable_names(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """schema v2.2: warn on malformed or duplicated tracked-item ``variableName`` values.
+
+    variableName is the PawScript handle ($<variableName>); it must be a snake_case
+    identifier and unique across tracked items or script references become ambiguous.
+    """
+    seen: dict[str, int] = {}
+    for ti in world.get("trackedItems", []):
+        vn = ti.get("variableName")
+        if not isinstance(vn, str) or vn == "":
+            continue
+        name = ti.get("name", "?")
+        if not _VARIABLE_NAME_RE.match(vn):
+            warnings.append(
+                f"trackedItems[name={name!r}]: variableName {vn!r} does not match "
+                r"^[a-z][a-z0-9_]*$ — PawScript $<variableName> references may not resolve"
+            )
+        seen[vn] = seen.get(vn, 0) + 1
+    for vn, count in sorted(seen.items()):
+        if count > 1:
+            warnings.append(
+                f"Duplicate tracked-item variableName {vn!r} ({count} items) — "
+                "PawScript $<variableName> references are ambiguous"
+            )
+
+
+def _strip_script_comments(script: str) -> list[str]:
+    """Return the script's lines with ``#`` comment lines removed."""
+    return [ln for ln in script.splitlines() if not ln.lstrip().startswith("#")]
+
+
+def _check_pawscript_scripts(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """schema v2.2: validate effectRunScript PawScript bodies.
+
+    - Warn on a ``$root`` that is neither a tracked-item variableName, a native
+      ($player/$game), a ``for each`` loop variable, nor a ``set`` scratch
+      variable (an undeclared reference).
+    - Warn on an assignment (including via ``set``) whose target root is a native
+      ($player/$game are read-only and must not be reused as a set variable).
+
+    Comment (``#``) lines are stripped first so URLs and prose never contribute
+    spurious identifiers.
+
+    This is a heuristic linter, not a PawScript parser. Two known limitations,
+    both benign for a warn-only check: it has no string-literal awareness (a
+    ``$name`` inside a quoted string is treated like a real reference), and it
+    does not enforce declaration order (a ``$x`` used before its ``set`` /
+    ``for each`` appears later in the script is still accepted, because loop and
+    set variables are collected from the whole body first).
+    """
+    variable_names = set(_collect_variable_names(world))
+    for trigger in world.get("triggerEvents", []):
+        tname = trigger.get("name", trigger.get("id", "?"))
+        for effect in trigger.get("triggerEffects", []):
+            if effect.get("type") != "effectRunScript":
+                continue
+            script = effect.get("data")
+            eid = effect.get("id", "?")
+            if not isinstance(script, str):
+                continue
+            lines = _strip_script_comments(script)
+
+            # Bind locally-introduced variables (locally legal roots): `for each $x in ...`
+            # loop variables and `set $x = ...` scratch variables. A `set` that
+            # targets a native name is flagged rather than bound — reusing the
+            # reserved read-only $player/$game as a scratch variable is an author
+            # error (whether it shadows or attempts to write the native).
+            local_vars: set[str] = set()
+            for ln in lines:
+                m = _SCRIPT_LOOP_RE.match(ln)
+                if m:
+                    local_vars.add(m.group(1))
+                sm = _SCRIPT_SET_RE.match(ln)
+                if sm:
+                    if sm.group(1) in _SCRIPT_NATIVES:
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectRunScript uses "
+                            f"'set ${sm.group(1)}' — $player and $game are reserved read-only "
+                            "natives and must not be reused as a set variable"
+                        )
+                    else:
+                        local_vars.add(sm.group(1))
+            legal = variable_names | _SCRIPT_NATIVES | local_vars
+
+            seen_unknown: set[str] = set()
+            for ln in lines:
+                for root in _SCRIPT_IDENT_RE.findall(ln):
+                    if root not in legal and root not in seen_unknown:
+                        seen_unknown.add(root)
+                        warnings.append(
+                            f"Trigger '{tname}' effect '{eid}': effectRunScript references "
+                            f"${root} which is not a tracked-item variableName, a native "
+                            "($player/$game), a for-each loop variable, or a set variable"
+                        )
+                am = _SCRIPT_ASSIGN_RE.match(ln)
+                if am and am.group(1) in _SCRIPT_NATIVES:
+                    warnings.append(
+                        f"Trigger '{tname}' effect '{eid}': effectRunScript assigns to "
+                        f"${am.group(1)} — the natives $player and $game are read-only at runtime"
+                    )
+
+
+def _check_enforce_format(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """schema v2.2: warn when enforceFormat is true but formatSchema is empty/missing."""
+    for ti in world.get("trackedItems", []):
+        if ti.get("enforceFormat") is not True:
+            continue
+        fs = ti.get("formatSchema")
+        if not (isinstance(fs, str) and fs.strip()):
+            name = ti.get("name", "?")
+            warnings.append(
+                f"trackedItems[name={name!r}]: enforceFormat is true but formatSchema is "
+                "empty — there is nothing to enforce; provide a formatSchema or set "
+                "enforceFormat false"
+            )
+
+
+def _check_yaml_tracked_items(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """schema v2.2: dataType 'yaml' items whose non-empty initialValue or formatExample
+    fails to parse as YAML → error (the platform stores these as parseable YAML)."""
+    for ti in world.get("trackedItems", []):
+        if ti.get("dataType") != "yaml":
+            continue
+        name = ti.get("name", "?")
+        for field in ("initialValue", "formatExample"):
+            val = ti.get(field)
+            if isinstance(val, str) and val.strip():
+                try:
+                    yaml.safe_load(val)
+                except (yaml.YAMLError, RecursionError) as exc:
+                    # RecursionError: PyYAML is not depth-limited even under
+                    # safe_load, so pathologically-nested author-controlled input
+                    # would otherwise crash the whole validator instead of being
+                    # reported here as an invalid-YAML error.
+                    detail = str(exc).replace("\n", " ")
+                    errors.append(
+                        f"trackedItems[name={name!r}]: {field} is not valid YAML "
+                        f"(dataType 'yaml'): {detail}"
+                    )
+
+
+def _check_xml_deprecation(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """schema v2.2: dataType 'xml' is deprecated in favor of 'yaml'. Warning, never error."""
+    for ti in world.get("trackedItems", []):
+        if ti.get("dataType") == "xml":
+            name = ti.get("name", "?")
+            warnings.append(
+                f"trackedItems[name={name!r}]: dataType 'xml' is deprecated (schema v2.2) — "
+                "prefer 'yaml' for structured tracked-item data"
             )
 
 
@@ -698,6 +901,12 @@ def validate_world(world_path: str) -> str:
     _check_set_tracked_item_value_shapes(world, errors, warnings)
     _check_sog_effect_context(world, errors, warnings)
     _check_skills_not_empty(world, errors, warnings)
+    # schema v2.2: PawScript + YAML tracked items
+    _check_tracked_item_variable_names(world, errors, warnings)
+    _check_pawscript_scripts(world, errors, warnings)
+    _check_enforce_format(world, errors, warnings)
+    _check_yaml_tracked_items(world, errors, warnings)
+    _check_xml_deprecation(world, errors, warnings)
 
     return json.dumps(
         {

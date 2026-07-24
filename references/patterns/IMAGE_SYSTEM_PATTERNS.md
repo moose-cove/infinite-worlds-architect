@@ -37,6 +37,33 @@ ATTRIBUTE PERSISTENCE: Extract [attr:VALUE] from illustrClothesChanged each turn
 
 ---
 
+### v2.2 note — when a real tracked item can replace the hijack
+
+This pattern exists because pre-v2.2 `text`/`xml` tracked items are
+AI-updated, and AI-updated values can drift or get skipped, so authors
+piggybacked on `illustrClothesChanged` — a field the AI is guaranteed to
+write every turn — as a more reliable persistence channel.
+
+For attributes that change **only** in response to a specific, nameable
+in-world event (transformation stage advancing, clothing tier changing at
+a purchase, injury level increasing on a specific hit), a `yaml` tracked
+item mutated by an `effectRunScript` trigger on that event is now equally
+reliable, and more direct: the trigger fires exactly when the event
+occurs, the mutation is transactional (all-or-nothing, logged on error),
+and the value is available to read (e.g. via `<<attribute_name>>`
+interpolation) without needing to parse it back out of a runtime field
+each turn. This sidesteps the entire extract/verify/revert scaffolding
+above.
+
+**Keep the `illustrClothesChanged` hijack when** the attribute's change
+condition is fuzzy or narrative-judged rather than a specific triggerable
+event (e.g. "the AI decides the character looks more disheveled") — that
+still needs the AI to set the value, not a script to compute it. For
+those cases the persistence problem this pattern solves is unchanged by
+v2.2.
+
+---
+
 ## Pattern 2 — Exact String Tables for Consistent Attribute Descriptions
 
 Instead of letting the AI rephrase attribute descriptions each turn (which causes gradual drift), define exact copy-paste strings for each attribute value. The AI must use these verbatim.

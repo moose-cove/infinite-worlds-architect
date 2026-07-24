@@ -2,7 +2,7 @@
 
 Covers: `instructions`, `instructionBlocks`, `authorStyle`, `designNotes`, `nsfw`/`mature`, `contentWarnings`.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#1-top-level-fields) §1 and §6.
+For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#1-top-level-fields) §1 and §6.
 
 ---
 

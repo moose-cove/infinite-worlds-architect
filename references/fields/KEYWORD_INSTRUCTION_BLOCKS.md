@@ -1,6 +1,6 @@
 # Field Guide: Keyword Instruction Blocks (`loreBookEntries`)
 
-JSON key: `loreBookEntries` — array of keyword block objects. Each entry has `id`, `name`, `keywords` (string[]), `content`. For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#6-instruction-blocks) §6.
+JSON key: `loreBookEntries` — array of keyword block objects. Each entry has `id`, `name`, `keywords` (string[]), `content`. For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#6-instruction-blocks) §6.
 
 ---
 

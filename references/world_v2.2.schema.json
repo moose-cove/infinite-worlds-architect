@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://infiniteworlds.app/schemas/world_v2.1",
-  "title": "Infinite Worlds World v2.1",
+  "$id": "https://infiniteworlds.app/schemas/world_v2.2",
+  "title": "Infinite Worlds World v2.2",
   "description": "Schema for Infinite Worlds story world JSON files. Single source of truth — schema_model.SCHEMA_SUMMARY is derived from this document at import time. IW-specific metadata uses x-iw-* extensions, which jsonschema validators ignore.",
-  "x-iw-schema-version": 2.1,
+  "x-iw-schema-version": 2.2,
   "type": "object",
   "required": ["schemaVersion", "title"],
   "properties": {
@@ -82,6 +82,13 @@
       "type": "boolean",
       "description": "When true, hides the world's skill values from the player UI.",
       "x-iw-category": "editable"
+    },
+    "showPawScriptButtons": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show PawScript-related UI buttons for this world.",
+      "x-iw-category": "editable",
+      "x-iw-note": "Semantics not officially documented; treated as type-checked passthrough."
     },
     "imageModel": {
       "type": "string",
@@ -409,8 +416,8 @@
         "positionInList": { "type": "number", "description": "Ordering position in the tracked items list." },
         "dataType": {
           "type": "string",
-          "enum": ["text", "number", "xml"],
-          "description": "Storage data type."
+          "enum": ["text", "number", "xml", "yaml"],
+          "description": "Storage data type. 'yaml' is the recommended structured format (schema v2.2) — enforceable via formatSchema. 'xml' is deprecated in favor of 'yaml' for structured data."
         },
         "visibility": {
           "type": "string",
@@ -426,7 +433,32 @@
           "enum": ["same", "character", "player"],
           "description": "Initialization strategy."
         },
-        "autoUpdate": { "type": "boolean", "description": "Whether the AI updates this variable automatically each turn." }
+        "autoUpdate": { "type": "boolean", "description": "Whether the AI updates this variable automatically each turn." },
+        "variableName": {
+          "type": "string",
+          "description": "snake_case identifier for this item (schema v2.2). PawScript references the item as $<variableName> (e.g. 'puppy_tracking' → $puppy_tracking). Should match ^[a-z][a-z0-9_]*$.",
+          "x-iw-category": "editable"
+        },
+        "enforceFormat": {
+          "type": "boolean",
+          "description": "When true (schema v2.2), the platform enforces the item's value against formatSchema. Typically paired with dataType: 'yaml' and a non-empty formatSchema.",
+          "x-iw-category": "editable"
+        },
+        "formatExample": {
+          "type": "string",
+          "description": "Example value showing the intended shape of the item's value (schema v2.2), e.g. a sample YAML document. Empty when unused.",
+          "x-iw-category": "editable"
+        },
+        "formatSchema": {
+          "type": "string",
+          "description": "Pseudo-schema describing the item's structure (schema v2.2): lines of 'field: type' where type is 'text' or 'number', and a trailing '...:' line meaning 'more entries like this'. For a list-of-records value (the common case) the fields are prefixed with a leading '- ' YAML list marker, e.g. '- name: text'. Empty when unused.",
+          "x-iw-category": "editable"
+        },
+        "driftAcknowledgedForName": {
+          "type": ["string", "null"],
+          "description": "Platform-managed drift-acknowledgement marker (schema v2.2). The fixture only shows null; its non-null shape is an open question — type-checked passthrough only for now.",
+          "x-iw-category": "platform"
+        }
       },
       "required": ["name", "positionInList", "dataType", "visibility", "autoUpdate"]
     },
@@ -578,6 +610,10 @@
           "data": "null or omitted",
           "description": "Fire a random trigger (selection pool/weighting unconfirmed). Historically absent from the schema but confirmed working in real worlds. Ignored (stripped) in Start-of-Game triggers.",
           "x-iw-note": "KB-empirical: confirmed working in non-SoG triggers. Source: iw_knowledge_base_v2_8.md 'Import Test Results'."
+        },
+        "effectRunScript": {
+          "data": "string (PawScript source)",
+          "description": "Run a PawScript script (the string in `data`) when the trigger fires (schema v2.2). Scripts can ONLY mutate tracked items, referenced as $<variableName>; the natives $player and $game are read-only. Execution is transactional: any error rolls back all changes, is logged to World Debug, and the game continues. No unbounded loops. Docs: https://infiniteworlds.app/pawscript-script-guide and https://infiniteworlds.app/pawscript-reference"
         }
       }
     },

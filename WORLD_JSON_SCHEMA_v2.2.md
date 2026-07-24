@@ -1,0 +1,1 @@
+references/WORLD_JSON_SCHEMA_v2.2.md

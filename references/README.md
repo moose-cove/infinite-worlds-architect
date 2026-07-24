@@ -6,16 +6,17 @@ This directory holds authoring and schema references for the `infinite-worlds-ar
 
 | File | Purpose |
 |---|---|
-| `world_v2.1.schema.json` | The canonical JSON Schema. Used by `validate_world` and the `SCHEMA_SUMMARY` deriver. Authoritative for field shapes, required-ness, enums, and `x-iw-*` semantics. |
-| `WORLD_JSON_SCHEMA_v2.1.md` | Human-readable schema walkthrough. Use when the JSON Schema `description` strings are too terse. |
+| `world_v2.2.schema.json` | The canonical JSON Schema. Used by `validate_world` and the `SCHEMA_SUMMARY` deriver. Authoritative for field shapes, required-ness, enums, and `x-iw-*` semantics. |
+| `WORLD_JSON_SCHEMA_v2.2.md` | Human-readable schema walkthrough. Use when the JSON Schema `description` strings are too terse. |
 
-The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin root — ground truth for *real* IW field shapes. If the validator rejects the fixture, the validator is wrong.
+The canonical fixture lives at `example-world-schema-v2.2.json` in the plugin root — ground truth for *real* IW field shapes. If the validator rejects the fixture, the validator is wrong. (`example-world-schema-v2.1.json` is retained alongside it as a back-compat fixture — not canonical; it must still validate with only warnings.)
 
 ## `mechanics/` — Runtime and platform behaviour
 
 | File | Read when |
 |---|---|
 | `mechanics/AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
+| `mechanics/PAWSCRIPT.md` | Writing `<<…>>` expressions beyond a bare variable name, or authoring an `effectRunScript` script. Covers expressions vs. scripts, native `$player`/`$game` variables, the statement set, bounded loops, transactional execution, and the function cheat-sheet. |
 | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
 | `mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` | Reading a played story with the `extract_story_data` / `query_story_data` / `get_character_list` tools — the tiered loading sequence and the `turn_detail` query budget. For any agent that needs to inspect a story export (e.g. a `modify-world` agent checking how a change played out), not only `sequel-world`. |
 
@@ -36,6 +37,7 @@ The canonical fixture lives at `example-world-schema-v2.1.json` in the plugin ro
 | `fields/PLAYER_CHARACTERS.md` | `skills`, `possibleCharacters`, `allowChangeCharacter*` permissions |
 | `fields/OTHER_CHARACTERS.md` | `NPCs` — the critical `one_liner` rule |
 | `fields/TRACKED_ITEMS.md` | `trackedItems` (dataType / visibility, the 10,000-char limit, what NOT to track) |
+| `fields/YAML_TRACKED_ITEMS.md` | Structured tracked items: `dataType: "yaml"` (XML deprecated), `variableName`, `formatSchema` / `formatExample` / `enforceFormat`, YAML quoting gotchas, the puppy-tracker worked example |
 | `fields/TRIGGER_EVENTS.md` | `triggerEvents` (when to use which effect type) |
 | `fields/KEYWORD_INSTRUCTION_BLOCKS.md` | `loreBookEntries` (substring matching, the awareness paradox) |
 | `fields/VICTORY_DEFEAT.md` | `victoryCondition` / `defeatCondition` |
@@ -77,6 +79,8 @@ Use this when the author's request doesn't map obviously to a field name:
 | Player characters, skills, character switching | `fields/PLAYER_CHARACTERS.md` |
 | NPCs, adding/editing characters | `fields/OTHER_CHARACTERS.md` |
 | Tracked items, inventory, game-state variables | `fields/TRACKED_ITEMS.md` |
+| YAML / structured tracked items, `variableName`, `formatSchema`, `enforceFormat` | `fields/YAML_TRACKED_ITEMS.md` |
+| PawScript, `<<…>>` expressions, `effectRunScript` scripts, `$player`/`$game`, `.count()`/`.where()` | `mechanics/PAWSCRIPT.md` |
 | Triggers, conditional events, "when X happens", "end when dragon dies" | `fields/TRIGGER_EVENTS.md` |
 | Lore, faction backstory, location info, keyword injection | `fields/KEYWORD_INSTRUCTION_BLOCKS.md` |
 | Victory, defeat, ending the game | `fields/VICTORY_DEFEAT.md` |
@@ -108,6 +112,7 @@ Always mint IDs with `mint_ids(kind, count)` — never invent them by hand. Form
 | Player character | `characterId` | 8 chars (`A-Za-z0-9+/`) |
 | NPC | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
 | Tracked item | `id` | max 9 chars, **alphanumeric only** (`A-Za-z0-9`) [^idlen] [^trkid] |
+| Tracked item | `variableName` | snake_case, **unique**; derived from the item's `name`. **Not minted** — it is the PawScript handle addressed as `$<variableName>`. [^varname] |
 | Trigger event | `id` | 8 chars |
 | Trigger condition / effect | `id` | UUID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) |
 | Instruction block | `id` | max 9 chars (`A-Za-z0-9+/`) [^idlen] |
@@ -116,3 +121,5 @@ Always mint IDs with `mint_ids(kind, count)` — never invent them by hand. Form
 [^idlen]: **KB-empirical.** The canonical fixture only contains 9-char IDs, so the fixture alone reads as "exactly 9." KB import testing confirms shorter IDs (1–9 chars) are valid for these four entity kinds — the rule is a *maximum*, not a fixed length.
 
 [^trkid]: **KB-empirical — June 2026 import test.** IW silently renames tracked-item IDs that contain `+`, `/`, or other non-alphanumeric characters to random 9-char alphanumeric strings on import, WITHOUT updating trigger references (dangling refs, broken triggers). EIB/KIB/trigger-event IDs with `+`/`/` survived the same test unchanged — the hazard is specific to `trackedItems[].id`. `mint_ids` now emits alphanumeric-only IDs for all entity kinds.
+
+[^varname]: `variableName` is a v2.2 tracked-item field, distinct from the opaque `id`. It is **not** minted by `mint_ids` — it's a human-readable snake_case symbol the author (or platform) derives from the item's `name`, and it must be unique because PawScript addresses the item by it as `$<variableName>`. See [`fields/YAML_TRACKED_ITEMS.md`](./fields/YAML_TRACKED_ITEMS.md) and [`mechanics/PAWSCRIPT.md`](./mechanics/PAWSCRIPT.md).

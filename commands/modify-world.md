@@ -94,23 +94,25 @@ Once the author's requested changes are complete:
 
 ### Adding a tracked item
 
-> Reference: [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md) — dataType / visibility choices, the 10,000-char limit, and what NOT to track.
+> Reference: [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md) — dataType / visibility choices, the 10,000-char limit, and what NOT to track. See [`references/fields/YAML_TRACKED_ITEMS.md`](../references/fields/YAML_TRACKED_ITEMS.md) for `dataType: "yaml"`, which is preferred over the deprecated `xml` for new items.
 
 ```
 1. mint_ids("trackedItem", 1)
 2. Determine positionInList
-3. If initialValueBasedOnPC="character", also add initialTrackedItemValues to each character
-4. validate_world
+3. Prefer dataType: "yaml"; if yaml, set a unique snake_case variableName (the PawScript $handle)
+4. If initialValueBasedOnPC="character", also add initialTrackedItemValues to each character
+5. validate_world
 ```
 
 ### Adding a trigger
 
-> Reference: [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) — when to use which condition and effect type, and the no-automatic-revert rule for world-state replacement effects.
+> Reference: [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) — when to use which condition and effect type, and the no-automatic-revert rule for world-state replacement effects. See [`references/mechanics/PAWSCRIPT.md`](../references/mechanics/PAWSCRIPT.md) before using the `effectRunScript` effect type.
 
 ```
 1. mint_ids("triggerEvent", 1)               → trigger ID
 2. mint_ids("triggerStep", <conds + effects>) → one distinct UUID per condition AND per effect
-3. Build the trigger object
+3. Build the trigger object — if an effect is effectRunScript, its script may only reference
+   existing tracked-item variableNames and must never write to $player/$game
 4. Edit: append to triggerEvents array
 5. validate_world
 ```

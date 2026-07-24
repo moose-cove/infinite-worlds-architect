@@ -6,7 +6,7 @@ import json
 import tempfile
 from pathlib import Path
 
-FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
+FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
 
 
 def _write(world: dict) -> str:

@@ -101,7 +101,7 @@ For content that is only relevant in specific game phases, or that needs to swap
   - Tracked item changes (`effectSetTrackedItemValue`).
   - Recurring story beats via `canTriggerMoreThanOnce: true`.
 
-For the full canonical list of v2.1 effect and condition types, see `WORLD_JSON_SCHEMA_v2.1.md` §5.
+For the full canonical list of v2.2 effect and condition types, see `WORLD_JSON_SCHEMA_v2.2.md` §5.
 
 **Latency implication.** Trigger effects and tracked-item auto-updates
 both happen at the end of the turn that triggers them — *after* the AI
@@ -172,6 +172,6 @@ These are the recurring mistakes. Avoiding them is most of the value of this doc
 
 ## Cross-references
 
-- **Schema shapes for every field above** — `WORLD_JSON_SCHEMA_v2.1.md`.
+- **Schema shapes for every field above** — `WORLD_JSON_SCHEMA_v2.2.md`.
 - **Runtime behavior of `instructions` / `descriptionRequest` / `evaluationRequest`** — `AI_RUNTIME_MECHANICS.md`.
 - **Anti-hallucination rules when populating characters** — `CHARACTER_AUTHORING_GUARDRAILS.md`.

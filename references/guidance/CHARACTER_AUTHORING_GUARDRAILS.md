@@ -100,6 +100,6 @@ Before considering a character complete:
 
 ## Cross-references
 
-- **Character field shapes** — `WORLD_JSON_SCHEMA_v2.1.md` §2 (`possibleCharacters`) and §3 (`NPCs`).
+- **Character field shapes** — `WORLD_JSON_SCHEMA_v2.2.md` §2 (`possibleCharacters`) and §3 (`NPCs`).
 - **Where character content does and does not belong** — `FIELD_ALLOCATION_STRATEGY.md` (especially the rule against embedding NPC content in `background`).
 - **How character text reaches the AI at runtime** — `AI_RUNTIME_MECHANICS.md`.

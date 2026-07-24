@@ -1,6 +1,6 @@
 # Field Guide: NPCs (Other Characters)
 
-JSON key: `NPCs` — array of NPC objects. For field shapes see [`WORLD_JSON_SCHEMA_v2.1.md`](../../WORLD_JSON_SCHEMA_v2.1.md#3-npcs) §3.
+JSON key: `NPCs` — array of NPC objects. For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#3-npcs) §3.
 
 For the discipline of writing characters without fabricating, see [`CHARACTER_AUTHORING_GUARDRAILS.md`](../../guidance/CHARACTER_AUTHORING_GUARDRAILS.md).
 
