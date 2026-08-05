@@ -15,8 +15,8 @@
 - [ ] chore
 
 ## Schema or fixture impact
-<!-- If this touches world_v2.2.schema.json, example-world-schema-v2.2.json,
-     SCHEMA_SUMMARY, validator rules, or WORLD_JSON_SCHEMA_v2.2.md, describe
+<!-- If this touches world_v2.4.schema.json, example-world-schema-v2.4.json,
+     SCHEMA_SUMMARY, validator rules, or WORLD_JSON_SCHEMA_v2.4.md, describe
      which artifacts moved and confirm they stay in sync. Otherwise: "N/A". -->
 
 ## Version bump

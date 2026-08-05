@@ -69,11 +69,13 @@ For **each field or entity**, follow this loop:
 **Tracked items** (see [`references/fields/TRACKED_ITEMS.md`](../references/fields/TRACKED_ITEMS.md) and [`references/fields/YAML_TRACKED_ITEMS.md`](../references/fields/YAML_TRACKED_ITEMS.md) for `dataType: "yaml"`):
 - For each item: `name`, `dataType`, `visibility`, `description`, `updateInstructions`, `initialValue`, `initialValueBasedOnPC`, `autoUpdate`
 - Prefer `dataType: "yaml"` over the deprecated `xml` for new items; when using `yaml`, also set a unique snake_case `variableName` (the PawScript `$handle`)
+- YAML items support the **entire** YAML language at any depth — nested maps, lists inside maps, records inside lists, block scalars (`|` / `>`). Shape the data honestly; don't flatten a hierarchy to avoid nesting. Mirror the nesting in `formatSchema` and pair it with `enforceFormat: true` when a script reads the item. See <https://infiniteworlds.app/yaml-guide>
 - Mint an `id` with `mint_ids("trackedItem", 1)`, assign `positionInList` sequentially
 
 **Triggers** (see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) and [`references/mechanics/PAWSCRIPT.md`](../references/mechanics/PAWSCRIPT.md) for the `effectRunScript` effect):
 - For each trigger: `name`, `canTriggerMoreThanOnce`, `advancedLogic`, `triggerOnStartOfGame`, then define conditions and effects
-- If an effect needs to update tracked items together as one unit, consider `effectRunScript` — a transactional PawScript that may only reference existing tracked-item `variableName`s and must never write to `$player`/`$game`
+- If an effect needs to update tracked items together as one unit, consider `effectRunScript` — a transactional PawScript that may only reference existing tracked-item `variableName`s and must never write to `$player`/`$game`; reach nested fields by chaining dots (`$puppy.stats.friendliness`)
+- **v2.4 shapes:** `triggerPrereqs` / `triggerBlockers` take `data: {prereqs|blockers: [...], firedThisTurn: false}`, not a bare array. Every `triggerOnEvent` needs its exact event string added to the world's top-level `conditions` array in the same edit
 - Mint a trigger `id` with `mint_ids("triggerEvent", 1)`
 - Mint condition/effect `id`s with `mint_ids("triggerStep", n)`
 

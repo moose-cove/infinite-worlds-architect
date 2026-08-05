@@ -79,6 +79,20 @@ def _text_budget(world: dict) -> dict[str, int]:
     return budgets
 
 
+def _prereq_ids(data: Any) -> list[str]:
+    """Extract prerequisite trigger IDs from a triggerPrereqs `data` payload.
+
+    Handles both shapes: schema v2.4's ``{"prereqs": [...], "firedThisTurn": bool}`` and
+    the pre-v2.4 bare ``[...]`` array that older worlds still carry. Reading only one of
+    them would leave the cycle detector silently blind to half the worlds it runs on.
+    """
+    if isinstance(data, dict):
+        data = data.get("prereqs")
+    if not isinstance(data, list):
+        return []
+    return [i for i in data if isinstance(i, str)]
+
+
 def _build_prereq_graph(world: dict) -> dict[str, list[str]]:
     """Build trigger-ID → list of prerequisite trigger-IDs graph."""
     graph: dict[str, list[str]] = {}
@@ -88,8 +102,8 @@ def _build_prereq_graph(world: dict) -> dict[str, list[str]]:
             continue
         prereqs: list[str] = []
         for cond in te.get("triggerConditions", []):
-            if cond.get("type") == "triggerPrereqs" and isinstance(cond.get("data"), list):
-                prereqs.extend(cond["data"])
+            if cond.get("type") == "triggerPrereqs":
+                prereqs.extend(_prereq_ids(cond.get("data")))
         graph[tid] = prereqs
     return graph
 

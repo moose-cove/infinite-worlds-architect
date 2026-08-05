@@ -2,7 +2,7 @@
 
 Per DESIGN_BRIEF_v2.md §7 milestone 2, schema knowledge lives in a single
 representation. The JSON Schema artifact at
-``references/world_v2.2.schema.json`` is the canonical
+``references/world_v2.4.schema.json`` is the canonical
 source; both the Tier 1 validator and ``get_schema_summary()`` consume it.
 
 This module derives the ``SCHEMA_SUMMARY`` dict at import time by translating
@@ -22,8 +22,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from iw_architect import KNOWN_SCHEMA_VERSION
+
 _PLUGIN_ROOT = Path(__file__).parent.parent.parent
-_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.2.schema.json"
+_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.4.schema.json"
 
 # Top-level array properties whose items are $ref into $defs become entityTypes entries.
 # The mapping connects the world-level field name (NPCs, trackedItems) with the $defs key.
@@ -123,7 +125,7 @@ def _build_schema_summary(schema: dict) -> dict:
     """Derive the SCHEMA_SUMMARY structure from the JSON Schema document."""
     defs = schema.get("$defs", {})
     summary: dict[str, Any] = {
-        "schemaVersion": schema.get("x-iw-schema-version", 2.2),
+        "schemaVersion": schema.get("x-iw-schema-version", KNOWN_SCHEMA_VERSION),
         "topLevelFields": _build_fields_map(schema),
         "entityTypes": {
             field_name: _build_entity_entry(defs[def_name])

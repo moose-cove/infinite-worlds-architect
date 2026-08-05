@@ -10,6 +10,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 
 def _write_world(world: dict) -> str:
     """Write a world dict to a temp file and return the path."""
@@ -216,7 +218,7 @@ def test_trigger_prereqs_unknown_id():
                     "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
                     "category": "condition",
                     "type": "triggerPrereqs",
-                    "data": ["DOES_NOT_EXIST"],
+                    "data": {"prereqs": ["DOES_NOT_EXIST"], "firedThisTurn": False},
                 }
             ],
         }
@@ -244,7 +246,7 @@ def test_trigger_blockers_unknown_id():
                     "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
                     "category": "condition",
                     "type": "triggerBlockers",
-                    "data": ["DOES_NOT_EXIST"],
+                    "data": {"blockers": ["DOES_NOT_EXIST"], "firedThisTurn": False},
                 }
             ],
         }
@@ -252,6 +254,166 @@ def test_trigger_blockers_unknown_id():
     result = _validate(world)
     assert not result["valid"]
     assert any("DOES_NOT_EXIST" in e for e in result["errors"])
+
+
+# ── schema v2.4: gate-condition data shape (triggerPrereqs / triggerBlockers) ──
+
+
+def _world_with_gate_condition(ctype: str, data):
+    """A one-trigger world whose sole condition is `ctype` carrying `data`."""
+    world = _base_world()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": ctype,
+                    "data": data,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+@pytest.mark.parametrize(
+    ("ctype", "key"),
+    [("triggerPrereqs", "prereqs"), ("triggerBlockers", "blockers")],
+)
+def test_gate_condition_legacy_array_still_cross_checked(ctype, key):
+    """The pre-v2.4 bare-array shape must still resolve trigger IDs, with a warning.
+
+    Regression guard: the old code gated on ``isinstance(data, list)``, so the v2.4 object
+    shape silently skipped the check entirely. Both shapes must reach the same lookup.
+    """
+    result = _validate(_world_with_gate_condition(ctype, ["DOES_NOT_EXIST"]))
+    assert not result["valid"]
+    assert any("DOES_NOT_EXIST" in e for e in result["errors"])
+    assert any("pre-v2.4 bare-array form" in w for w in result["warnings"]), result["warnings"]
+    assert any(key in w for w in result["warnings"]), result["warnings"]
+
+
+@pytest.mark.parametrize("ctype", ["triggerPrereqs", "triggerBlockers"])
+def test_gate_condition_scalar_data_is_an_error(ctype):
+    """`data` that is neither the v2.4 object nor a legacy array is an error, not a skip."""
+    result = _validate(_world_with_gate_condition(ctype, "TRIG0001"))
+    assert not result["valid"]
+    assert any("must be an object" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize(
+    ("ctype", "key"),
+    [("triggerPrereqs", "prereqs"), ("triggerBlockers", "blockers")],
+)
+def test_gate_condition_object_missing_id_list_is_an_error(ctype, key):
+    result = _validate(_world_with_gate_condition(ctype, {"firedThisTurn": True}))
+    assert not result["valid"]
+    assert any(f"missing the '{key}' list" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize("ctype", ["triggerPrereqs", "triggerBlockers"])
+def test_gate_condition_missing_fired_this_turn_warns(ctype):
+    """A well-formed object with no `firedThisTurn` is valid but worth flagging."""
+    key = "prereqs" if ctype == "triggerPrereqs" else "blockers"
+    result = _validate(_world_with_gate_condition(ctype, {key: ["TRIG0001"]}))
+    assert result["valid"], result["errors"]
+    assert any("no boolean 'firedThisTurn'" in w for w in result["warnings"]), result["warnings"]
+
+
+# ── schema v2.4: triggerOnEvent ↔ top-level `conditions` registry ──────────────
+
+
+def _world_with_event_condition(event: str, declared: list[str] | None):
+    world = _base_world()
+    if declared is not None:
+        world["conditions"] = declared
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerOnEvent",
+                    "data": event,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+def test_trigger_on_event_not_in_conditions_registry_warns():
+    """An undeclared event still evaluates, so this is a warning — never an error."""
+    result = _validate(_world_with_event_condition("The marmot eats the marmalade", []))
+    assert result["valid"], result["errors"]
+    assert any(
+        "not declared in the top-level 'conditions' array" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_trigger_on_event_declared_in_conditions_registry_is_silent():
+    event = "The marmot eats the marmalade"
+    result = _validate(_world_with_event_condition(event, [event]))
+    assert result["valid"], result["errors"]
+    assert not any("not declared in the top-level" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_trigger_on_event_nested_in_logic_condition_is_still_checked():
+    """Advanced-logic triggers nest conditions under a `logic` combinator — recurse into it."""
+    world = _base_world()
+    world["conditions"] = []
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "advancedLogic": True,
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "logic",
+                    "operator": "or",
+                    "data": [
+                        {
+                            "id": "ccac5aa8-13cc-cc5a-f032-2016af92a391",
+                            "category": "condition",
+                            "type": "triggerOnEvent",
+                            "data": "A buried event",
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    result = _validate(world)
+    assert any("A buried event" in w for w in result["warnings"]), result["warnings"]
 
 
 # ── Duplicate IDs ─────────────────────────────────────────────────────────────
@@ -648,7 +810,7 @@ def test_audit_world_fixture():
     """audit_world must return findings (not error) on the canonical fixture."""
     from iw_architect.tools.analysis import audit_world
 
-    fixture = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
+    fixture = Path(__file__).parent.parent / "example-world-schema-v2.4.json"
     result = json.loads(audit_world(str(fixture)))
     assert "findings" in result
     assert isinstance(result["findings"], list)

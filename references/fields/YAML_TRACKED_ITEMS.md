@@ -9,7 +9,7 @@ general when-to-track / `visibility` / `updateInstructions` judgment; this file
 is only about the YAML shape and the PawScript handle.
 
 For exact field shapes see
-[`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#4-trackeditems) §4.
+[`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#4-trackeditems) §4.
 
 ---
 
@@ -34,6 +34,60 @@ functions (`.count()`, `.where(…)`, `for each`, …) are designed to walk. See
 If you're deciding between `text` and `yaml`: use `text` for a flat scalar or a
 simple comma-separated list; use `yaml` the moment each entry has multiple
 fields, or you want to iterate/filter entries from PawScript.
+
+---
+
+## The whole YAML language is supported — including nesting
+
+**A `dataType: "yaml"` item can hold any valid YAML structure, to any depth.** There
+is no flat-key restriction and no "one level of records" limit. If it is legal YAML,
+it is a legal tracked-item value.
+
+This is worth stating outright because the examples in this guide used to be flat, and
+flat examples get read as a flat *ceiling*. They aren't. The authoritative author-facing
+reference is **<https://infiniteworlds.app/yaml-guide>**, and everything it teaches is
+usable here:
+
+| Shape | Example | Guide step |
+|---|---|---|
+| Labels and scalars | `gold: 120` | 1–2 |
+| Lists | `- apples`<br>`- pears` | 3 |
+| Lists of records | `- name: Spot`<br>`  breed: mixed` | 4 |
+| **Nesting** — a map inside a map | `sword:`<br>`  damage: 8`<br>`  weight: 5` | 5 |
+| **Lists inside things** — and records inside those lists, recursively | `skills:`<br>`  - id: fireball`<br>`    depends_on:`<br>`      - flame_dart` | 6 |
+| Empty list | `depends_on: []` | 6 |
+| Block scalars — `\|` keeps your line breaks, `>` folds into one line | `backstory: \|`<br>`  She lost her family.`<br>`  Now she studies fire magic.` | 7 |
+| Comments | `# ignored by the parser` | 8 |
+| Quoting to protect literal text | `answer: "yes"` | 9 |
+
+Mix them freely. A record in a list can contain a map, which can contain another
+list of records, as deep as the data actually goes:
+
+```yaml
+- name: Spot
+  breed: mixed
+  stats:
+    friendliness: 5
+    energy: 10
+  tricks:
+    - name: sit
+      reliability: 0.9
+    - name: rollover
+      reliability: 0.4
+  color: spotted black and white
+```
+
+**Depth is a cost decision, not a capability question.** The AI has to reproduce the
+whole shape every turn it updates the item, so each level of nesting is one more thing
+that can drift. Nest because the data is genuinely hierarchical — grouping a record's
+stats under `stats:` is meaningful — not to show off. A three-level structure the AI
+maintains reliably beats a six-level one it mangles.
+
+Two things follow the nesting automatically:
+
+- **`formatSchema` mirrors it** — see the next section.
+- **PawScript walks it with dots** — `$puppy.stats.friendliness`, `$puppy.tricks.count()`.
+  See [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md).
 
 ---
 
@@ -65,20 +119,40 @@ item from PawScript as `$<variableName>` (e.g. `variableName: "player_gold"` →
 `formatSchema` is a lightweight pseudo-schema, one field per line:
 
 - `field: text` or `field: number` — declares a field and its type.
+- `field:` with **indented children** — declares a field whose value is a sub-map.
 - `...:` — a **continuation marker** meaning "more entries like the ones above"
   (i.e., the structure repeats — it's a list of these records, not a fixed set).
+  It can appear at **any level**, not just the outermost one.
+
+**The pseudo-schema mirrors the value's own nesting.** It is not restricted to a
+flat list of leaf fields. This is the fixture's puppy tracker:
 
 ```
 - name: text
   breed: text
-  friendliness: number
-  energy: number
+  stats:
+    friendliness: number
+    energy: number
+    ...:
   color: text
   ...:
 ```
 
-That schema describes a **list of records**, each with the five named fields;
-the trailing `...:` says the list may hold any number of such records.
+Read it top-down: a **list of records**; each record has `name`, `breed`, a `stats`
+sub-map, and `color`. Inside `stats`, `friendliness` and `energy` are numbers, and
+the nested `...:` says more stat keys are allowed there. The trailing outer `...:`
+says the list may hold any number of such records.
+
+Compare to the matching `formatExample`, which is the same shape filled in:
+
+```yaml
+- name: Spot
+  breed: mixed
+  stats:
+    friendliness: 5
+    energy: 10
+  color: spotted black and white
+```
 
 ### `formatExample` vs. `formatSchema` vs. `enforceFormat`
 
@@ -88,9 +162,12 @@ the trailing `...:` says the list may hold any number of such records.
 - `enforceFormat: true` turns `formatSchema` from a suggestion into a
   constraint the platform holds the value to. Use it when downstream PawScript
   depends on the fields being present and correctly typed (e.g., a script that
-  does `$puppy.friendliness += 1` needs `friendliness` to exist and be a
-  number). Use `enforceFormat: false` (or omit) for advisory structure where
+  does `$puppy.stats.friendliness += 1` needs `stats.friendliness` to exist and
+  be a number). Use `enforceFormat: false` (or omit) for advisory structure where
   the AI has more latitude.
+- **Enforcement follows the nesting.** If `formatSchema` declares a `stats:`
+  sub-map, `enforceFormat: true` holds the value to that sub-map too — which is
+  what makes a nested path safe to write from a script.
 
 ---
 
@@ -115,8 +192,10 @@ doubt, quote.
 
 ## Worked example — the puppy tracker
 
-A real fixture item that stores a list of puppy records and bumps their
-friendliness each turn via a script.
+A real fixture item (`sVHX9pTft`) that stores a list of puppy records and bumps
+their friendliness each turn via a script. **It is deliberately nested** — each
+record's numeric stats live under a `stats:` sub-map — so that the canonical
+example demonstrates depth rather than implying a flat ceiling.
 
 **Tracked item:**
 
@@ -128,22 +207,40 @@ friendliness each turn via a script.
   ```
   - name: text
     breed: text
-    friendliness: number
-    energy: number
+    stats:
+      friendliness: number
+      energy: number
+      ...:
     color: text
     ...:
+  ```
+
+- `formatExample` / `initialValue`:
+
+  ```yaml
+  - name: Spot
+    breed: mixed
+    stats:
+      friendliness: 5
+      energy: 10
+    color: spotted black and white
   ```
 
 **The `effectRunScript` that walks it** (a "Run a script" trigger effect):
 
 ```
 for each $puppy in $puppy_tracking_yaml_format_tracked_items
-  $puppy.friendliness += 1
+  $puppy.stats.friendliness += 1
 ```
 
-Because `enforceFormat` is `true`, every entry is guaranteed to carry a numeric
-`friendliness` field, so the script's `+= 1` is safe. The loop variable
-`$puppy` is assignable and writes back to the real item — see
+Note the path: `$puppy.stats.friendliness`, not `$puppy.friendliness`. **Chaining
+dots is all nesting costs at the script layer** — a field two levels down is no
+harder to reach than a top-level one, which is why grouping related fields into a
+sub-map is essentially free once the AI is reliably producing the shape.
+
+Because `enforceFormat` is `true`, every entry is guaranteed to carry a `stats`
+map with a numeric `friendliness`, so the script's `+= 1` is safe. The loop
+variable `$puppy` is assignable and writes back to the real item — see
 [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md#5-statement-set-scripts-only)
 §5. The whole script is transactional: if any entry were malformed, nothing
 would change and the error would land in World Debug.
@@ -152,6 +249,10 @@ would change and the error would land in World Debug.
 
 ## Cross-references
 
+- **The YAML language itself** — <https://infiniteworlds.app/yaml-guide> is the
+  author-facing guide, and IW supports all of it: labels, lists, nesting, lists
+  inside things, block scalars (`|` and `>`), comments, and quoting. Point authors
+  there rather than re-teaching YAML.
 - **PawScript** — [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md) for how
   `$<variableName>` items are read and mutated, and the collection functions
   that walk YAML lists/maps.
@@ -159,4 +260,4 @@ would change and the error would land in World Debug.
   `visibility`, the per-turn processing cost, and `updateInstructions`.
 - **Trigger effects** — [`TRIGGER_EVENTS.md`](./TRIGGER_EVENTS.md) for
   `effectRunScript` and the other effects that read/write tracked items.
-- **Schema shapes** — [`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#4-trackeditems) §4.
+- **Schema shapes** — [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#4-trackeditems) §4.

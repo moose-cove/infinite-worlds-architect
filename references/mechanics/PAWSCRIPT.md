@@ -74,7 +74,7 @@ is your tracked items.
 > **Expressions and the legacy `<<…>>` syntax.** In narrative text you still
 > reference tracked items and skills the classic way — `<<health>>`,
 > `<<skill_charm>>`, `<<turn_number>>` — the interpolation vocabulary in
-> [`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#9-template-variable-system)
+> [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system)
 > §9. The `$`-prefixed native form is the PawScript-native way to reach the
 > same state; see §6 for how the two coexist.
 
@@ -153,13 +153,38 @@ Indentation defines blocks (like Python).
 
 ```
 for each $puppy in $puppy_tracking_yaml_format_tracked_items
-  $puppy.friendliness += 1
+  $puppy.stats.friendliness += 1
 ```
 
 - The body is the indented block beneath the `for each` line.
 - **The loop variable is assignable and writes through to the real item.**
-  `$puppy.friendliness += 1` mutates the actual tracked-item entry, not a copy.
+  `$puppy.stats.friendliness += 1` mutates the actual tracked-item entry, not a copy.
 - You may only iterate a list, a map, or `range(n)` — never an unbounded source.
+
+### Nested paths — chain dots as deep as the data goes
+
+A YAML tracked item may hold **any valid YAML structure to any depth** (see
+[`fields/YAML_TRACKED_ITEMS.md`](../fields/YAML_TRACKED_ITEMS.md) and
+<https://infiniteworlds.app/yaml-guide>). PawScript reaches into it by chaining
+dots, and a nested path is assignable exactly like a top-level one:
+
+```
+$party.leader.stats.hp -= 10          # read-modify-write, three levels down
+$puppy.tricks.count()                 # a collection function on a nested list
+for each $trick in $puppy.tricks      # iterate a list nested inside a record
+  $trick.reliability += 0.05
+```
+
+**Depth is free at the script layer.** `$puppy.stats.friendliness` is no more
+expensive or fragile to write than `$puppy.friendliness` would be. The cost of
+nesting is borne by the *AI* reproducing the shape each turn, not by the script —
+so let the data's real structure drive the depth, and use `enforceFormat: true`
+with a matching nested `formatSchema` to keep the paths reliably present.
+
+The one thing to watch: a path is only as valid as the structure beneath it. If the
+item's shape drifts and `stats` goes missing, the assignment fails — and because
+scripts are transactional, the *whole* script rolls back and the error lands in
+World Debug. That's the argument for `enforceFormat` on any item a script writes to.
 
 ### `if` / `else if` / `else` — branching
 
@@ -197,7 +222,7 @@ and is **not** persisted.
 ```
 set $total = 0
 for each $puppy in $puppy_tracking_yaml_format_tracked_items
-  set $total = $total + $puppy.friendliness
+  set $total = $total + $puppy.stats.friendliness
 $happiness_score = $total
 ```
 
@@ -285,7 +310,7 @@ when in doubt:
   for `dataType` / `visibility` choices and per-turn cost.
 - **Trigger effects** — [`fields/TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md)
   for `effectRunScript` and the other effect types a script can't replace.
-- **Template variables** — [`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#9-template-variable-system)
+- **Template variables** — [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system)
   §9 for the legacy `<<…>>` interpolation vocabulary.
 - **Turn lifecycle** — [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
   §3 for when a script's writes take effect.

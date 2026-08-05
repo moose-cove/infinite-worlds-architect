@@ -2,7 +2,7 @@
 
 Covers: `imageModel`, `imageStyle`, the four `imageStyleCharacterPre/Post` and `imageStyleNonCharacterPre/Post` wrapper fields, and the newer `illustrationStyleCharacterHighPriority`/`LowPriority` and `illustrationStyleNonCharacterHighPriority`/`LowPriority` fields.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#1-top-level-fields) §1 and §8 (per-character `portraitPromptDetails`).
+For field shapes see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#1-top-level-fields) §1 and §8 (per-character `portraitPromptDetails`).
 
 ---
 
@@ -96,5 +96,5 @@ Drop these into the Post field for the relevant subject type. The model recogniz
 **Word-limit awareness.** Stay within model limits (Flux ~300w, Manticore ~400w). Prompts that exceed the limit have elements dropped *unpredictably* — prioritize the most important style descriptors at the beginning of the wrapper fields.
 
 **Character consistency requires per-character work.** The world-level image style fields alone cannot ensure consistent character appearance across scenes. For character consistency:
-- For player characters: detailed `possibleCharacters[*].description` plus `portraitPromptDetails` (the per-character version of the world-level `imagePromptDetails` — see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#8-image-prompt-details-world--per-character) §8).
+- For player characters: detailed `possibleCharacters[*].description` plus `portraitPromptDetails` (the per-character version of the world-level `imagePromptDetails` — see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#8-image-prompt-details-world--per-character) §8).
 - For NPCs: `img_appearance` and `img_clothing` on the NPC. Always ask the author for these — see [`CHARACTER_AUTHORING_GUARDRAILS.md`](../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance).

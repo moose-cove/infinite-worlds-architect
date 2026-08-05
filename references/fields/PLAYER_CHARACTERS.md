@@ -2,7 +2,7 @@
 
 Covers: world-level `skills`, the `possibleCharacters` array, and the six `allowChangeCharacter*` permission booleans.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#2-possiblecharacters-player-characters) §2 and §7.
+For field shapes see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#2-possiblecharacters-player-characters) §2 and §7.
 
 ---
 
@@ -33,7 +33,7 @@ A list of attributes the storyteller AI uses to evaluate player actions. The AI 
 
 **Naming tip.** Use clear, self-describing skill names the AI can interpret without extra context: `Persuasion`, `Stealth`, `Combat`, `Hacking`, `Empathy`. Avoid cryptic or world-specific names without explaining them in `instructions`.
 
-**Template-variable generation.** Each skill name automatically becomes a template variable: `Persuasion` → `<<skill_persuasion>>`, `Hacking` → `<<skill_hacking>>` (lowercase, spaces become underscores). Use these in `instructions` and trigger conditions to reference skill ratings. (For the full template-variable system including math operators and dice rolls, see [`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#9-template-variable-system) §9.)
+**Template-variable generation.** Each skill name automatically becomes a template variable: `Persuasion` → `<<skill_persuasion>>`, `Hacking` → `<<skill_hacking>>` (lowercase, spaces become underscores). Use these in `instructions` and trigger conditions to reference skill ratings. (For the full template-variable system including math operators and dice rolls, see [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system) §9.)
 
 ---
 
@@ -65,7 +65,7 @@ The character-specific skill ratings mapping, e.g. `{"Strength": 4, "Stealth": 2
 Per-character starting values for tracked items. Each entry: `{id, name, visibility, initialPCValue, initialValueBasedOnPC}`. The `initialPCValue` may be a string OR a string array — when an array, it represents the *set of choices* the player picks from at character selection. Treat the array as an unordered set, not a `[min, max, default]` tuple.
 
 **`portraitPromptDetails`** *(hybrid)*
-Author-provided prompt info used to generate the portrait. Same shape as the world-level `imagePromptDetails`. See [`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#8-image-prompt-details-world--per-character) §8.
+Author-provided prompt info used to generate the portrait. Same shape as the world-level `imagePromptDetails`. See [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#8-image-prompt-details-world--per-character) §8.
 
 ---
 

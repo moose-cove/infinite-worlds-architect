@@ -1,0 +1,720 @@
+{
+  "favorite": false,
+  "title": "EXAMPLE ADVENTURE: The Enchanted Bake-Off of Willowmere - SCHEMA VERSION 2.2",
+  "description": "In the whimsical village of Willowmere, where talking animals run the local shops and enchanted ingredients grow in moonlit gardens, the annual Grand Bake-Off is about to begin. You are one of four hopeful bakers competing for the legendary Golden Whisk — a magical utensil said to grant its owner the ability to bake anything perfectly, forever. But the competition is fierce, the ingredients are unpredictable, and the judges have very peculiar tastes. Gather your ingredients, manage your time, avoid kitchen disasters, and bake your way to glory!",
+  "background": "Welcome to Willowmere, a cozy village nestled between the Sugarplum Hills and the Butterscotch River. Here, the flowers hum lullabies, the streetlamps glow with bottled starlight, and every household takes baking very, very seriously.\n\nOnce a year, the village holds the Grand Bake-Off — a three-round competition judged by the mysterious and ancient Council of Tastes: a trio of enchanted beings whose palates are said to perceive not just flavor, but emotion, memory, and even color.\n\nThis year, you have entered the competition. The Golden Whisk — displayed in a glass case at the center of the village square, slowly rotating and emitting a warm buttery glow — awaits the winner.\n\nThe rules are simple: three rounds, three bakes. Each round has a theme announced just before it begins. You must gather your own ingredients from the village and surrounding countryside, prepare your creation in the communal kitchen tent, and present it to the Council before the hourglass runs out.\n\nBut beware — Willowmere's enchanted ingredients have minds of their own. Moonberries might refuse to be picked if you're in a bad mood. Laughing flour erupts into giggles if you measure it wrong. And the competitive spirit among the other bakers might lead to unexpected sabotage... or unexpected friendship.\n\nThe morning sun rises over Willowmere. Bunting flutters between the lampposts. The smell of fresh bread drifts from every doorway. The village square is filling with spectators — mice in waistcoats, rabbits in bonnets, and the occasional cheerful hedgehog. The Head Judge, an enormous owl named Professor Featherbottom, perches atop the announcement podium, clearing his throat.",
+  "instructions": "This adventure takes place in the whimsical, enchanted village of Willowmere — a cozy, safe-for-work fantasy setting populated by both human villagers and talking animals who live side by side. The tone should be warm, charming, and gently humorous, like a cross between a Studio Ghibli film and The Great British Bake Off, but with magical elements throughout.\n\nThe player is competing in a three-round baking competition. Each round has a theme (Round 1: 'A Taste of Home', Round 2: 'Something Wild', Round 3: 'The Impossible Bake'). Between rounds, the player can explore the village, gather ingredients, interact with characters, practice recipes, or investigate rumors.\n\nKey characters include:\n- Professor Featherbottom: A wise old owl who is Head Judge. Speaks in long, winding sentences.\n- Maple: A friendly red squirrel who runs the ingredient shop. Enthusiastic and chatty.\n- Bramble: A grumpy but secretly kind badger who tends the Moonlit Garden where rare ingredients grow.\n- Rival bakers: Cinnamon (a confident young woman with flame-red hair), Dusty (a shy but talented mouse in a chef's hat), and Old Greenleaf (a retired wizard-turned-baker, an elderly man with a long green beard).\n\nThe adventure should include moments of gentle tension (a soufflé collapsing, an ingredient going missing, a rival seeming to cheat), moments of warmth (making friends, sharing recipes, helping a neighbor), and moments of wonder (discovering a new magical ingredient, witnessing enchanted baking processes).\n\nThe world uses the following tracked elements:\n- Ingredients collected (inventory items)\n- Reputation with other characters (relationship tracking)\n- Round scores (numerical tracking)\n- Time of day (state tracking — morning, afternoon, evening, night)\n- Current competition round (state tracking)\n\nTriggers and effects that should come into play:\n- Time-based triggers: Certain ingredients are only available at certain times (moonberries at night, sunpetals at dawn)\n- Relationship triggers: If the player helps another baker, that baker may help them later; if they antagonize someone, sabotage may occur\n- Skill check triggers: Baking challenges require skill checks against the player's abilities\n- Item triggers: Having certain rare ingredients unlocks special recipe options\n- State triggers: Advancing to the next round requires presenting a completed bake\n- Random event triggers: Kitchen mishaps, surprise visitors, or weather changes may occur\n\nCustom instructions:\n- The narrative should never become dark or frightening. Conflicts are gentle and resolved with kindness.\n- Magic is whimsical and food-themed (never violent)\n- All characters should feel like they belong in a storybook — quirky, endearing, and memorable\n- Descriptions of food should be vivid and mouth-watering\n- The passage of time matters: the player must manage their time between exploration and preparation\n- The player can fail a round but still continue — only winning at least two of three rounds wins the competition\n- Dialogue should be warm and characterful, with each character having a distinct voice\n\nThe three judges are: Professor Featherbottom (values tradition and technique), Lady Rosepetal (a hummingbird who values beauty and presentation), and Grumbold (a stone golem who values bold and surprising flavors).\n\nThe competition takes place over three days — one round per day, with time between for preparation.",
+  "authorStyle": "A writer of cozy, heartwarming fantasy in the style of Diana Wynne Jones",
+  "recommendedAIModel": null,
+  "firstInput": "I make my way to the village square for the opening ceremony, taking in the sights and sounds of the festival preparations around me.",
+  "objective": "Win the Grand Bake-Off of Willowmere by excelling in at least two of the three baking rounds, and claim the legendary Golden Whisk.",
+  "imageModel": "manticore",
+  "imageStyle": "photo_1",
+  "illustrationStyleNonCharacterLowPriority": "watercolor storybook illustration, whimsical fantasy village, soft pastels, cozy cottages, enchanted garden",
+  "illustrationStyleNonCharacterHighPriority": "",
+  "illustrationStyleCharacterLowPriority": "watercolor storybook illustration, whimsical fantasy, soft warm colors, gentle expressions",
+  "illustrationStyleCharacterHighPriority": "",
+  "imageStyleCharacterPre": "A beautiful medium shot photographic portrait of",
+  "imageStyleCharacterPost": "The focus is razor-sharp on the texture of the face, showing every pore. IWBeautiful IWUpscaleFace",
+  "imageStyleNonCharacterPre": "A beautiful photograph of",
+  "imageStyleNonCharacterPost": "bright and cheery",
+  "mature": false,
+  "nsfw": false,
+  "contentWarnings": "here by content warnings, specifically that this is a generic test world designed to demonstrate IW's capabilities!",
+  "enableAISpecificInstructionBlocks": true,
+  "previewImage": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/7f5WUSxYtO.jpg",
+  "fullSizePreviewImage": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/VgWKZT4GiC.jpg",
+  "previewImageOptions": [
+    "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/7f5WUSxYtO.jpg"
+  ],
+  "fullSizePreviewImageOptions": [
+    "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/VgWKZT4GiC.jpg"
+  ],
+  "currentPreviewImageIndex": 0,
+  "imagePromptDetails": {
+    "illustrGenre": "fantasy, colorful, whimsical, storybook",
+    "illustrClothes": "flour-dusted lavender apron over a cream blouse with rolled-up sleeves",
+    "illustrSetting": "in a cozy enchanted kitchen with glowing jars of magical ingredients on wooden shelves, a moonlit window, and a golden whisk displayed on a pedestal in the background, fantasy, colorful, whimsical, storybook",
+    "illustrSubject": "A whimsical baker character",
+    "illustrAppearance": "a 35 year old female English baker with warm brown eyes, rosy fair skin, and wavy chestnut hair tied up in a messy bun",
+    "illustrIsCharacter": true,
+    "illustrExpressionPosition": "smiling"
+  },
+  "permissionsOnceShared": {
+    "sharing": true,
+    "editing": true
+  },
+  "allowChangeCharacterName": true,
+  "allowChangeCharacterDescription": true,
+  "allowChangeCharacterSkills": true,
+  "allowChangeCharacterItemValues": true,
+  "allowChangeCharacterPortrait": true,
+  "allowChangeCharacterNewPortrait": true,
+  "conditions": [
+    "The marmut eats the marmalade"
+  ],
+  "descriptionRequest": "The instruction passed to the AI when requesting a description of what happens next. The default instruction handles basic narration style. If you check the box below, you can replace it with your own instruction.\n\nDEFAULT DESCRIPTION INSTRUCTIONS:\nBriefly describe the immediate results of my action, without any preamble or reminding me of who my character is. Describe any dialogue in full. Remember that things may go well - or very badly - for my character. Please write your description over several paragraphs.",
+  "evaluationRequest": "The instruction passed to the AI when evaluating whether a player's custom action succeeds or fails. The default instruction handles skill checks and difficulty assessment. If you check the box below, you can replace it with your own instruction.\n\nThe idea of the evaluation step is to get the AI to think about whether the player's action should succeed or not. Its outputs aren't used except to guide the AI's thinking, so you don't need it to produce any particular outputs (the default instructions ask for SUCCESS, FAILURE etc, but they're not special).\n\nThe default instructions use a few special variables which relate to the default skill system. You may or may not want to use them if you're changing the system. Here are examples of what they contain in a particular test world:\n\nskill_list: \"Magical talent, Charisma, Athleticism, Guile, Intelligence\"\ndifficulty_list: \"Very easy, Easy, Medium, Hard, Very hard, Unfeasible\"\nskill_example: \"Magical talent\"\ndifficulty_example: \"Easy\"\n\nskills_and_levels:\nMagical talent: Highly skilled (Max difficulty: Hard)\nCharisma: Competent (Max difficulty: Medium)\nAthleticism: Unskilled (Max difficulty: Easy)\n\nIf you are replacing the evaluation system entirely, you may wish to hide the skill system from players. When checked, skills will not be shown in the character chooser, character customiser, or character sheet.\n\nDEFAULT EVALUATION INSTRUCTIONS IF NOT OVERWRITTEN:\n\nFirstly, if I have made any assertions in my description, evaluate whether you judge that they are reasonable and likely. If they are nonsensical, incoherent or blatantly impossible, the action should be DENIED. On the other hand, if the action is trivial and there is nothing to complicate it, skip the evaluation entirely and deem the action a SUCCESS. Don't overthink this! If the action doesn't warrant further evaluation, make a judgement and move on.\n\nAssuming the action is not a trivial SUCCESS or DENIED, I would like you to evaluate what skill would be needed to succeed in this action, and how difficult it would be to do so. Please indicate which skill which is needed to succeed.\nIf applicable use this list: (<<skill_list>>) and a difficulty (from the list: <<difficulty_list>>). For example: {<<skill_example>>: <<difficulty_example>>}. Consider the difficulties carefully, evaluating what might be feasible in the situation. Identifying the skill and difficulty is very important!\n\nThen, evaluate whether I would succeed in the action. To evaluate, consider my proficiency in various skills using either (<<skills_and_levels>>) or logical application of other skills. By comparing these difficulties to the stated difficulty of the action, you should conclusively decide whether the action is a SUCCESS or a FAILURE.\n\nBase your decision on player character description, past, rest of the instructions and common sense - for example, if my skill is low but you know that I am able to perform the given action due to past events, treat me as more competent in this case. Again, don't overthink this - just make a sensible judgement given the information available to you and based on what makes sense for the story.\n\nIn some situations, you may wish to evaluate the action as a PARTIAL_SUCCESS instead - this is for something where my abilities are sufficient that I don't simply fail completely (or where failing completely would make for a boring story) but I also don't success. Either I achieve some but not all of what I wanted, I fail but have some silver lining, or I succeed but there are drawbacks or side-effects rather than a \"clean\" success.\n\nIn total, your evaluation should consist of an extremely brief discussion of your thinking (just a single sentence), a skill and difficulty, and then either DENIED, SUCCESS, FAILURE, or PARTIAL_SUCCESS (along with any clarifying remarks).\n\nThat's all you need to do for the evaluation, which should be returned in the 'evaluation' argument. Remember to conclude with one of DENIED, SUCCESS, FAILURE, or PARTIAL_SUCCESS.",
+  "hideSkillSystem": true,
+  "summaryRequest": "In order to best keep track of the story as the game proceeds, the system maintains a summary of the story so far. Generally this works well but it can sometimes lose track of details which you may consider important. If you check the box below, you can write instructions on things that the summarisation system should be sure to keep track of. For example: \"Make sure to record in detail what knowledge each character has of the events of the murder.\"",
+  "schemaVersion": 2.4,
+  "charSelectText": "This is where additional text on the character selection screen would go if we had some!",
+  "skills": [
+    "Baking",
+    "Creativity",
+    "Foraging",
+    "Charm",
+    "Patience"
+  ],
+  "possibleCharacters": [
+    {
+      "name": "Rosemary Thistlewick",
+      "description": "A warm-hearted woman in her mid-thirties who moved to Willowmere three years ago from the big city, seeking a simpler life. She learned to bake from her grandmother and has a deep knowledge of traditional recipes. She tends a small cottage garden and has befriended many of the village animals. She is steady, kind, and methodical — the sort of baker who measures everything twice. Her weakness is that she sometimes plays it safe, sticking to what she knows rather than taking creative risks.",
+      "portrait": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/PQfvZjnZra.jpg",
+      "portraitPromptDetails": {
+        "illustrGenre": "fantasy, whimsical, storybook, colorful",
+        "illustrClothes": "cream linen blouse with rolled-up sleeves, a dusty rose apron tied at the waist, olive green skirt",
+        "illustrSetting": "in a cozy cottage kitchen with bundles of dried herbs hanging from the rafters, a flour-dusted wooden table, and a window showing a moonlit garden outside, fantasy, whimsical, storybook, colorful",
+        "illustrSubject": "Rosemary Thistlewick",
+        "illustrAppearance": "a 35 year old female English cottage baker with warm hazel eyes, fair freckled skin, and wavy chestnut hair pulled back in a loose bun with a few strands falling around her face",
+        "illustrIsCharacter": true,
+        "illustrExpressionPosition": "friendly"
+      },
+      "fullSizePortrait": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/DKsF2Yoqc5.jpg",
+      "portraitOptions": [
+        "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/PQfvZjnZra.jpg"
+      ],
+      "fullSizePortraitOptions": [
+        "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/DKsF2Yoqc5.jpg"
+      ],
+      "currentPortraitIndex": 0,
+      "characterId": "0TBwVqX9",
+      "skills": {
+        "Charm": 3,
+        "Baking": 4,
+        "Foraging": 3,
+        "Patience": 4,
+        "Creativity": 3
+      },
+      "initialTrackedItemValues": [
+        {
+          "id": "Vbqny5TeL",
+          "visibility": "everyone",
+          "name": "Number of Non-Human Friends",
+          "initialPCValue": "2",
+          "initialValueBasedOnPC": "character"
+        }
+      ]
+    },
+    {
+      "name": "Hazel Copperkettle",
+      "description": "A cheerful, round-faced woman in her late forties who runs Willowmere's tea shop and is beloved by everyone in the village. She knows every resident by name — human and animal alike — and can coax a secret out of anyone over a cup of chamomile. Her baking is inventive and crowd-pleasing, though she's less experienced with the wild magical ingredients that grow outside the village proper. She entered the competition on a dare from her regulars and is determined to prove she belongs. She is generous, perceptive, and has a booming laugh that can be heard three streets away.",
+      "portrait": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/qY2fdNVhmT.jpg",
+      "portraitPromptDetails": {
+        "illustrGenre": "fantasy, colorful, whimsical, storybook",
+        "illustrClothes": "a flour-dusted lavender apron over a cream blouse with rolled-up sleeves, and a long plum-colored skirt",
+        "illustrSetting": "in a cozy village tea shop with shelves of colorful teapots and jars of dried herbs, warm afternoon light streaming through a mullioned window, fantasy, colorful, whimsical, storybook",
+        "illustrSubject": "Hazel Copperkettle",
+        "illustrAppearance": "a 48 year old female English tea shop owner with warm brown eyes, rosy fair skin, and curly chestnut hair pinned up in a loose bun",
+        "illustrIsCharacter": true,
+        "illustrExpressionPosition": "friendly"
+      },
+      "fullSizePortrait": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/nPa4D2JM4x.jpg",
+      "portraitOptions": [
+        "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/qY2fdNVhmT.jpg"
+      ],
+      "fullSizePortraitOptions": [
+        "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/nPa4D2JM4x.jpg"
+      ],
+      "currentPortraitIndex": 0,
+      "characterId": "B0ceNHbz",
+      "skills": {
+        "Charm": 5,
+        "Baking": 3,
+        "Foraging": 2,
+        "Patience": 3,
+        "Creativity": 4
+      },
+      "initialTrackedItemValues": [
+        {
+          "id": "Vbqny5TeL",
+          "visibility": "everyone",
+          "name": "Number of Non-Human Friends",
+          "initialPCValue": "3",
+          "initialValueBasedOnPC": "character"
+        }
+      ]
+    },
+    {
+      "name": "Pip Ashgrove",
+      "description": "A quiet, serious boy of sixteen — the youngest entrant the Bake-Off has seen in years. Pip is an orphan raised by Bramble the badger in a cottage at the edge of the Moonlit Garden, and knows the magical flora of Willowmere better than almost anyone. He is shy around people and sometimes comes across as aloof, but he has a gentle soul and a deep connection to the natural world. His baking is precise and ingredient-focused — he lets the quality of his foraged materials do the heavy lifting. He entered the competition to make Bramble proud, though he'd never admit it aloud.",
+      "portrait": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/2A0uav0sAl.jpg",
+      "portraitPromptDetails": {
+        "illustrGenre": "fantasy, whimsical, storybook",
+        "illustrClothes": "faded linen shirt with rolled sleeves, brown leather apron stained with berry juice, patched wool trousers",
+        "illustrSetting": "in a moonlit garden with silver-leafed herbs and softly glowing flowers, a thatched cottage visible in the background at night, fantasy, whimsical, storybook",
+        "illustrSubject": "Pip Ashgrove",
+        "illustrAppearance": "a 16 year old male English boy with grey-green eyes, fair freckled skin, and messy dark brown hair falling past his ears",
+        "illustrIsCharacter": true,
+        "illustrExpressionPosition": "calm"
+      },
+      "fullSizePortrait": "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/y6cR5SxsGr.jpg",
+      "portraitOptions": [
+        "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/2A0uav0sAl.jpg"
+      ],
+      "fullSizePortraitOptions": [
+        "https://infinite-worlds-images-4.us-mia-1.linodeobjects.com/y6cR5SxsGr.jpg"
+      ],
+      "currentPortraitIndex": 0,
+      "characterId": "u4Ka7vFv",
+      "skills": {
+        "Charm": 2,
+        "Baking": 3,
+        "Foraging": 4,
+        "Patience": 4,
+        "Creativity": 3
+      },
+      "initialTrackedItemValues": [
+        {
+          "id": "Vbqny5TeL",
+          "visibility": "everyone",
+          "name": "Number of Non-Human Friends",
+          "initialPCValue": [
+            "0",
+            "900",
+            "5"
+          ],
+          "initialValueBasedOnPC": "character"
+        }
+      ]
+    }
+  ],
+  "triggerEvents": [
+    {
+      "id": "PKRVGe1E",
+      "name": "Test Trigger 1 - Advanced Logic",
+      "advancedLogic": true,
+      "triggerEffects": [
+        {
+          "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+          "data": "This is a test message! It gets Shown to player",
+          "type": "effectShowMessage"
+        },
+        {
+          "id": "77dce768-520c-d771-48fb-af7900779cef",
+          "data": "I tells the AI what should happen next turn, the same as if a player using Storyteller Mode told the AI what should happen next turn. Note: When this trigger fires, it temporarily disables the ability for a player using Storytelling Mode to tell the AI  what should happen next turn.",
+          "type": "effectTellAIWhatToDo"
+        },
+        {
+          "id": "c4429464-6660-f1cb-0d03-61ae756d5367",
+          "data": "Completely replaces the \"Background\" for the adventure with the new background.",
+          "type": "effectChangeBackground"
+        },
+        {
+          "id": "ba771c39-f8cc-79fa-e07e-c2f368437d21",
+          "data": "Completely replaces the \"Main instructions\" for the adventure with these new instructions.",
+          "type": "effectChangeMainInstructions"
+        },
+        {
+          "id": "90e8aa82-fb20-4f00-1136-5004c68f5306",
+          "data": {
+            "id": "klM0IhdYi",
+            "content": "I modify the value of Cool Extra Instruction Block!"
+          },
+          "type": "effectModifyInstructionBlock"
+        },
+        {
+          "id": "b30b6c92-ed0a-8e5c-a5aa-5ac623aafa2e",
+          "data": "I change the author style field",
+          "type": "effectChangeAuthorStyle"
+        },
+        {
+          "id": "09f813e7-70dc-acd9-3349-75ccb89c6c6b",
+          "data": "I change the description instructions field",
+          "type": "effectChangeDescriptionInstructions"
+        },
+        {
+          "id": "e0e0c124-1263-9ab8-354f-12fc36d165c7",
+          "data": "I completely replace the \"First Action\" field for the adventure",
+          "type": "effectChangeFirstAction"
+        },
+        {
+          "id": "384a6a9a-183f-cb80-559e-33fd3286c1dc",
+          "data": "Completely replaces the \"Objective\" for the adventure with the new text.",
+          "type": "effectChangeObjective"
+        },
+        {
+          "id": "5d743062-2e44-e129-f7ca-56f2fa450bb4",
+          "data": {
+            "text": "Complete replaces the \"Text shown on victory\" for the adventure with the new text",
+            "condition": "Completely replaces the \"Victory Condition\" for the adventure with the new text.",
+            "alreadyFired": false
+          },
+          "type": "effectChangeVictoryCondition"
+        },
+        {
+          "id": "985690d7-d476-9468-9f03-1389a2b6ce37",
+          "data": {
+            "text": "Completely replaces the \"Text shown on defeat\" for the adventure with the new text.",
+            "condition": "Completely replaces the \"Defeat Condition\" for the adventure with the new text.",
+            "alreadyFired": false
+          },
+          "type": "effectChangeDefeatCondition"
+        },
+        {
+          "id": "0fb6561c-3f3a-113e-ed33-8c219640c2a2",
+          "data": "I change the player character's name",
+          "type": "effectChangePCName"
+        },
+        {
+          "id": "df2d9899-dfbd-a869-27bb-405473b9ab2e",
+          "data": "Change player character description",
+          "type": "effectChangePCDescription"
+        },
+        {
+          "id": "76bc72bb-952e-ef8d-e1b6-5901de80786c",
+          "data": {
+            "name": "Creativity",
+            "amount": 1,
+            "minmax": 5,
+            "increase": true
+          },
+          "type": "effectChangePCSkill"
+        },
+        {
+          "id": "26608f32-254a-5cc4-4d8d-0164a52dc104",
+          "data": {
+            "name": "Baking",
+            "amount": 1,
+            "minmax": 0,
+            "increase": false
+          },
+          "type": "effectChangePCSkill"
+        },
+        {
+          "id": "acad8eb4-2908-23b5-0d55-196a638ed889",
+          "data": {
+            "action": "set",
+            "newValue": "I replace the value of the tracked item",
+            "replaceWith": "",
+            "trackedItemID": "O7WyJNRkm"
+          },
+          "type": "effectSetTrackedItemValue",
+          "trackedItemID": "O7WyJNRkm"
+        },
+        {
+          "id": "0f17c1c1-5f23-b2d5-8889-48b893311e23",
+          "data": {
+            "action": "add",
+            "newValue": "I add this text to the end of the tracked item",
+            "replaceWith": "",
+            "trackedItemID": "O7WyJNRkm"
+          },
+          "type": "effectSetTrackedItemValue",
+          "trackedItemID": "O7WyJNRkm"
+        },
+        {
+          "id": "edd64f59-744f-8e1d-1506-54850c03bc87",
+          "data": {
+            "action": "subtract",
+            "newValue": "I remove this text if it's present in the tracked item",
+            "replaceWith": "",
+            "trackedItemID": "O7WyJNRkm"
+          },
+          "type": "effectSetTrackedItemValue",
+          "trackedItemID": "O7WyJNRkm"
+        },
+        {
+          "id": "8ac66586-3c92-349c-b525-ae9d2ee782d7",
+          "data": {
+            "action": "replace",
+            "newValue": "I replace instances of this text",
+            "replaceWith": "with this text in the tracked item",
+            "trackedItemID": "O7WyJNRkm"
+          },
+          "type": "effectSetTrackedItemValue",
+          "trackedItemID": "O7WyJNRkm"
+        },
+        {
+          "id": "1da0513d-a2d0-7d3c-619e-3aca78e2bbaa",
+          "data": {
+            "id": "Z1etuKHwQ",
+            "content": "I replace the contents of Secret Cake Recipe keyword instruction block",
+            "keywords": [
+              "I replace the keywords of Secret Cake Recipe keyword instruction block"
+            ]
+          },
+          "type": "effectModifyKeywordBlock"
+        },
+        {
+          "id": "1b9f52fb-904f-302f-1554-628b5ea285cf",
+          "data": {
+            "description": "I change the Tracked Item Description",
+            "autoUpdate": true,
+            "overrideUpdateInstructions": true,
+            "name": "Changed Tracked Item Name",
+            "overrideVisibility": true,
+            "overrideName": true,
+            "overrideAutoUpdate": true,
+            "overrideDescription": true,
+            "updateInstructions": "I change the Tracked Item's Updating Instructions",
+            "visibility": "ai_only_boring",
+            "trackedItemID": "PMh7S1RYT"
+          },
+          "type": "effectModifyTrackedItemDetails",
+          "trackedItemID": "PMh7S1RYT"
+        },
+        {
+          "id": "6007d57c-b660-8493-2e01-8993677b9db0",
+          "data": {
+            "choices": "Strawberry\nBlueberry\nRaspberry\nMulberry",
+            "message": "This effect will present a choice to the player - they must make the choice before the game continues. The choice they select is saved as the new value of  the target tracked item.",
+            "updateMode": "replace",
+            "maxSelections": null,
+            "minSelections": null,
+            "selectionMode": "single",
+            "valueDelimiter": "newline",
+            "targetTrackedItemId": "WgKQOBK1q"
+          },
+          "type": "effectPresentChoice"
+        },
+        {
+          "id": "bb7ada5f-0410-375c-2f6a-27f255218fa5",
+          "data": {
+            "choices": "Choice 1\nChoice 2\nChoice 3",
+            "message": "This effect will present a choice to the player - they must make the choice before the game continues. The choice they select is saved as the new value of  the target tracked item, but this time they can choose multiple answers!",
+            "updateMode": "replace",
+            "maxSelections": 3,
+            "minSelections": 2,
+            "selectionMode": "multiple",
+            "valueDelimiter": "comma",
+            "targetTrackedItemId": "O7WyJNRkm"
+          },
+          "type": "effectPresentChoice"
+        },
+        {
+          "id": "be3edb0c-0219-1157-6430-ec24d7bbe582",
+          "data": {
+            "choices": "Choice 4\nChoice 5\nChoice 6",
+            "message": "This effect will present a choice to the player - they must make the choice before the game continues. The choice they select is saved as the new value of  the target tracked item, but this time they can choose multiple answers, there's no upper or lower limit on number of selections, and we store each selection on a separate line in the tracked item!",
+            "updateMode": "replace",
+            "maxSelections": null,
+            "minSelections": null,
+            "selectionMode": "multiple",
+            "valueDelimiter": "newline",
+            "targetTrackedItemId": "PMh7S1RYT"
+          },
+          "type": "effectPresentChoice"
+        },
+        {
+          "id": "c1bdfff2-5069-2aaa-140e-22f0ea6bfc4a",
+          "data": {
+            "inputMode": "multi",
+            "requestText": "This effect will ask the player to enter some text. The text they enter is saved as the new value of  the target tracked item.\n",
+            "requiresInput": true,
+            "targetTrackedItemId": "WgKQOBK1q"
+          },
+          "type": "effectRequestInput"
+        },
+        {
+          "id": "8cba4bee-345c-2996-0e8d-a415184e79a5",
+          "data": "# The following is an example PawScript script.\n# You can learn more about how to use PawScript from the following links:\n# https://infiniteworlds.app/pawscript-script-guide\n# https://infiniteworlds.app/pawscript-reference\n# https://infiniteworlds.app/pawscript-expressions-guide\n# https://infiniteworlds.app/pawscript-expression-playground\n# Note the nested path: `friendliness` lives under the `stats` sub-map of each\n# puppy record, so the script walks $puppy.stats.friendliness. YAML tracked items\n# support arbitrary nesting - see https://infiniteworlds.app/yaml-guide\nfor each $puppy in $puppy_tracking_yaml_format_tracked_items\n  $puppy.stats.friendliness += 1",
+          "type": "effectRunScript"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "64f127cc-a0d0-7792-b574-c271005cb13c",
+          "data": [
+            "0TBwVqX9",
+            "B0ceNHbz"
+          ],
+          "type": "triggerOnCharacter",
+          "category": "condition"
+        },
+        {
+          "id": "29932f25-2ac9-7500-8e06-62bafbcb7bf7",
+          "data": [
+            {
+              "id": "63ef5c9b-9004-63e3-62e0-1901a06ba797",
+              "data": {
+                "inequality": "at_least",
+                "requiredValue": "1d4+skill_charm",
+                "trackedItemID": "skill_patience",
+                "textComparison": "contains"
+              },
+              "type": "triggerOnTrackedItem",
+              "category": "condition",
+              "inequality": "at_least",
+              "trackedItemID": "skill_patience"
+            },
+            {
+              "id": "d833de3f-898b-856e-9558-47183e9846f1",
+              "data": "15+round(turn_number%random)",
+              "type": "triggerOnRandomChance",
+              "category": "condition"
+            }
+          ],
+          "category": "logic",
+          "operator": "or"
+        }
+      ],
+      "triggerOnStartOfGame": true,
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "Ba1OxV97",
+      "name": "Test Trigger 2 - Simple Logic, Blocking Trigger",
+      "triggerEffects": [
+        {
+          "id": "141ab791-7bc4-0013-6680-79517220c8d6",
+          "data": "I'm just as an example of a trigger with simple logic that can fire multiple times, but doesn't fire at the start of game! I only fire if Test Trigger 1 - Advanced Logic HAS NOT already fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "d7437342-18f7-a070-8d47-9d61fb6d007d",
+          "data": {
+            "blockers": [
+              "PKRVGe1E"
+            ],
+            "firedThisTurn": false
+          },
+          "type": "triggerBlockers",
+          "category": "condition"
+        },
+        {
+          "id": "f15f3251-3175-568c-7b25-80ee1bff0428",
+          "data": "The marmut eats the marmalade",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "zOG+PB3L",
+      "name": "Test Trigger 3 - Simple Logic, After Other Triggers",
+      "triggerEffects": [
+        {
+          "id": "c0862376-757f-b753-f7e0-e46b97fccc50",
+          "data": "I'm just as an example of a trigger with simple logic that can fire multiple times, but doesn't fire at the start of game! I only fire if Test Trigger 1 - Advanced Logic HAS already fired.",
+          "type": "effectShowMessage"
+        },
+        {
+          "id": "5a1f4b34-27a5-3b97-63fe-3d8046faa468",
+          "data": "This information will be given to the storytelling AI when the event is triggered by being appended to secretInfo. It will not be shown to the player, but can be used to give important background information to the AI. For example: \"The treasure the player has found belongs to Blackbeard, who will be likely to seek revenge.\"",
+          "type": "effectGiveInfo"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "ea17e628-f136-f528-3318-b0e072999662",
+          "data": {
+            "prereqs": [
+              "PKRVGe1E"
+            ],
+            "firedThisTurn": false
+          },
+          "type": "triggerPrereqs",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "Sy07xqta",
+      "name": "End the Game on Turn 5",
+      "triggerEffects": [
+        {
+          "id": "0715f088-8410-7183-cf93-203b8fb959ec",
+          "data": "This trigger is set to fire when turn number is at least this number. It will now end the game, but you can choose to continue if you want.\n\nThe \"end the game\" effect has the following description text: \"End the game. Generally used for alternative victory or defeat conditions.\"\n",
+          "type": "effectShowMessage"
+        },
+        {
+          "id": "8a7e8696-b4e3-2099-8e02-11be75622151",
+          "data": true,
+          "type": "effectEndsGame"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "547d6832-1c42-7e8e-c41d-82825666a8f2",
+          "data": 5,
+          "type": "triggerOnTurn",
+          "category": "condition"
+        }
+      ]
+    }
+  ],
+  "victoryCondition": {
+    "condition": "The player character has won the Grand Bake-Off by successfully completing at least two of the three rounds with scores high enough to beat all rival bakers, and has been presented with the Golden Whisk by Professor Featherbottom in the award ceremony.",
+    "text": "Congratulations, master baker! The Golden Whisk is yours!\n\nAs Professor Featherbottom places the gleaming utensil in your hands, it hums with a warm, buttery magic that seems to flow right into your heart. The crowd erupts in cheers — mice throw their tiny hats, rabbits stamp their feet in applause, and somewhere in the back, even Bramble the badger cracks a rare smile.\n\nYour bakes today were more than food — they were stories, memories, and dreams made edible. Willowmere will remember this day for generations.\n\nNow, with the Golden Whisk in hand, every recipe you dream of is within reach. What will you bake first?",
+    "alreadyFired": false
+  },
+  "defeatCondition": {
+    "condition": "The player character has died",
+    "text": "Your adventure ends here.\n\nGame over.",
+    "alreadyFired": false
+  },
+  "instructionBlocks": [
+    {
+      "id": "klM0IhdYi",
+      "name": "Cool Extra Instruction Block",
+      "content": "I'm an extra instruction block!"
+    },
+    {
+      "id": "e8WBWeOav",
+      "name": "Smilodon Only Instruction Block",
+      "content": "If the option to allows the author to set \"Extra instruction blocks\" (found in the \"Main instructions\" section near the top of this page) to only activate when the player is using certain AI models is set, then we get extra fields.\n",
+      "selectedAIProfiles": [
+        "smilodon"
+      ]
+    },
+    {
+      "id": "gOiWjgLZv",
+      "name": "Available Variables",
+      "content": "This is a copy of the information about variables that the IW world builder page shows you (just so that they're included in this reference world):\n\nUsing variables anywhere in the world editor\nThere are a number of variables which the system knows about - skill levels, values of tracked items, the player's name, etc.. You can use these anywhere in the world editor, in a double-pair of angle brackets like <<this>>.\n\nA few examples of how this can be useful:\n- In Main Instructions, write: \"Whenever I look into a mirror, set the illustration subject to $player.name.\"\n- In Main Instructions, write: \"When writing, remember that I have <<hp>> hit points left out of an initial total of <<initial_hp>>; describe my actions accordingly.\" (This relies on having Tracked Items called \"hp\" and \"Initial hp\".\n\nFor numerical variables, you can also write equations, e.g. <<turn_number+2d6>>. You can play with the equation editor below to see what equations are valid.\n\nAvailable text variables (see below for numerical variables):\nplayer_name\nfavorite_flavor\nsecret_grudges\nplayer_visible_ai_invisible_item\nplayer_invisible_ai_invisible_item\nYou can also use equations, including variables for tracked item values, skill values and turn number, along with dice rolls and typical math expressions.\n\nrandom this will give a value from 0.0 (inclusive) to 1.0 (exclusive), to three decimal places (e.g. 0.589)\nxdy this will give a random result of x numbers of y sided dice, e.g. 3d6, 1d20\ntrunc(x) round the value in parentheses down to the nearest integer\nround(x) round the value in parentheses to the nearest integer\nabs(x) take the absolute value of the value in parentheses\nx%y the remainder after dividing x by y\n\nSome sample equations:\n\n3d6+turn_number - roll 3d6 and add the current turn number\nround(100*random) - generate a random integer from 0 to 100.\n\nAvailable numerical variables:\nnumber_of_non_human_friends\nskill_baking\nskill_creativity\nskill_foraging\nskill_charm\nskill_patience\nturn_number\n"
+    }
+  ],
+  "loreBookEntries": [
+    {
+      "id": "Z1etuKHwQ",
+      "name": "Secret Cake Recipe",
+      "content": "1. Find the secret flour\n2. Find the secret eggs\n3. ???\n4. Profit",
+      "keywords": [
+        "secret cake",
+        "cake recipe",
+        "secret recipe"
+      ]
+    }
+  ],
+  "trackedItems": [
+    {
+      "id": "Vbqny5TeL",
+      "name": "Number of Non-Human Friends",
+      "positionInList": 0,
+      "dataType": "number",
+      "visibility": "everyone",
+      "description": "How many non-human (talking animal) friends $player.name has made.",
+      "updateInstructions": "Update whenever $player.name makes or loses a non-human friend. Only update for non-human friends.",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": true,
+      "variableName": "number_of_non_human_friends",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "WgKQOBK1q",
+      "name": "Favorite Flavor",
+      "positionInList": 1,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "This is $player.name's favorite flavor, and the one they're best at baking with.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "Blueberry",
+      "initialValueBasedOnPC": "player",
+      "autoUpdate": false,
+      "variableName": "favorite_flavor",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "WTOtZ8nzh",
+      "name": "Secret Grudges",
+      "positionInList": 2,
+      "dataType": "xml",
+      "visibility": "ai_only_boring",
+      "description": "NOTE: The XML format for tracked items is NO LONGER RECOMMENDED. It is recommended to use the new YAML format wherever you would have used XML instead.\nDifferent characters in the world may develop secret grudges against $player.name. Some characters may develop more than one secret grudge. This is a XML-formatted entry that keeps track of characters and their secret grudges. ALWAYS keep it in this format:\n<secretGrudges>\n<character name=\"Bob Badguy\">\n<grudge>\n<reason>Pip killed his pumpkin in cold blood.</reason>\n<playerKnows>No</playerKnows>\n</grudge>\n</character>\n<character name=\"Tina Turner\">\n<grudge>\n<reason>Jealous of Pip's divine pumpkin slaying powers.</reason>\n<playerKnows>Yes</playerKnows>\n</grudge>\n</character>\n</secretGrudges>",
+      "updateInstructions": "Always update whenever a character develops a grudge against $player.name. Always keep updates in the correct format. Always update also whenever $player.name learns about the grudge.",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "<secretGrudges></secretGrudges>",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": true,
+      "variableName": "secret_grudges",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "O7WyJNRkm",
+      "name": "Player-Visible AI-Invisible Item",
+      "positionInList": 3,
+      "dataType": "text",
+      "visibility": "player_only",
+      "description": "This is just an example of an item that the player can see but the AI can't",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "player_visible_ai_invisible_item",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PMh7S1RYT",
+      "name": "Player-Invisible AI-Invisible Item",
+      "positionInList": 4,
+      "dataType": "text",
+      "visibility": "hidden",
+      "description": "This is just another example item, showing an item that's hidden from both the player and the AI",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "player_invisible_ai_invisible_item",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "sVHX9pTft",
+      "name": "Puppy Tracking - YAML Format Tracked Items",
+      "positionInList": 5,
+      "dataType": "yaml",
+      "visibility": "everyone",
+      "description": "This tracked item uses the YAML format, which is the new format supported by Infinite Worlds and it's custom scripting language, Pawscript. It tracks the puppies that the character has met in their travels. \n\nInfinite Worlds provides a useful reference for using YAML, which can be found at: https://infiniteworlds.app/yaml-guide\n\nFor information how to use Pawscript, check out the following Infinite Worlds sites:\nhttps://infiniteworlds.app/pawscript-expressions-guide\nhttps://infiniteworlds.app/pawscript-reference\nhttps://infiniteworlds.app/pawscript-script-guide\nhttps://infiniteworlds.app/pawscript-expression-playground",
+      "updateInstructions": "Update the diary whenever $player.name meets a puppy, based on what $player.name observes of the puppy in the process. If it is a new puppy, create a new entry in the list. It is okay for some attributes to be empty (for instance, if $player.name has not yet learned the puppies name).",
+      "formatExample": "- name: Spot\n  breed: mixed\n  stats:\n    friendliness: 5\n    energy: 10\n  color: spotted black and white\n- name: Gayle\n  breed: terrier\n  stats:\n    friendliness: 4\n    energy: 8\n  color: white-blonde",
+      "enforceFormat": true,
+      "formatSchema": "- name: text\n  breed: text\n  stats:\n    friendliness: number\n    energy: number\n    ...:\n  color: text\n  ...:",
+      "initialValue": "- name: Spot\n  breed: mixed\n  stats:\n    friendliness: 5\n    energy: 10\n  color: spotted black and white\n- ",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": true,
+      "variableName": "puppy_tracking_yaml_format_tracked_items",
+      "driftAcknowledgedForName": null
+    }
+  ],
+  "NPCs": [
+    {
+      "id": "LSLx7o1JD",
+      "name": "Finnegan Mosswood",
+      "detail": "Finnegan is an artist first and a baker second — he entered the competition because he sees baking as edible sculpture. His creations look extraordinary but don't always taste as good as they look, because he tends to get so excited about an idea that he rushes the technical steps. He knows the wild places around Willowmere intimately, often foraging for unusual ingredients for his experimental recipes. He is enthusiastic, slightly scatterbrained, and endlessly optimistic.",
+      "one_liner": "Finnegan is an enthusiastic, slightly scatterbrained but endlessly optimistic baker who's strength lie in presentation rather than flavor.",
+      "appearance": "A lanky young man of twenty-two with perpetually flour-dusted curly hair and paint stains on his apron.",
+      "location": "Opening Ceremonies Grounds",
+      "secret_info": "Finnegan has a secret crush on Pip Ashgrove - though everyone besides Pip seems to know about it already, they're generally good-natured about not spoiling the fun.",
+      "names": [
+        "Finn",
+        "Finnegan",
+        "Mosswood"
+      ],
+      "img_appearance": "A lanky young man of twenty-two with perpetually flour-dusted curly hair and paint stains on his apron.",
+      "img_clothing": "A baker's outfit, with a button up shirt and a messy apron.",
+      "positionInList": 0
+    }
+  ],
+  "autoAdvanceVersion": true,
+  "version": "1.08",
+  "designNotes": "--- Original user world design prompt: ---\n\nThis adventure is meant to demonstrate a fully fleshed out world using all of the possible effects! It should have a cute, safe-for-work, easy to understand, and cohesive example story that's used as it's framework, but it should include all possible features Infinite Worlds can currently use: every type of trigger and trigger effect, every type of tracked item, every kind of custom instruction, etc. It should be a model for how these things work within Infinite Worlds.",
+  "showPawScriptButtons": true
+}

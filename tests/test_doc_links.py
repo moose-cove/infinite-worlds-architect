@@ -60,7 +60,7 @@ _DUP_ANCHOR_RE = re.compile(r"^(.*)-(\d+)$")
 def _doc_files() -> list[Path]:
     """Every live documentation Markdown file, symlinks excluded.
 
-    The tracked root ``WORLD_JSON_SCHEMA_v2.2.md`` symlink points into ``references/``, so its
+    The tracked root ``WORLD_JSON_SCHEMA_v2.4.md`` symlink points into ``references/``, so its
     relative links resolve against ``references/`` — not the repo root where the symlink sits.
     Checking it as if it were a root-level file reports phantom breakage for links that are
     actually fine, so symlinks are skipped and the real file is checked in place.

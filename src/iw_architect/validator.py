@@ -18,7 +18,7 @@ from iw_architect import KNOWN_SCHEMA_VERSION
 from iw_architect.paths import RelativePathError, require_absolute
 
 _PLUGIN_ROOT = Path(__file__).parent.parent.parent  # src/iw_architect/ → src/ → repo root
-_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.2.schema.json"
+_SCHEMA_PATH = _PLUGIN_ROOT / "references" / "world_v2.4.schema.json"
 _SCHEMA: dict | None = None
 
 _KNOWN_EFFECT_TYPES = {
@@ -60,7 +60,7 @@ _REGULAR_ONLY_EFFECTS = {"effectGiveInfo", "effectFireRandomTrigger"}
 
 # rec 3: required data keys for player-interaction effects.
 # effectPresentChoice: all 8 keys must be present (even in single-select; min/max may be null).
-# Source: fixture + WORLD_JSON_SCHEMA_v2.2.md.
+# Source: fixture + WORLD_JSON_SCHEMA_v2.4.md.
 _EFFECT_PRESENT_CHOICE_REQUIRED_KEYS = {
     "message",
     "choices",
@@ -352,7 +352,7 @@ def _check_player_interaction_effect_shapes(
 
     Both effects are silently stripped if their data is malformed.
     All required keys must be present (minSelections/maxSelections may be null).
-    Source: fixture + WORLD_JSON_SCHEMA_v2.2.md + iw_knowledge_base_v2_8.md.
+    Source: fixture + WORLD_JSON_SCHEMA_v2.4.md + iw_knowledge_base_v2_8.md.
     """
     for trigger in world.get("triggerEvents", []):
         tname = trigger.get("name", trigger.get("id", "?"))
@@ -668,6 +668,102 @@ def _check_xml_deprecation(world: dict, errors: list[str], warnings: list[str]) 
             )
 
 
+def _check_event_conditions_registered(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """schema v2.4: a triggerOnEvent's event text should be declared in the top-level
+    `conditions` array, which is what registers the event in the world editor's trigger UI.
+
+    Warning, never error: an undeclared event still evaluates at runtime — the AI reads the
+    condition's own `data` string — it just cannot be picked from the editor's dropdown, so
+    the author loses the round-trip. Pre-v2.4 worlds have no `conditions` array at all and
+    surface one warning per triggerOnEvent, which is the intended nudge on migration.
+    """
+    declared = {c.strip() for c in world.get("conditions", []) if isinstance(c, str)}
+
+    def _walk(conditions: Any, tname: str) -> None:
+        if not isinstance(conditions, list):
+            return
+        for cond in conditions:
+            if not isinstance(cond, dict):
+                continue
+            if cond.get("category") == "logic":
+                _walk(cond.get("data", []), tname)
+                continue
+            if cond.get("type") != "triggerOnEvent":
+                continue
+            event = cond.get("data")
+            if not isinstance(event, str) or not event.strip():
+                continue
+            if event.strip() not in declared:
+                warnings.append(
+                    f"Trigger '{tname}': triggerOnEvent event {event.strip()!r} is not "
+                    "declared in the top-level 'conditions' array (schema v2.4). It still "
+                    "evaluates at runtime, but will not be selectable in the world "
+                    "editor's trigger UI."
+                )
+
+    for trigger in world.get("triggerEvents", []):
+        _walk(
+            trigger.get("triggerConditions", []),
+            trigger.get("name", trigger.get("id", "?")),
+        )
+
+
+# schema v2.4 changed the `data` shape of the two trigger-gating condition types.
+#   v2.2 and earlier: ["triggerId", ...]
+#   v2.4:             {"<key>": ["triggerId", ...], "firedThisTurn": bool}
+# The wrapper key is named after the condition. `firedThisTurn` is type-checked but its
+# semantics are an open question — the fixture only ever shows false, and the plugin does
+# not assume what true does (see references/WORLD_JSON_SCHEMA_v2.4.md). The legacy bare
+# array is still accepted on read — worlds authored before v2.4 carry it and the platform
+# migrates them on import — but new authoring must emit the object form.
+_GATE_CONDITION_DATA_KEYS = {
+    "triggerPrereqs": "prereqs",
+    "triggerBlockers": "blockers",
+}
+
+
+def _gate_condition_trigger_ids(
+    ctype: str,
+    data: Any,
+    tname: str,
+    errors: list[str],
+    warnings: list[str],
+) -> list[str]:
+    """Validate a triggerPrereqs/triggerBlockers `data` payload, returning its trigger IDs.
+
+    Accepts both the v2.4 object form and the pre-v2.4 bare array (with a warning), so a
+    shape change never silently disables the dangling-reference check that follows.
+    """
+    key = _GATE_CONDITION_DATA_KEYS[ctype]
+
+    if isinstance(data, list):
+        warnings.append(
+            f"Trigger '{tname}': {ctype} data uses the pre-v2.4 bare-array form. "
+            f'schema v2.4 expects {{"{key}": [...], "firedThisTurn": false}} — the '
+            "platform migrates the old form on import, but emit the object form when "
+            "authoring new conditions."
+        )
+        return [i for i in data if isinstance(i, str)]
+
+    if not isinstance(data, dict):
+        errors.append(
+            f"Trigger '{tname}': {ctype} data must be an object with '{key}' "
+            "(a list of trigger IDs) and 'firedThisTurn' (a boolean)"
+        )
+        return []
+
+    inner = data.get(key)
+    if not isinstance(inner, list):
+        errors.append(f"Trigger '{tname}': {ctype} data is missing the '{key}' list of trigger IDs")
+        inner = []
+    if not isinstance(data.get("firedThisTurn"), bool):
+        warnings.append(
+            f"Trigger '{tname}': {ctype} data has no boolean 'firedThisTurn'; schema v2.4 "
+            "expects one. Emit false — the only value the canonical fixture shows"
+        )
+    return [i for i in inner if isinstance(i, str)]
+
+
 def _check_cross_references(world: dict, errors: list[str], warnings: list[str]) -> None:
     ids = _collect_ids(world)
     valid_skill_ids = _skill_ids(world)
@@ -692,19 +788,13 @@ def _check_cross_references(world: dict, errors: list[str], warnings: list[str])
                         err = _resolve_tracked_item_ref(ref, ids["trackedItem"], valid_skill_ids)
                         if err:
                             errors.append(f"Trigger '{tname}': {err}")
-                elif ctype == "triggerPrereqs" and isinstance(data, list):
-                    for prereq_id in data:
-                        if prereq_id not in ids["triggerEvent"]:
+                elif ctype in _GATE_CONDITION_DATA_KEYS:
+                    gate_ids = _gate_condition_trigger_ids(ctype, data, tname, errors, warnings)
+                    for gate_id in gate_ids:
+                        if gate_id not in ids["triggerEvent"]:
                             errors.append(
-                                f"Trigger '{tname}': triggerPrereqs references "
-                                f"unknown trigger id '{prereq_id}'"
-                            )
-                elif ctype == "triggerBlockers" and isinstance(data, list):
-                    for blocker_id in data:
-                        if blocker_id not in ids["triggerEvent"]:
-                            errors.append(
-                                f"Trigger '{tname}': triggerBlockers references "
-                                f"unknown trigger id '{blocker_id}'"
+                                f"Trigger '{tname}': {ctype} references "
+                                f"unknown trigger id '{gate_id}'"
                             )
 
             elif cat == "logic":
@@ -907,6 +997,8 @@ def validate_world(world_path: str) -> str:
     _check_enforce_format(world, errors, warnings)
     _check_yaml_tracked_items(world, errors, warnings)
     _check_xml_deprecation(world, errors, warnings)
+    # schema v2.4: named-event registry
+    _check_event_conditions_registered(world, errors, warnings)
 
     return json.dumps(
         {

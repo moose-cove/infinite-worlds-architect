@@ -1,6 +1,6 @@
 # Field Guide: Tracked Items
 
-JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#4-trackeditems) §4.
+JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#4-trackeditems) §4.
 
 This file covers *authoring judgments* about tracked items: when to use them, how to choose `dataType` and `visibility`, what `updateInstructions` actually shape.
 

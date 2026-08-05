@@ -1,7 +1,19 @@
 
-# Schema reference (derived from `example-world-schema-v2.2.json`)
+# Schema reference (derived from `example-world-schema-v2.4.json`)
 
-This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived from `example-world-schema-v2.2.json`. Where the fixture is silent on a field's exact semantics, that uncertainty is noted inline; the plugin's validator should warn (not error) on such fields and preserve their values verbatim on round-trip.
+This is the canonical schema for the v2.4 Infinite Worlds world JSON, derived from `example-world-schema-v2.4.json`. Where the fixture is silent on a field's exact semantics, that uncertainty is noted inline; the plugin's validator should warn (not error) on such fields and preserve their values verbatim on round-trip.
+
+### What changed in v2.4
+
+| Change | Kind | Where |
+|---|---|---|
+| New top-level `conditions: string[]` — the named-event registry that backs `triggerOnEvent` | Additive | [§1](#1-top-level-fields) |
+| `triggerPrereqs.data` — bare `string[]` → `{prereqs: string[], firedThisTurn: boolean}` | **Breaking** | [`triggerConditions[*]`](#triggerconditions) |
+| `triggerBlockers.data` — bare `string[]` → `{blockers: string[], firedThisTurn: boolean}` | **Breaking** | [`triggerConditions[*]`](#triggerconditions) |
+
+The two gate-condition changes are breaking at the shape level but not at the authoring level: the platform migrates the pre-v2.4 bare array on import, and this plugin's validator reads both forms — emitting the object form for new authoring and warning (never erroring) when it encounters the legacy array. `example-world-schema-v2.2.json` is retained as the back-compat fixture that proves it.
+
+No v2.3 fixture reached this plugin, so the deltas above are measured 2.2 → 2.4. If some of them actually landed in 2.3 on the platform side, the shapes are unaffected — only the attribution is.
 
 **Convention**: in the tables below, "Editable" means an author edits this directly. "Platform-managed" means the platform writes it (image URLs after image generation, IDs after entity creation, runtime state). "Hybrid" means the author provides input data but the platform may modify it.
 
@@ -13,7 +25,7 @@ This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived fr
 - [4 `trackedItems[*]`](#4-trackeditems)
 - [5 `triggerEvents[*]`](#5-triggerevents)
   - [`triggerConditions[*]`](#triggerconditions)
-  - [`triggerEffects[*]` — canonical list from v2.2 fixture](#triggereffects--canonical-list-from-v22-fixture)
+  - [`triggerEffects[*]` — canonical list from v2.4 fixture](#triggereffects--canonical-list-from-v24-fixture)
 - [6 Instruction blocks](#6-instruction-blocks)
 - [7 Player permissions](#7-player-permissions)
 - [8 Image prompt details (world + per-character)](#8-image-prompt-details-world--per-character)
@@ -25,7 +37,8 @@ This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived fr
 
 | Key | Type | Category | Notes |
 |---|---|---|---|
-| `schemaVersion` | number | Platform | `2.2` in current fixture. Read on input, write on output. Warn on unknown versions. |
+| `schemaVersion` | number | Platform | `2.4` in current fixture. Read on input, write on output. Warn on unknown versions. |
+| `conditions` | string[] | Editable | **New in v2.4.** The world's named-event registry. Each entry is a natural-language event description (fixture: `["The marmut eats the marmalade"]`). A `triggerOnEvent` condition matches an entry by its text, and declaring the event here is what makes it selectable in the world editor's trigger UI. An undeclared `triggerOnEvent` still evaluates at runtime — the AI reads the condition's own `data` string — so the plugin warns rather than errors. Absent entirely in pre-v2.4 worlds. |
 | `title` | string | Editable | World name |
 | `description` | string | Editable | User-facing blurb shown in the world browser |
 | `background` | string | Editable | Initial story situation sent to the AI |
@@ -126,12 +139,54 @@ This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived fr
 | `updateInstructions` | string | Editable | Instructions to the AI for when/how to update this item. Empty string is valid (no auto-update) |
 | `formatExample` | string | Editable | New in v2.2. A concrete example of a well-formed value, shown to the AI (and, per `showPawScriptButtons`, possibly the author) as a model to imitate. Empty string is valid (no example provided). Most useful paired with `"yaml"` dataType. |
 | `enforceFormat` | boolean | Editable | New in v2.2. When `true`, the platform is expected to validate/enforce that AI-written updates conform to `formatSchema`. Fixture shows `false` for `text`/`number`/`xml` items and `true` for the `yaml` item — treat as author-controlled per item. |
-| `formatSchema` | string | Editable | New in v2.2. A pseudo-schema describing the expected shape of the item's value, one field per line as `field: text\|number`; a line `...:` means "more entries like this are allowed" (i.e. a repeating/array-like structure). Empty string is valid (no schema declared). See the fixture's YAML tracked item for a worked example. |
+| `formatSchema` | string | Editable | New in v2.2. A pseudo-schema describing the expected shape of the item's value, one field per line as `field: text\|number`; a line `...:` means "more entries like this are allowed" (i.e. a repeating/array-like structure). **The pseudo-schema mirrors the value's own nesting** — a field whose value is a sub-map is written as a bare `field:` line with its children indented beneath, and `...:` may appear at any level. It is not limited to a flat list of leaf fields. Empty string is valid (no schema declared). See the fixture's YAML tracked item for a worked example. |
 | `initialValue` | string | Editable | World-default initial value. Per-character overrides live in `possibleCharacters[*].initialTrackedItemValues` |
 | `initialValueBasedOnPC` | string | Editable | One of: `"same"` (all characters share initial value), `"character"` (per-character defaults), `"player"` (player chooses at game start) |
 | `autoUpdate` | boolean | Editable | Whether the AI updates this item automatically each turn |
 | `variableName` | string | Editable | New in v2.2. A snake_case identifier, unique across `trackedItems`, that is this item's **PawScript handle** — referenced in `effectRunScript` scripts and PawScript expressions as `$variableName` (e.g., `$puppy_tracking_yaml_format_tracked_items`). Distinct from the `<<name_in_snake_case>>` template-variable form used in narrative text fields — `variableName` is specifically the script-facing binding. See [`mechanics/AI_RUNTIME_MECHANICS.md`](mechanics/AI_RUNTIME_MECHANICS.md) and `mechanics/PAWSCRIPT.md`. |
 | `driftAcknowledgedForName` | string \| null | Platform | New in v2.2. Only `null` observed in the fixture. **Open question** — likely tracks whether the author has acknowledged a rename/drift between `name` and `variableName`, but semantics are unconfirmed. Validator should type-check only (accept `null` or a string) and preserve the value verbatim on round-trip. |
+
+### `dataType: "yaml"` supports the whole YAML language
+
+A YAML tracked item may hold **any valid YAML structure, to any depth**. There is no flat-key
+restriction, and nothing about the tracked-item container narrows what YAML you may write. The
+authoritative author-facing guide is <https://infiniteworlds.app/yaml-guide>; everything it
+teaches is usable in a tracked item:
+
+| Shape | Example | Guide step |
+|---|---|---|
+| Scalars under labels | `gold: 120` | Steps 1–2 |
+| Sequences | `- apples`<br>`- pears` | Step 3 |
+| Mappings nested in mappings | `sword:`<br>`  damage: 8` | Step 5 |
+| Sequences nested in mappings, and mappings nested in sequences | `skills:`<br>`  - id: fireball`<br>`    depends_on:`<br>`      - flame_dart` | Step 6 |
+| Empty sequence | `depends_on: []` | Step 6 |
+| Block scalars — `\|` literal (keeps line breaks), `>` folded (joins into one line) | `backstory: \|`<br>`  Line one.`<br>`  Line two.` | Step 7 |
+| Comments | `# not part of the value` | Step 8 |
+| Quoting to protect special values | `answer: "yes"` | Step 9 |
+
+The canonical fixture's puppy tracker (`sVHX9pTft`) deliberately nests — each record's
+`friendliness` and `energy` live under a `stats:` sub-map — precisely so the example does not
+imply a one-level-deep limit:
+
+```yaml
+- name: Spot
+  breed: mixed
+  stats:
+    friendliness: 5
+    energy: 10
+  color: spotted black and white
+```
+
+Three consequences worth holding onto:
+
+1. **`formatSchema` nests too.** Mirror the value's structure, using a bare `stats:` line with
+   indented children. See the row above.
+2. **PawScript walks nested paths with dots.** The fixture's script reads
+   `$puppy.stats.friendliness`, not `$puppy.friendliness`. Depth costs nothing at the script
+   layer — see [`mechanics/PAWSCRIPT.md`](mechanics/PAWSCRIPT.md).
+3. **Depth is an authoring-cost decision, not a capability limit.** The AI has to reproduce the
+   shape every turn it updates the item, so deep nesting raises the chance of format drift. Nest
+   because the data is genuinely hierarchical, not because you can.
 
 **`initialPCValue` array form**: in `possibleCharacters[*].initialTrackedItemValues`, the `initialPCValue` may be a string OR a string array. When it is an array (e.g., `["0", "900", "5"]`), the values are the **set of available choices the player picks from** at character selection — a pick-one menu. Treat the array as an unordered set of valid options — not a [min, max, default] tuple or a distribution. The player selects exactly one option and that single choice becomes the item's active value; the item never holds every option at once. Consequently a `triggerOnTrackedItem` condition is evaluated against the chosen value, so a `contains` test is not always-true merely because the menu lists the required string — see [`fields/TRIGGER_EVENTS.md`](fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
@@ -147,13 +202,20 @@ This is the canonical schema for the v2.2 Infinite Worlds world JSON, derived fr
 | `triggerConditions` | object[] | Editable | Conditions that gate when this trigger fires. See `triggerConditions[*]` below. |
 | `triggerEffects` | object[] | Editable | Effects applied when the trigger fires. See `triggerEffects[*]` below. |
 
-**Note**: in the v2.2 fixture, prerequisites and blockers appear only as `triggerPrereqs` / `triggerBlockers` condition types under `triggerConditions` (see below). Whether top-level `prerequisites` / `blockers` fields are also accepted by the platform is unverified — the plugin emits only the condition-type form.
+**Note**: in the canonical fixture, prerequisites and blockers appear only as `triggerPrereqs` / `triggerBlockers` condition types under `triggerConditions` (see below). Whether top-level `prerequisites` / `blockers` fields are also accepted by the platform is unverified — the plugin emits only the condition-type form.
 
 ### `triggerConditions[*]`
 
 Every condition has `id` (UUID), `category`, `data`, plus type-specific fields.
 
-**`data` is polymorphic** — its shape depends entirely on `type`: a `string[]` for `triggerOnCharacter`/`triggerBlockers`/`triggerPrereqs`, an object for `triggerOnTrackedItem`, a formula string for `triggerOnRandomChance`, an integer for `triggerOnTurn`, a natural-language string for `triggerOnEvent`, and an object array for `category: "logic"`. Do not assume a uniform shape.
+**`data` is polymorphic** — its shape depends entirely on `type`: a `string[]` for `triggerOnCharacter`, an object for `triggerOnTrackedItem`/`triggerBlockers`/`triggerPrereqs`, a formula string for `triggerOnRandomChance`, an integer for `triggerOnTurn`, a natural-language string for `triggerOnEvent`, and an object array for `category: "logic"`. Do not assume a uniform shape.
+
+> **v2.4 shape change.** `triggerBlockers` and `triggerPrereqs` moved from a bare `string[]` of trigger IDs to an object wrapping that array. Read both; write only the new form. Code that pattern-matches on `data` being a list will silently *skip* these conditions rather than fail loudly on a v2.4 world — that is the failure mode to watch for when porting anything that walks the trigger graph.
+>
+> ```jsonc
+> // pre-v2.4                      // v2.4
+> "data": ["PKRVGe1E"]             "data": { "prereqs": ["PKRVGe1E"], "firedThisTurn": false }
+> ```
 
 For `category: "condition"`, the condition has a `type`:
 
@@ -163,9 +225,11 @@ For `category: "condition"`, the condition has a `type`:
 | `triggerOnTrackedItem` | `{inequality, requiredValue, trackedItemID, textComparison}` | `inequality` one of: `at_least`, `at_most`, `is_exactly`, `not_equal`, `contains`. `not_equal` maps to the UI label "is not exactly" (KB-empirical; import survival [PENDING TEST] as of May 2026 — Source: iw_knowledge_base_v2_8.md). `contains` is for text-type comparisons. `requiredValue` may be a formula string like `"1d4+skill_charm"` and must always be a JSON string (not a number — IW crashes on import if non-string). `trackedItemID` may reference a tracked-item ID OR a synthetic `skill_<name>` ID for skill comparisons. `textComparison` is used for text-type tracked items. The condition object also carries top-level `inequality` and `trackedItemID` fields duplicating those inside `data` — preserve both. |
 | `triggerOnRandomChance` | `string` (formula) | Formula evaluated each turn, compared against a random number. E.g., `"15+round(turn_number%random)"` or a simple `"30"` for 30% |
 | `triggerOnTurn` | `integer` | Fires when the current turn number ≥ the integer value of `data`. E.g., `data: 5` fires from turn 5 onward (combined with `canTriggerMoreThanOnce: false` for a one-shot; with `canTriggerMoreThanOnce: true` to repeat every eligible turn from that turn on). |
-| `triggerOnEvent` | `string` | AI-evaluated condition. `data` is a free-form natural-language description of an event (e.g., `"Someone says the words 'dummy bunny' to you"`). The AI reads the narrative each turn and fires the trigger when it judges the described event has occurred. Use for events that cannot be reduced to a tracked-item comparison or random chance — anything requiring narrative judgment. Valid both as a top-level condition and as a sub-condition inside a `category: "logic"` block. |
-| `triggerBlockers` | `string[]` | Array of trigger IDs that must NOT have fired. If any have, this trigger is blocked. |
-| `triggerPrereqs` | `string[]` | Array of trigger IDs that must have fired first. |
+| `triggerOnEvent` | `string` | AI-evaluated condition. `data` is a free-form natural-language description of an event (e.g., `"Someone says the words 'dummy bunny' to you"`). The AI reads the narrative each turn and fires the trigger when it judges the described event has occurred. Use for events that cannot be reduced to a tracked-item comparison or random chance — anything requiring narrative judgment. Valid both as a top-level condition and as a sub-condition inside a `category: "logic"` block. **v2.4:** the same string should also be listed in the world's top-level [`conditions`](#1-top-level-fields) registry, which is what makes the event selectable in the editor's trigger UI. |
+| `triggerBlockers` | `{blockers: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `blockers` is the array of trigger IDs that must NOT have fired; if any have, this trigger is blocked. `firedThisTurn` is **an open question** — see below. |
+| `triggerPrereqs` | `{prereqs: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `prereqs` is the array of trigger IDs that must have fired first. `firedThisTurn` is **an open question** — see below. |
+
+> **Open question — `firedThisTurn`.** The v2.4 fixture shows only `false`, on both the blockers and the prereqs condition. The name suggests it narrows the match from "the listed trigger fired at any point in the past" to "the listed trigger fired on the current turn" — which would make it the switch between a permanent gate and a same-turn interlock — but nothing in the fixture confirms that reading, and the platform's behaviour when it is `true` is untested. **Emit `false`** unless an author explicitly wants the other behaviour and has verified it in-game. The plugin type-checks the field and warns when it is missing; it does not assume semantics beyond that.
 
 For `category: "logic"`:
 
@@ -178,7 +242,7 @@ For `category: "logic"`:
 
 Logic conditions only render when `advancedLogic: true` is set on the trigger. The default trigger semantics outside logic is AND across all conditions.
 
-### `triggerEffects[*]` — canonical list from v2.2 fixture
+### `triggerEffects[*]` — canonical list from v2.4 fixture
 
 Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level fields.
 
@@ -210,7 +274,7 @@ Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level
 
 **PawScript expressions vs. scripts.** `effectRunScript`'s `data` holds a full PawScript *script* (statements, mutation). Distinct from PawScript *expressions* (`<<…>>` read-only interpolations), which remain legal anywhere adventure text is typed (`instructions`, `descriptionRequest`, tracked-item `description`, etc.) — see §9.
 
-**Forward compatibility**: the table above is the comprehensive set of effect types observed in v2.2 fixtures. Future schema versions may add new types. The validator must **warn** (not error) on unrecognized `type` values so unknown-but-platform-valid effects survive round-trips. The agent should refuse to emit unrecognized types until they appear in a verified fixture, but should leave existing unknown-type effects untouched when editing other fields of the world.
+**Forward compatibility**: the table above is the comprehensive set of effect types observed in the v2.4 fixture. Future schema versions may add new types. The validator must **warn** (not error) on unrecognized `type` values so unknown-but-platform-valid effects survive round-trips. The agent should refuse to emit unrecognized types until they appear in a verified fixture, but should leave existing unknown-type effects untouched when editing other fields of the world.
 
 **v2.1 consolidation.** Pre-v2.1 worlds used a separate boolean field
 `canContinueEndedGame` to control continuation behavior on an end-game

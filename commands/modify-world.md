@@ -100,9 +100,13 @@ Once the author's requested changes are complete:
 1. mint_ids("trackedItem", 1)
 2. Determine positionInList
 3. Prefer dataType: "yaml"; if yaml, set a unique snake_case variableName (the PawScript $handle)
-4. If initialValueBasedOnPC="character", also add initialTrackedItemValues to each character
-5. validate_world
+4. Shape the YAML to the data — nesting to any depth is fully supported; mirror it in
+   formatSchema and set enforceFormat: true if a script reads the item
+5. If initialValueBasedOnPC="character", also add initialTrackedItemValues to each character
+6. validate_world
 ```
+
+> YAML tracked items accept the whole YAML language — nested maps, lists inside maps, records inside lists, block scalars (`|` / `>`), comments, quoting — per <https://infiniteworlds.app/yaml-guide>. Never flatten a genuinely hierarchical structure to avoid nesting. Scripts reach nested fields by chaining dots (`$puppy.stats.friendliness`); if you add nesting to an item an existing script reads, update that script's paths in the same edit or it will fail and roll back.
 
 ### Adding a trigger
 
@@ -113,9 +117,17 @@ Once the author's requested changes are complete:
 2. mint_ids("triggerStep", <conds + effects>) → one distinct UUID per condition AND per effect
 3. Build the trigger object — if an effect is effectRunScript, its script may only reference
    existing tracked-item variableNames and must never write to $player/$game
-4. Edit: append to triggerEvents array
-5. validate_world
+4. v2.4 shapes: triggerPrereqs/triggerBlockers use
+   data: {prereqs|blockers: [...], firedThisTurn: false} — not a bare array
+5. If a condition is triggerOnEvent, add its exact event string to the world's
+   top-level `conditions` array in this same edit
+6. Edit: append to triggerEvents array
+7. validate_world
 ```
+
+> **v2.4 gate-condition shape.** `triggerPrereqs` and `triggerBlockers` moved from `data: ["TRIGGERID"]` to `data: {"prereqs": ["TRIGGERID"], "firedThisTurn": false}` (`"blockers"` for the blocker form). Worlds authored before v2.4 still carry the bare array and still validate — with a warning — so don't treat one you find as a bug; just don't author it fresh. Emit `firedThisTurn: false`; what `true` does is an open question the plugin doesn't assume.
+>
+> **v2.4 `conditions` registry.** The top-level `conditions: string[]` declares the named events that `triggerOnEvent` matches, and declaring one is what makes it selectable in the editor's trigger UI. If you're modifying a pre-v2.4 world that has `triggerOnEvent` conditions and no `conditions` array, offer to build one from the existing event strings — `validate_world` will warn once per undeclared event.
 
 > `triggerStep` is a synthetic kind that yields UUIDs (the format required for condition/effect `id` fields). Every condition and every effect needs its own distinct UUID — duplicate IDs within the conditions array (or within the effects array) fail validation, and any reused ID makes runtime references ambiguous. Mint one fresh UUID per step.
 
