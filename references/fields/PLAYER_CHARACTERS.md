@@ -23,7 +23,7 @@ A list of attributes the storyteller AI uses to evaluate player actions. The AI 
 | 4 | Highly Skilled |
 | 5 | Exceptional |
 
-(See [`AI_RUNTIME_MECHANICS.md`](../AI_RUNTIME_MECHANICS.md#skill-evaluation-default-model) §5 for how the AI uses this scale at runtime.)
+(See [`AI_RUNTIME_MECHANICS.md`](../mechanics/AI_RUNTIME_MECHANICS.md#skill-evaluation-default-model) §5 for how the AI uses this scale at runtime.)
 
 ### Requirements and conventions
 

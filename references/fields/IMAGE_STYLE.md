@@ -97,4 +97,4 @@ Drop these into the Post field for the relevant subject type. The model recogniz
 
 **Character consistency requires per-character work.** The world-level image style fields alone cannot ensure consistent character appearance across scenes. For character consistency:
 - For player characters: detailed `possibleCharacters[*].description` plus `portraitPromptDetails` (the per-character version of the world-level `imagePromptDetails` — see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#8-image-prompt-details-world--per-character) §8).
-- For NPCs: `img_appearance` and `img_clothing` on the NPC. Always ask the author for these — see [`CHARACTER_AUTHORING_GUARDRAILS.md`](../../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance).
+- For NPCs: `img_appearance` and `img_clothing` on the NPC. Always ask the author for these — see [`CHARACTER_AUTHORING_GUARDRAILS.md`](../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance).

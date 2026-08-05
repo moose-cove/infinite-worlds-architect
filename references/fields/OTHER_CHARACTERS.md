@@ -2,7 +2,7 @@
 
 JSON key: `NPCs` — array of NPC objects. For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#3-npcs) §3.
 
-For the discipline of writing characters without fabricating, see [`CHARACTER_AUTHORING_GUARDRAILS.md`](../../guidance/CHARACTER_AUTHORING_GUARDRAILS.md).
+For the discipline of writing characters without fabricating, see [`CHARACTER_AUTHORING_GUARDRAILS.md`](../guidance/CHARACTER_AUTHORING_GUARDRAILS.md).
 
 ---
 
@@ -80,7 +80,7 @@ These feed the image generation system's character portrait prompts. Since image
 - `img_appearance`: Physical description formatted for image generation (age, hair, eyes, skin tone, build). Concrete visual descriptors, comma-separated tags, LoRA-friendly phrasing.
 - `img_clothing`: Current clothing description (exclude footwear by standard image generation convention).
 
-**These fields typically require author input and must not be invented.** If the source material doesn't describe the character's appearance, prompt the user to confirm or supply these values. See [`CHARACTER_AUTHORING_GUARDRAILS.md`](../../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance) §2.
+**These fields typically require author input and must not be invented.** If the source material doesn't describe the character's appearance, prompt the user to confirm or supply these values. See [`CHARACTER_AUTHORING_GUARDRAILS.md`](../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance) §2.
 
 ---
 
