@@ -74,7 +74,7 @@ Defines how the AI writes `outcomeDescription` — the writing style, tone, narr
 
 **Can be replaced mid-game** via `effectChangeAuthorStyle` — useful for genre transitions or deliberate tonal shifts at plot points.
 
-See [`AI_RUNTIME_MECHANICS.md`](../../mechanics/AI_RUNTIME_MECHANICS.md#6-author-style-guidelines) §6 for additional author-style discipline (consistency, model-tier proactivity, descriptive depth placement).
+See [`AI_RUNTIME_MECHANICS.md`](../mechanics/AI_RUNTIME_MECHANICS.md#6-author-style-guidelines) §6 for additional author-style discipline (consistency, model-tier proactivity, descriptive depth placement).
 
 ---
 

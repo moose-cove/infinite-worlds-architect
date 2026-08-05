@@ -28,7 +28,7 @@ Tracked items are author-defined variables the storyteller AI monitors and updat
 **Update timing.** Auto-updates are written by the Storyteller AI *after*
 it has finished writing `outcomeDescription` and `secretInfo` for the turn
 (step 7 of the per-turn sequence — see
-[`AI_RUNTIME_MECHANICS.md`](../../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+[`AI_RUNTIME_MECHANICS.md`](../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 §3). The AI cannot read a tracked item's just-updated value during the
 same turn — it only sees the new value starting turn N+1.
 
@@ -113,4 +113,4 @@ The v2.2 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
 
 **New in v2.2 — `effectRunScript`.** Tracked items can also be mutated by a PawScript script attached to a trigger via `effectRunScript`, referencing the item by its `variableName` handle (e.g., `$my_item_variable_name`). This is a third modification path alongside `effectSetTrackedItemValue` and `effectModifyTrackedItemDetails` — reach for it when the mutation needs script logic (loops over YAML entries, per-entry arithmetic) that a single effect can't express. See [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md).
 
-See also: [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md) on when to choose a tracked item vs. embedding state in `secretInfo` or `background`, and [`YAML_TRACKED_ITEMS.md`](./YAML_TRACKED_ITEMS.md) for the new v2.2 YAML dataType.
+See also: [`FIELD_ALLOCATION_STRATEGY.md`](../guidance/FIELD_ALLOCATION_STRATEGY.md) on when to choose a tracked item vs. embedding state in `secretInfo` or `background`, and [`YAML_TRACKED_ITEMS.md`](./YAML_TRACKED_ITEMS.md) for the new v2.2 YAML dataType.

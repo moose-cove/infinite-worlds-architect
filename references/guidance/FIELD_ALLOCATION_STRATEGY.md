@@ -110,7 +110,7 @@ narrative starting on the *next* turn, not the current one. Anything that
 needs to take effect immediately must be in the world before the turn
 begins — you cannot use a trigger or tracked-item update to react within
 the current turn. See
-[`AI_RUNTIME_MECHANICS.md`](../../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+[`AI_RUNTIME_MECHANICS.md`](../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 §3 for the full turn lifecycle.
 
 ### Author-only (Tier 6)

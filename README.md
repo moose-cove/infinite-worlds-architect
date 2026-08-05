@@ -134,7 +134,7 @@ uv run python -m iw_architect.server
 |---|---|
 | [`USAGE_EXAMPLES.md`](./USAGE_EXAMPLES.md) | How to organize your world-authoring work: three proven directory layouts (draft→review→finalize, semantic version history, script-assisted optimization) and the command/tool usage that goes with each. |
 | [`CLAUDE.md`](./CLAUDE.md) | Project conventions, file structure, pre-commit policy, and the workflow for adding a new platform feature. Loaded automatically into every Claude Code session in this repo. |
-| [`DESIGN_BRIEF_v2.md`](./DESIGN_BRIEF_v2.md) | The full design spec the implementation was built against. Architecture rationale, tool surface, validator check list, testing strategy. |
+| [`DESIGN_BRIEF_v2.md`](./dev-docs/DESIGN_BRIEF_v2.md) | The full design spec the implementation was built against. Architecture rationale, tool surface, validator check list, testing strategy. |
 | [`references/WORLD_JSON_SCHEMA_v2.2.md`](./references/WORLD_JSON_SCHEMA_v2.2.md) | Human-readable explanation of every field in the world JSON schema. The canonical JSON Schema artifact lives next to it at `references/world_v2.2.schema.json`. |
 | [`example-world-schema-v2.2.json`](./example-world-schema-v2.2.json) | The canonical fixture (schema v2.2). Per design brief §3, this file is the ultimate source of truth — if `validate_world` rejects it, the validator is wrong. `example-world-schema-v2.1.json` is retained alongside it as a back-compat fixture (must still validate with only warnings). |
 

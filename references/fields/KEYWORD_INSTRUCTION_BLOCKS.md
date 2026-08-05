@@ -90,4 +90,4 @@ This is how you implement "the player learns a new technique" or "the village no
 
 If the content is relevant every turn → EIB or `instructions`. If it's relevant only when a specific topic surfaces → KIB.
 
-See also: [`FIELD_ALLOCATION_STRATEGY.md`](../../guidance/FIELD_ALLOCATION_STRATEGY.md) on the broader always-on vs. keyword-gated vs. trigger-gated decision.
+See also: [`FIELD_ALLOCATION_STRATEGY.md`](../guidance/FIELD_ALLOCATION_STRATEGY.md) on the broader always-on vs. keyword-gated vs. trigger-gated decision.

@@ -10,7 +10,7 @@ For the canonical list of v2.2 condition types and effect types with their `data
 
 Triggers evaluate and fire **after the Storyteller AI has finished writing
 the turn's narrative** — they're step 9 of the per-turn sequence (see
-[`AI_RUNTIME_MECHANICS.md`](../../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
+[`AI_RUNTIME_MECHANICS.md`](../mechanics/AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 §3 for the full lifecycle). This is the single most important fact about
 triggers — most authoring mistakes stem from forgetting it.
 
