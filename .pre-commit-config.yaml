@@ -25,14 +25,18 @@ repos:
         types: [python]
         require_serial: true
 
-      # pytest only runs when Python or JSON (incl. JSON Schema) files are
-      # staged — a docs-only commit skips the suite. CI mirrors this: its
-      # pytest step is gated on the same .py/.json change detection, so the
-      # two stay aligned. pass_filenames is false so the FULL suite runs
-      # whenever it triggers (not just the changed files).
+      # pytest only runs when Python, JSON (incl. JSON Schema), or Markdown
+      # files are staged. CI mirrors this: its pytest step is gated on the same
+      # .py/.json/.md change detection, so the two stay aligned. pass_filenames
+      # is false so the FULL suite runs whenever it triggers (not just the
+      # changed files).
+      #
+      # .md is in the gate because tests/test_doc_links.py guards documentation
+      # link integrity. Without it a docs-only commit would skip the suite —
+      # precisely the commit most likely to break a link.
       - id: pytest
-        name: pytest with coverage (matches CI; skipped if no .py/.json changed)
+        name: pytest with coverage (matches CI; skipped if no .py/.json/.md changed)
         entry: .venv/bin/pytest --no-header -q
         language: system
         pass_filenames: false
-        files: \.(py|json)$
+        files: \.(py|json|md)$

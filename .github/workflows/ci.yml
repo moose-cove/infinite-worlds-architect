@@ -15,11 +15,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Mirror the pre-commit pytest gate: only run the suite when Python or
-      # JSON (incl. JSON Schema) files changed vs. base. The job itself always
-      # runs so the required "Tests" status check still reports — only the
-      # pytest step below is skipped on docs-only changes.
-      - name: Detect Python/JSON changes
+      # Mirror the pre-commit pytest gate: only run the suite when Python, JSON
+      # (incl. JSON Schema), or Markdown files changed vs. base. The job itself
+      # always runs so the required "Tests" status check still reports — only
+      # the pytest step below is skipped.
+      #
+      # .md is in the gate because tests/test_doc_links.py guards documentation
+      # link integrity; a docs-only change must not skip the suite.
+      - name: Detect Python/JSON/Markdown changes
         id: changes
         run: |
           set -euo pipefail
@@ -36,12 +39,12 @@ jobs:
           fi
           if [ -z "${range}" ]; then
             changed="true"   # no comparison point (e.g. new branch) — run to be safe
-          elif git diff --name-only "${range}" | grep -qE '\.(py|json)$'; then
+          elif git diff --name-only "${range}" | grep -qE '\.(py|json|md)$'; then
             changed="true"
           else
             changed="false"
           fi
-          echo "Python/JSON changed: ${changed}"
+          echo "Python/JSON/Markdown changed: ${changed}"
           echo "code=${changed}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
