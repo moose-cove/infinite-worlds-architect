@@ -116,18 +116,16 @@ Once the author's requested changes are complete:
 1. mint_ids("triggerEvent", 1)               → trigger ID
 2. mint_ids("triggerStep", <conds + effects>) → one distinct UUID per condition AND per effect
 3. Build the trigger object — if an effect is effectRunScript, its script may only reference
-   existing tracked-item variableNames and must never write to $player/$game
-4. v2.4 shapes: triggerPrereqs/triggerBlockers use
+   existing tracked-item variableNames and must never write to $player/$game.
+   v2.4 shapes: triggerPrereqs/triggerBlockers take
    data: {prereqs|blockers: [...], firedThisTurn: false} — not a bare array
-5. If a condition is triggerOnEvent, add its exact event string to the world's
+4. If a condition is triggerOnEvent, add its exact event string to the world's
    top-level `conditions` array in this same edit
-6. Edit: append to triggerEvents array
-7. validate_world
+5. Edit: append to triggerEvents array
+6. validate_world
 ```
 
-> **v2.4 gate-condition shape.** `triggerPrereqs` and `triggerBlockers` moved from `data: ["TRIGGERID"]` to `data: {"prereqs": ["TRIGGERID"], "firedThisTurn": false}` (`"blockers"` for the blocker form). Worlds authored before v2.4 still carry the bare array and still validate — with a warning — so don't treat one you find as a bug; just don't author it fresh. Emit `firedThisTurn: false`; what `true` does is an open question the plugin doesn't assume.
->
-> **v2.4 `conditions` registry.** The top-level `conditions: string[]` declares the named events that `triggerOnEvent` matches, and declaring one is what makes it selectable in the editor's trigger UI. If you're modifying a pre-v2.4 world that has `triggerOnEvent` conditions and no `conditions` array, offer to build one from the existing event strings — `validate_world` will warn once per undeclared event.
+> The v2.4 gate-condition shape and the `conditions` registry are covered in [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) — including why a pre-v2.4 bare array you find in an existing world is not a bug, and how to build a `conditions` array when migrating a world that lacks one.
 
 > `triggerStep` is a synthetic kind that yields UUIDs (the format required for condition/effect `id` fields). Every condition and every effect needs its own distinct UUID — duplicate IDs within the conditions array (or within the effects array) fail validation, and any reused ID makes runtime references ambiguous. Mint one fresh UUID per step.
 

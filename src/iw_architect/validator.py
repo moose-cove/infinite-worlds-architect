@@ -92,6 +92,18 @@ _KNOWN_CONDITION_TYPES = {
 # Variables always valid in template expressions
 _ALWAYS_VALID_VARS = {"player_name", "turn_number", "random"}
 
+# Condition trees are author-controlled and arbitrarily deep (`category: "logic"` nests
+# recursively). Python's own recursion limit is the real ceiling, and blowing it raises
+# RecursionError out of validate_world instead of returning a report. Depth beyond this is
+# far past anything the editor can produce, so stopping the walk is strictly better than
+# crashing — and validate_world wraps Tier 2 in a RecursionError guard as a second net.
+_MAX_CONDITION_DEPTH = 100
+
+# Documented cap on AI-evaluated events per world (references/fields/TRIGGER_EVENTS.md; the
+# wiki says "only ten custom situation conditions can be created and used"). Wiki-corroborated
+# rather than fixture-proven, so it drives a warning, never an error.
+_MAX_AI_EVENT_CONDITIONS = 10
+
 
 def _get_schema() -> dict:
     global _SCHEMA
@@ -160,9 +172,18 @@ def _check_schema_version(world: dict, errors: list[str], warnings: list[str]) -
 
 
 def _check_duplicate_ids(world: dict, errors: list[str], warnings: list[str]) -> None:
-    def _check_array(entities: list[dict], id_field: str, label: str) -> None:
+    # `entities` is annotated Any, not list[dict]: it comes straight from author-controlled
+    # JSON, so the isinstance guards below are load-bearing runtime checks, not dead code.
+    def _check_array(entities: Any, id_field: str, label: str) -> None:
         seen: set = set()
+        if not isinstance(entities, list):
+            return  # Tier 1 already reported the type error
         for entity in entities:
+            # This runs before every other Tier 2 check, so a non-dict entry here would crash
+            # the whole pass and make the downstream isinstance guards unreachable.
+            if not isinstance(entity, dict):
+                errors.append(f"{label}: entry is not an object ({type(entity).__name__})")
+                continue
             eid = entity.get(id_field)
             if eid is not None:
                 if eid in seen:
@@ -669,36 +690,56 @@ def _check_xml_deprecation(world: dict, errors: list[str], warnings: list[str]) 
 
 
 def _check_event_conditions_registered(world: dict, errors: list[str], warnings: list[str]) -> None:
-    """schema v2.4: a triggerOnEvent's event text should be declared in the top-level
-    `conditions` array, which is what registers the event in the world editor's trigger UI.
+    """schema v2.4: keep a triggerOnEvent's event text in sync with the top-level
+    `conditions` registry.
 
-    Warning, never error: an undeclared event still evaluates at runtime — the AI reads the
-    condition's own `data` string — it just cannot be picked from the editor's dropdown, so
-    the author loses the round-trip. Pre-v2.4 worlds have no `conditions` array at all and
-    surface one warning per triggerOnEvent, which is the intended nudge on migration.
+    Warning, never error. The fixture pairs one `conditions` entry with one `triggerOnEvent`
+    whose `data` matches it byte-for-byte, and there is no ID or index linking the two, so
+    exact text is the only available key. What the registry *does* is an open question: it may
+    drive selectability in the editor's trigger UI, or it may be a platform-maintained index of
+    the events already in use (which would also explain how the documented world-level cap of
+    ten AI-evaluated events is enforced). The sync guidance is identical under either reading,
+    so that is all this check asserts.
+
+    Matching is exact after `strip()`. Case, internal whitespace and trailing punctuation are
+    all significant — no normalization is applied, because the platform's own matching rule is
+    undocumented and guessing at one would trade false negatives for false positives.
+
+    Pre-v2.4 worlds have no `conditions` array at all and surface one warning per
+    triggerOnEvent, which is the intended nudge on migration.
     """
-    declared = {c.strip() for c in world.get("conditions", []) if isinstance(c, str)}
+    # `.get(key, default)` only defaults when the key is ABSENT. A world carrying an explicit
+    # `"conditions": null` (or any non-list) would otherwise blow up here with a TypeError that
+    # escapes validate_world entirely, breaking its documented "always returns a report"
+    # contract. Tier 1 already reports the type error; Tier 2 just has to not crash on it.
+    raw_conditions = world.get("conditions")
+    declared = (
+        {c.strip() for c in raw_conditions if isinstance(c, str)}
+        if isinstance(raw_conditions, list)
+        else set()
+    )
+    used: set[str] = set()
 
-    def _walk(conditions: Any, tname: str) -> None:
-        if not isinstance(conditions, list):
+    def _walk(conditions: Any, tname: str, depth: int = 0) -> None:
+        if depth > _MAX_CONDITION_DEPTH or not isinstance(conditions, list):
             return
         for cond in conditions:
             if not isinstance(cond, dict):
                 continue
             if cond.get("category") == "logic":
-                _walk(cond.get("data", []), tname)
+                _walk(cond.get("data", []), tname, depth + 1)
                 continue
             if cond.get("type") != "triggerOnEvent":
                 continue
             event = cond.get("data")
             if not isinstance(event, str) or not event.strip():
                 continue
+            used.add(event.strip())
             if event.strip() not in declared:
                 warnings.append(
                     f"Trigger '{tname}': triggerOnEvent event {event.strip()!r} is not "
-                    "declared in the top-level 'conditions' array (schema v2.4). It still "
-                    "evaluates at runtime, but will not be selectable in the world "
-                    "editor's trigger UI."
+                    "declared in the world's top-level 'conditions' registry (schema v2.4). "
+                    "Add it verbatim — matching is by exact text."
                 )
 
     for trigger in world.get("triggerEvents", []):
@@ -707,15 +748,33 @@ def _check_event_conditions_registered(world: dict, errors: list[str], warnings:
             trigger.get("name", trigger.get("id", "?")),
         )
 
+    for orphan in sorted(declared - used):
+        warnings.append(
+            f"conditions: declared event {orphan!r} is not used by any triggerOnEvent "
+            "condition (schema v2.4)"
+        )
+
+    # The 10-event cap is documented in references/fields/TRIGGER_EVENTS.md and corroborated by
+    # the wiki ("only ten custom situation conditions can be created and used"). Wiki-sourced,
+    # so warn rather than error, and don't encode it as `maxItems` in the schema.
+    event_count = max(len(declared), len(used))
+    if event_count > _MAX_AI_EVENT_CONDITIONS:
+        warnings.append(
+            f"This world has {event_count} AI-evaluated events (triggerOnEvent / 'conditions' "
+            f"entries); the platform's documented cap is {_MAX_AI_EVENT_CONDITIONS}. Each one "
+            "costs an extra AI evaluation per turn, and events beyond the cap may be ignored."
+        )
+
 
 # schema v2.4 changed the `data` shape of the two trigger-gating condition types.
 #   v2.2 and earlier: ["triggerId", ...]
 #   v2.4:             {"<key>": ["triggerId", ...], "firedThisTurn": bool}
 # The wrapper key is named after the condition. `firedThisTurn` is type-checked but its
 # semantics are an open question — the fixture only ever shows false, and the plugin does
-# not assume what true does (see references/WORLD_JSON_SCHEMA_v2.4.md). The legacy bare
-# array is still accepted on read — worlds authored before v2.4 carry it and the platform
-# migrates them on import — but new authoring must emit the object form.
+# not assume what true does (see references/WORLD_JSON_SCHEMA_v2.4.md). The legacy bare array
+# is still accepted on read because worlds authored before v2.4 carry it and must keep
+# validating; whether the PLATFORM migrates it on import is unverified, so the warning tells
+# authors to migrate rather than blessing the old shape. New authoring emits the object form.
 _GATE_CONDITION_DATA_KEYS = {
     "triggerPrereqs": "prereqs",
     "triggerBlockers": "blockers",
@@ -739,9 +798,9 @@ def _gate_condition_trigger_ids(
     if isinstance(data, list):
         warnings.append(
             f"Trigger '{tname}': {ctype} data uses the pre-v2.4 bare-array form. "
-            f'schema v2.4 expects {{"{key}": [...], "firedThisTurn": false}} — the '
-            "platform migrates the old form on import, but emit the object form when "
-            "authoring new conditions."
+            f'schema v2.4 expects {{"{key}": [...], "firedThisTurn": false}}. Whether the '
+            "platform migrates the legacy form on import is unverified — migrate it while "
+            "you are in this world, and emit the object form for new conditions."
         )
         return [i for i in data if isinstance(i, str)]
 
@@ -768,8 +827,14 @@ def _check_cross_references(world: dict, errors: list[str], warnings: list[str])
     ids = _collect_ids(world)
     valid_skill_ids = _skill_ids(world)
 
-    def _check_cond_refs(conditions: list[dict], tname: str) -> None:
+    # `conditions` is Any, not list[dict]: author-controlled JSON, so the guards are runtime
+    # checks rather than dead code.
+    def _check_cond_refs(conditions: Any, tname: str, depth: int = 0) -> None:
+        if depth > _MAX_CONDITION_DEPTH or not isinstance(conditions, list):
+            return
         for cond in conditions:
+            if not isinstance(cond, dict):
+                continue
             cat = cond.get("category")
             ctype = cond.get("type")
 
@@ -800,7 +865,7 @@ def _check_cross_references(world: dict, errors: list[str], warnings: list[str])
             elif cat == "logic":
                 sub = cond.get("data", [])
                 if isinstance(sub, list):
-                    _check_cond_refs(sub, tname)
+                    _check_cond_refs(sub, tname, depth + 1)
 
     # Validate trigger conditions and effects
     for trigger in world.get("triggerEvents", []):
@@ -963,6 +1028,25 @@ def validate_world(world_path: str) -> str:
         world = json.loads(path.read_text())
     except json.JSONDecodeError as exc:
         return json.dumps({"valid": False, "errors": [f"Invalid JSON: {exc}"], "warnings": []})
+    except RecursionError:
+        # CPython's JSON scanner recurses per nesting level, so a pathologically nested
+        # world exhausts the stack before any check runs. Report it rather than propagating.
+        return json.dumps(
+            {
+                "valid": False,
+                "errors": ["Invalid JSON: nesting is too deep to parse"],
+                "warnings": [],
+            }
+        )
+
+    if not isinstance(world, dict):
+        return json.dumps(
+            {
+                "valid": False,
+                "errors": [f"World must be a JSON object, got {type(world).__name__}"],
+                "warnings": [],
+            }
+        )
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -974,31 +1058,49 @@ def validate_world(world_path: str) -> str:
         path_str = ".".join(str(p) for p in error.path) if error.path else "(root)"
         errors.append(f"[{path_str}] {error.message}")
 
-    # Tier 2: semantic checks
-    _check_schema_version(world, errors, warnings)
-    _check_duplicate_ids(world, errors, warnings)
-    _check_position_in_list(world, errors, warnings)
-    _check_tracked_item_id_charset(world, errors, warnings)
-    _check_null_image_fields(world, errors, warnings)
-    _check_cross_field_invariants(world, errors, warnings)
-    _check_logic_conditions(world, errors, warnings)
-    _check_cross_references(world, errors, warnings)
-    _check_template_variables(world, errors, warnings)
-    _check_unknown_top_level_keys(world, errors, warnings)
-    # KB v2.8 checks (recs 1, 2, 3, 6, 7, 9-validator)
-    _check_tracked_item_condition_data(world, errors, warnings)
-    _check_player_interaction_effect_shapes(world, errors, warnings)
-    _check_set_tracked_item_value_shapes(world, errors, warnings)
-    _check_sog_effect_context(world, errors, warnings)
-    _check_skills_not_empty(world, errors, warnings)
-    # schema v2.2: PawScript + YAML tracked items
-    _check_tracked_item_variable_names(world, errors, warnings)
-    _check_pawscript_scripts(world, errors, warnings)
-    _check_enforce_format(world, errors, warnings)
-    _check_yaml_tracked_items(world, errors, warnings)
-    _check_xml_deprecation(world, errors, warnings)
-    # schema v2.4: named-event registry
-    _check_event_conditions_registered(world, errors, warnings)
+    # Tier 2: semantic checks.
+    #
+    # Wrapped as a unit: every check below walks author-controlled structure, several of them
+    # recursively, and this function's contract is that it ALWAYS returns a report. A malformed
+    # world must never surface to an MCP caller as a raw traceback. Individual checks guard
+    # their own inputs (see _MAX_CONDITION_DEPTH and the isinstance gates); this is the net
+    # under those, so a gap in one of them degrades to a reported error instead of a crash.
+    try:
+        _check_schema_version(world, errors, warnings)
+        _check_duplicate_ids(world, errors, warnings)
+        _check_position_in_list(world, errors, warnings)
+        _check_tracked_item_id_charset(world, errors, warnings)
+        _check_null_image_fields(world, errors, warnings)
+        _check_cross_field_invariants(world, errors, warnings)
+        _check_logic_conditions(world, errors, warnings)
+        _check_cross_references(world, errors, warnings)
+        _check_template_variables(world, errors, warnings)
+        _check_unknown_top_level_keys(world, errors, warnings)
+        # KB v2.8 checks (recs 1, 2, 3, 6, 7, 9-validator)
+        _check_tracked_item_condition_data(world, errors, warnings)
+        _check_player_interaction_effect_shapes(world, errors, warnings)
+        _check_set_tracked_item_value_shapes(world, errors, warnings)
+        _check_sog_effect_context(world, errors, warnings)
+        _check_skills_not_empty(world, errors, warnings)
+        # schema v2.2: PawScript + YAML tracked items
+        _check_tracked_item_variable_names(world, errors, warnings)
+        _check_pawscript_scripts(world, errors, warnings)
+        _check_enforce_format(world, errors, warnings)
+        _check_yaml_tracked_items(world, errors, warnings)
+        _check_xml_deprecation(world, errors, warnings)
+        # schema v2.4: named-event registry
+        _check_event_conditions_registered(world, errors, warnings)
+    except RecursionError:
+        errors.append(
+            "Semantic validation stopped: the world's structure is nested too deeply to "
+            "analyze. Tier 1 (structural) results above are complete; Tier 2 checks are not."
+        )
+    except (TypeError, AttributeError, ValueError, KeyError) as exc:
+        # Defensive: a shape no check anticipated. Surfacing it as an error keeps the tool
+        # contract intact and still tells the author their world is malformed.
+        errors.append(
+            f"Semantic validation stopped on malformed world data: {type(exc).__name__}: {exc}"
+        )
 
     return json.dumps(
         {

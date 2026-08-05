@@ -248,10 +248,10 @@
     "conditions": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Named-event registry (schema v2.4). Each string is a natural-language event the AI watches for; a `triggerOnEvent` condition fires when the AI judges the matching event occurred. Declaring the event here is what makes it selectable in the world editor's trigger UI.",
+      "description": "Named-event registry (schema v2.4). Each string is a natural-language event the AI watches for; a `triggerOnEvent` condition is matched to an entry by exact text. Keep the two in sync.",
       "x-iw-category": "editable",
       "default": [],
-      "x-iw-note": "New in v2.4. Before v2.4 the `triggerOnEvent` condition carried its event text inline with nothing declaring it; `conditions` is the declaration side. A `triggerOnEvent` whose `data` string has no match in this array is authorable but unselectable in the editor UI — Tier 2 validation warns on it."
+      "x-iw-note": "New in v2.4. Absent entirely in pre-v2.4 worlds. Exact-text keying is well-supported: the fixture's single entry matches its single triggerOnEvent `data` byte-for-byte, and no ID or index links them, so text is the only available key. OPEN QUESTION: what the registry DOES is unverified. It may drive selectability in the world editor's trigger UI (the reading this plugin's guidance assumes), or it may be a platform-maintained index of the events already in use — which would also explain how the documented world-level cap of ten AI-evaluated events is enforced. The authoring instruction is identical under either reading: keep `conditions` in sync with your triggerOnEvent strings. Tier 2 warns on drift in both directions, never errors."
     },
     "permissionsOnceShared": {
       "type": "object",

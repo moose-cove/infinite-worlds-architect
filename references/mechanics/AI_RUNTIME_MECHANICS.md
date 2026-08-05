@@ -6,7 +6,7 @@ Read this before designing `instructions`, `authorStyle`, `descriptionRequest`, 
 
 > **Documentation status.** Infinite Worlds evolves over time, and specific
 > platform behaviors may shift between releases. This document describes the
-> *expected* behavior as of v2.2. If observed behavior contradicts what's
+> *expected* behavior as of v2.4. If observed behavior contradicts what's
 > documented here, flag the discrepancy to the user rather than silently
 > working around it — surfacing drift is how the docs stay correct.
 
@@ -191,7 +191,7 @@ full scripting language reference.
 ### Documented behavior may evolve
 
 This document describes the *expected* behavior of Infinite Worlds as
-of v2.2. The platform updates over time, and specific behaviors may
+of v2.4. The platform updates over time, and specific behaviors may
 shift. If observed behavior contradicts what's documented here — a
 trigger firing on a different turn than expected, a tracked item not
 updating as described, a different evaluation order — flag the
@@ -311,7 +311,7 @@ These strings have been removed from IW and will be **silently stripped on impor
 
 ## 8. Cross-references
 
-- **Trigger conditions and effects** — see `WORLD_JSON_SCHEMA_v2.4.md` §5 for the v2.2 canonical list, including the new `effectRunScript` type. The set of effect/condition types is the source of truth there, not in this document.
+- **Trigger conditions and effects** — see `WORLD_JSON_SCHEMA_v2.4.md` §5 for the v2.4 canonical list, including the new `effectRunScript` type. The set of effect/condition types is the source of truth there, not in this document.
 - **Template variables** — see `WORLD_JSON_SCHEMA_v2.4.md` §9 for the full `<<…>>` syntax.
 - **Field allocation strategy** — see `FIELD_ALLOCATION_STRATEGY.md` for which kinds of content belong in which field (always-on `instructions` vs keyword-gated `loreBookEntries` vs trigger-gated effects).
 - **PawScript scripting** — see `mechanics/PAWSCRIPT.md` for the full scripting model (syntax, tracked-item mutation rules, transactional semantics) and §3 above for how scripts fit into the turn lifecycle.

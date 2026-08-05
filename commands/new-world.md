@@ -78,6 +78,7 @@ For **each field or entity**, follow this loop:
 - **v2.4 shapes:** `triggerPrereqs` / `triggerBlockers` take `data: {prereqs|blockers: [...], firedThisTurn: false}`, not a bare array. Every `triggerOnEvent` needs its exact event string added to the world's top-level `conditions` array in the same edit
 - Mint a trigger `id` with `mint_ids("triggerEvent", 1)`
 - Mint condition/effect `id`s with `mint_ids("triggerStep", n)`
+- After all triggers are defined, confirm `conditions` holds exactly the set of `triggerOnEvent` strings — `validate_world` warns once per undeclared event
 
 **Instruction and lore blocks** (see [`references/fields/MAIN_INSTRUCTIONS.md`](../references/fields/MAIN_INSTRUCTIONS.md) for `instructionBlocks` and [`references/fields/KEYWORD_INSTRUCTION_BLOCKS.md`](../references/fields/KEYWORD_INSTRUCTION_BLOCKS.md) for `loreBookEntries`):
 - For each: `name`, `content`, and `keywords` (lore only)

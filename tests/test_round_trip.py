@@ -106,12 +106,18 @@ def test_v22_fixture_still_validates_clean():
 
 
 def test_v22_fixture_legacy_gate_shape_still_cross_checked():
-    """The pre-v2.4 bare-array gate shape must still be cross-reference checked.
+    """The pre-v2.4 bare-array gate shape must still resolve trigger IDs, and must warn.
 
-    This is the regression guard for the migration's sharpest edge: the old code matched
-    on ``isinstance(data, list)``, so when v2.4 made `data` an object the branch simply
-    stopped matching and dangling prereq/blocker IDs passed silently. Point a v2.2-shaped
-    condition at a trigger that does not exist and the validator must still say so.
+    Scope note, because this is easy to misread: this test does **not** guard the silent-skip
+    bug. The old ``isinstance(data, list)`` code handled *list*-shaped data correctly — that
+    was never what broke. What broke was *dict*-shaped data falling through every branch. So
+    the "unknown trigger id" assertion below cannot distinguish old code from new; under that
+    mutation only the bare-array *warning* assertion fails.
+
+    The tests that actually guard the silent skip are ``test_trigger_prereqs_unknown_id`` and
+    ``test_trigger_blockers_unknown_id`` in ``test_validator.py``, which carry dict-shaped
+    ``data``. If those payloads are ever weakened back to bare lists, this test will keep
+    passing while the regression goes uncovered.
     """
     from iw_architect.validator import validate_world
 

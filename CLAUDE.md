@@ -155,6 +155,13 @@ The three versions must be **equal** at all times. CI's `version-bump` job fails
 - **Minor (`0.2.0` → `0.3.0`)** — new commands, new MCP tools, new optional schema fields, new validator warnings, new skill content. Additive, backwards-compatible.
 - **Major (`0.2.0` → `1.0.0`)** — schema breaking changes (renamed/removed fields, stricter required-ness), removed commands or tools, renamed MCP tool surfaces, anything that would force a world author to edit existing `world.json` files. **Pre-1.0 exception:** while the project is still pre-1.0, renamed MCP tool surfaces are treated as **minor** bumps rather than major — pre-1.0 semver conventionally allows breaking changes in minor increments.
 
+**Platform world-schema version bumps** (e.g. v2.2 → v2.4) don't get their own tier — classify by what the change does to *existing worlds*, not by the size of the version jump:
+
+- **Minor** if the validator accepts both the old and new shapes and no existing `world.json` is forced to change. A shape change the plugin reads bidirectionally is additive from a user's perspective; renaming the plugin's own schema artifacts (`world_vX.Y.schema.json`, `WORLD_JSON_SCHEMA_vX.Y.md`) is an internal file move, not a schema field rename, and doesn't trip major on its own. This is what v2.2 → v2.4 was (`0.17.0`).
+- **Major** if a previously-valid world becomes unreadable or newly invalid — a shape the validator can no longer parse, a field that becomes required, or a removal with no back-compat path.
+
+Whenever a bump renames a schema artifact, grep the whole repo for the old filenames **and** for prose currency claims (`v2.2 schema`, `as of v2.2`, `the v2.2 enum`) — the link tests catch paths, not sentences. Keep "New in v2.2" / "deprecated as of v2.2" provenance notes; only update claims that assert which version is *current*.
+
 **Workflow:**
 
 1. When starting a branch, decide the bump level based on the planned change. If you don't know yet, default to patch and revisit before opening the PR.

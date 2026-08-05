@@ -106,7 +106,7 @@ When the change touches the plugin itself — commands, references, skill conten
 
 1. **Workflow accuracy** — Does the command guide the user through an IW workflow that actually exists? E.g., a "create trigger" command should produce a trigger shape the IW app accepts, with all required fields and using only registered effect/condition types (or explicitly flagging unknown types as warnings, per project rule).
 2. **Field coverage** — Does the command prompt for all required fields (per the schema)? Does it correctly handle optional fields, defaults, and `x-iw-*` semantics?
-3. **Example fidelity** — If the command includes example JSON or templates, do they match the canonical fixture's shapes? Are entity IDs minted in a way that's compatible with IW (check `mint_ids` in `tools/helpers.py`)?
+3. **Example fidelity** — If the command includes example JSON or templates, do they match the canonical fixture's shapes? Are entity IDs minted in a way that's compatible with IW (check `mint_ids` in `src/iw_architect/tools/helpers.py`)?
 4. **Cross-reference correctness** — If the command creates entities that reference other entities (triggers referencing tracked items, etc.), does it guide the user to use real entity IDs from the world?
 5. **Pass-through respect** — Does the command preserve `schemaVersion` and unknown fields when editing existing worlds? Read-before-write per project rule.
 
@@ -118,11 +118,14 @@ When the change touches the plugin itself — commands, references, skill conten
 4. **Naming consistency** — Reference files use UPPER_SNAKE_CASE per the project convention (see CLAUDE.md). Flag kebab-case or camelCase filenames.
 5. **Behavioral claims** — Statements like "triggers fire in declaration order" or "conditions AND together" are exactly the kind of claim where the wiki is unreliable. Verify carefully. If the schema is silent and the fixture doesn't disambiguate, say "unverifiable from local sources" and either cite the wiki with a disclaimer or recommend the user confirm with the IW team.
 
-### For new or edited skill content (`skills/world-architect/SKILL.md` and similar)
+### For new or edited authoring-agent content (`agents/world-architect.md`)
 
-1. **Domain accuracy** — Same factual-accuracy bar as reference docs. The skill teaches Claude how to think about IW; inaccuracies here propagate into every world Claude helps build.
-2. **Source-of-truth alignment** — Does the skill instruct Claude to consult the schema first, the fixture second, etc.? Flag any guidance that elevates the wiki above the schema.
-3. **Mechanic descriptions** — When the skill describes how triggers, effects, conditions, tracked items, etc. work, cross-check against the schema's `x-iw-*` extensions and the fixture's examples.
+The plugin's `world-architect` agent replaced an earlier world-architect *skill* (removed in commit f137372), and the same bar applies to the agent body — which is `@`-inlined into every slash command and so reaches every authoring flow.
+
+1. **Domain accuracy** — Same factual-accuracy bar as reference docs. The agent body teaches Claude how to think about IW; inaccuracies here propagate into every world Claude helps build.
+2. **Source-of-truth alignment** — Does it instruct Claude to consult the schema first, the fixture second, etc.? Flag any guidance that elevates the wiki above the schema.
+3. **Mechanic descriptions** — When it describes how triggers, effects, conditions, tracked items, etc. work, cross-check against the schema's `x-iw-*` extensions and the fixture's examples.
+4. **Tool-allowlist coverage** — Every MCP tool the body instructs the agent to call must appear in the frontmatter `tools:` list, which is a whitelist. A tool named in the prose but missing from the list is silently uncallable.
 
 ### For schema artifact edits (`references/world_v2.4.schema.json`)
 

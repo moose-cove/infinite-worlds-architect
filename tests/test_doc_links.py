@@ -29,7 +29,18 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent
 
 # Directories whose Markdown is part of the shipped, live documentation surface.
-_DOC_GLOBS = ("references/**/*.md", "commands/*.md", "agents/**/*.md", "*.md")
+# `.claude/agents/` and `.github/` are included because they carry schema-artifact paths too:
+# the v2.2 → v2.4 rename had to hand-fix 11 references in the project reviewer agent and 3 in
+# the PR template, and neither file was covered here to catch a miss. This is precisely the
+# "breakage hides in files the change didn't otherwise touch" class this module exists for.
+_DOC_GLOBS = (
+    "references/**/*.md",
+    "commands/*.md",
+    "agents/**/*.md",
+    ".claude/agents/**/*.md",
+    ".github/*.md",
+    "*.md",
+)
 
 # `dev-docs/` is a frozen historical record (DESIGN_BRIEF_v2.md describes the original v2.1
 # build and names v2.1 artifacts on purpose). Rewriting it to match today's tree would destroy

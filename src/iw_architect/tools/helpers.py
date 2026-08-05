@@ -121,8 +121,8 @@ _DEFAULT_SCAFFOLD: dict[str, Any] = {
     "instructionBlocks": [],
     "loreBookEntries": [],
     # schema v2.4: the named-event registry backing `triggerOnEvent` conditions. Seeded
-    # empty rather than omitted so authors see the field exists — an event must be
-    # declared here to be selectable in the editor's trigger UI.
+    # empty rather than omitted so authors see the field exists and keep it in sync with
+    # their triggerOnEvent strings (matched by exact text).
     "conditions": [],
     "allowChangeCharacterName": True,
     "allowChangeCharacterDescription": True,

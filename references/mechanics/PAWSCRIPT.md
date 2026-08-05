@@ -16,7 +16,7 @@ bare tracked-item name, or before authoring an `effectRunScript` effect.
 
 > **Documentation status.** PawScript is a live platform feature and its
 > surface evolves. This document describes expected behavior as of schema
-> v2.2, cross-checked against the official PawScript guides (linked in §7). If
+> v2.4, cross-checked against the official PawScript guides (linked in §7). If
 > observed behavior contradicts what's documented here, flag the discrepancy to
 > the user rather than silently working around it — surfacing drift is how the
 > docs stay correct.

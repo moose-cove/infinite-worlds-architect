@@ -55,7 +55,7 @@ If you're uncertain whether something should be `number` or `text`: pick `number
 
 ## Choosing `visibility`
 
-The v2.2 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
+The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`, `hidden_boring`.
 
 | Value | Who sees the value | When to use |
 |---|---|---|

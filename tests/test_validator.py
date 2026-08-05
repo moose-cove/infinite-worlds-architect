@@ -304,9 +304,14 @@ def test_gate_condition_legacy_array_still_cross_checked(ctype, key):
 
 
 @pytest.mark.parametrize("ctype", ["triggerPrereqs", "triggerBlockers"])
-def test_gate_condition_scalar_data_is_an_error(ctype):
-    """`data` that is neither the v2.4 object nor a legacy array is an error, not a skip."""
-    result = _validate(_world_with_gate_condition(ctype, "TRIG0001"))
+@pytest.mark.parametrize("data", ["TRIG0001", None, 7, True], ids=["str", "null", "int", "bool"])
+def test_gate_condition_scalar_data_is_an_error(ctype, data):
+    """`data` that is neither the v2.4 object nor a legacy array is an error, not a skip.
+
+    Silently skipping is the failure mode this whole change exists to prevent, so an
+    unrecognized shape must be loud.
+    """
+    result = _validate(_world_with_gate_condition(ctype, data))
     assert not result["valid"]
     assert any("must be an object" in e for e in result["errors"]), result["errors"]
 
@@ -366,7 +371,8 @@ def test_trigger_on_event_not_in_conditions_registry_warns():
     result = _validate(_world_with_event_condition("The marmot eats the marmalade", []))
     assert result["valid"], result["errors"]
     assert any(
-        "not declared in the top-level 'conditions' array" in w for w in result["warnings"]
+        "not declared in the world's top-level 'conditions' registry" in w
+        for w in result["warnings"]
     ), result["warnings"]
 
 
@@ -377,6 +383,39 @@ def test_trigger_on_event_declared_in_conditions_registry_is_silent():
     assert not any("not declared in the top-level" in w for w in result["warnings"]), result[
         "warnings"
     ]
+
+
+def test_conditions_entry_with_no_matching_trigger_on_event_warns():
+    """The reverse direction: a declared event nothing uses.
+
+    Under the registry reading that's a dead entry in the editor's dropdown; under the
+    competing derived-index reading it's stale data. Worth surfacing either way.
+    """
+    result = _validate(_world_with_event_condition("Used event", ["Used event", "Orphan event"]))
+    assert result["valid"], result["errors"]
+    assert any(
+        "'Orphan event' is not used by any triggerOnEvent" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_trigger_on_event_count_over_cap_warns():
+    """The documented world-level cap of 10 AI-evaluated events.
+
+    Wiki-corroborated rather than fixture-proven, so it warns and is deliberately NOT encoded
+    as `maxItems` in the JSON Schema — a Tier 1 error would be too strong for the evidence.
+    """
+    events = [f"Event number {i}" for i in range(11)]
+    world = _world_with_event_condition(events[0], events)
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    assert any("documented cap is 10" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_trigger_on_event_count_at_cap_is_silent():
+    """Exactly 10 is fine — the cap is inclusive."""
+    events = [f"Event number {i}" for i in range(10)]
+    result = _validate(_world_with_event_condition(events[0], events))
+    assert not any("documented cap" in w for w in result["warnings"]), result["warnings"]
 
 
 def test_trigger_on_event_nested_in_logic_condition_is_still_checked():
@@ -414,6 +453,82 @@ def test_trigger_on_event_nested_in_logic_condition_is_still_checked():
     ]
     result = _validate(world)
     assert any("A buried event" in w for w in result["warnings"]), result["warnings"]
+
+
+# ── validate_world always returns a report, never raises ──────────────────────
+#
+# `validate_world` is an MCP tool whose docstring promises a JSON report with 'valid',
+# 'errors' and 'warnings'. A malformed world must surface as errors in that report, never as
+# a traceback to the caller. Every case below crashed before the guards were added.
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, 5, "The marmut eats the marmalade", [1, 2, 3], {"a": 1}],
+    ids=["null", "number", "bare-string", "list-of-non-strings", "object"],
+)
+def test_malformed_conditions_reports_instead_of_crashing(value):
+    """`conditions` present but not a list[str].
+
+    `world.get("conditions", [])` only defaults when the key is ABSENT, so an explicit
+    `"conditions": null` used to raise TypeError straight out of validate_world. A bare
+    string was worse than a crash — it iterated the string's characters and silently built
+    garbage into the declared-event set.
+    """
+    world = _base_world()
+    world["conditions"] = value
+    result = _validate(world)  # must not raise
+    assert isinstance(result["errors"], list)
+    assert isinstance(result["warnings"], list)
+
+
+def test_non_dict_entity_entries_report_instead_of_crashing():
+    """A non-dict entry in an entity array crashed `_check_duplicate_ids`.
+
+    That check runs first, so the crash pre-empted every later check — including their own
+    isinstance guards, which were therefore unreachable on real malformed input.
+    """
+    world = _base_world()
+    world["trackedItems"] = ["not an object"]
+    world["NPCs"] = [42]
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("not an object" in e for e in result["errors"]), result["errors"]
+
+
+def test_deeply_nested_logic_conditions_report_instead_of_crashing():
+    """Author-controlled nesting depth must not exhaust the Python stack.
+
+    `category: "logic"` nests recursively, and three separate walkers descend it. Past
+    _MAX_CONDITION_DEPTH the walk stops; past CPython's own limit the JSON parser gives up
+    first. Either way the caller gets a report.
+
+    Depth is 300: comfortably past _MAX_CONDITION_DEPTH (100) so the walkers' guards are the
+    thing under test, while staying inside what ``json.dump`` can serialize — the test helper
+    writes the world to disk, and the encoder recurses per level too.
+    """
+    world = _base_world()
+    node = {
+        "id": "cc-1",
+        "category": "condition",
+        "type": "triggerOnEvent",
+        "data": "a deeply buried event",
+    }
+    for i in range(300):
+        node = {"id": f"lg-{i}", "category": "logic", "operator": "and", "data": [node]}
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Deep",
+            "advancedLogic": True,
+            "triggerEffects": [
+                {"id": "aa-1", "type": "effectShowMessage", "data": "hi"},
+            ],
+            "triggerConditions": [node],
+        }
+    ]
+    result = _validate(world)  # must not raise
+    assert isinstance(result["errors"], list)
 
 
 # ── Duplicate IDs ─────────────────────────────────────────────────────────────

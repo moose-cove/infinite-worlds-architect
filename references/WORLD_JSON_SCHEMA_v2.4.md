@@ -3,7 +3,7 @@
 
 This is the canonical schema for the v2.4 Infinite Worlds world JSON, derived from `example-world-schema-v2.4.json`. Where the fixture is silent on a field's exact semantics, that uncertainty is noted inline; the plugin's validator should warn (not error) on such fields and preserve their values verbatim on round-trip.
 
-### What changed in v2.4
+## What changed in v2.4
 
 | Change | Kind | Where |
 |---|---|---|
@@ -11,7 +11,11 @@ This is the canonical schema for the v2.4 Infinite Worlds world JSON, derived fr
 | `triggerPrereqs.data` — bare `string[]` → `{prereqs: string[], firedThisTurn: boolean}` | **Breaking** | [`triggerConditions[*]`](#triggerconditions) |
 | `triggerBlockers.data` — bare `string[]` → `{blockers: string[], firedThisTurn: boolean}` | **Breaking** | [`triggerConditions[*]`](#triggerconditions) |
 
-The two gate-condition changes are breaking at the shape level but not at the authoring level: the platform migrates the pre-v2.4 bare array on import, and this plugin's validator reads both forms — emitting the object form for new authoring and warning (never erroring) when it encounters the legacy array. `example-world-schema-v2.2.json` is retained as the back-compat fixture that proves it.
+The two gate-condition changes are breaking at the shape level. This plugin's validator reads both forms — emitting the object form for new authoring and warning (never erroring) on the legacy array, because pre-v2.4 worlds carry it and must keep validating. `example-world-schema-v2.2.json` is retained as the back-compat fixture that proves the validator still reads it.
+
+> **Unverified: whether the platform itself migrates the bare array on import.** Nothing in the schema, either fixture, or the wiki establishes this. Treat a legacy gate condition you find in an existing world as something to **migrate when you touch that world**, not as something safe to leave indefinitely — if the platform instead ignores an unrecognized bare array under v2.4, the gate silently stops gating, and a trigger that fires *more often than intended* is among the hardest failures to notice.
+
+**Two open questions inherited from v2.4** — both are recorded where they bite rather than resolved here, because the fixture doesn't settle them: what `firedThisTurn: true` does (see [`triggerConditions[*]`](#triggerconditions)), and whether `conditions` is an author-maintained registry or a platform-derived index (see §1). A single experiment settles most of it: author a world with an undeclared `triggerOnEvent` and a legacy bare-array prereq, import it, re-export, and diff. If `conditions` comes back populated with the undeclared event, it is a derived index and the guidance below should be inverted rather than merely hedged.
 
 No v2.3 fixture reached this plugin, so the deltas above are measured 2.2 → 2.4. If some of them actually landed in 2.3 on the platform side, the shapes are unaffected — only the attribution is.
 
@@ -19,6 +23,7 @@ No v2.3 fixture reached this plugin, so the deltas above are measured 2.2 → 2.
 
 ## Table of Contents
 
+- [What changed in v2.4](#what-changed-in-v24)
 - [1 Top-level fields](#1-top-level-fields)
 - [2 `possibleCharacters[*]` (player characters)](#2-possiblecharacters-player-characters)
 - [3 `NPCs[*]`](#3-npcs)
@@ -38,7 +43,7 @@ No v2.3 fixture reached this plugin, so the deltas above are measured 2.2 → 2.
 | Key | Type | Category | Notes |
 |---|---|---|---|
 | `schemaVersion` | number | Platform | `2.4` in current fixture. Read on input, write on output. Warn on unknown versions. |
-| `conditions` | string[] | Editable | **New in v2.4.** The world's named-event registry. Each entry is a natural-language event description (fixture: `["The marmut eats the marmalade"]`). A `triggerOnEvent` condition matches an entry by its text, and declaring the event here is what makes it selectable in the world editor's trigger UI. An undeclared `triggerOnEvent` still evaluates at runtime — the AI reads the condition's own `data` string — so the plugin warns rather than errors. Absent entirely in pre-v2.4 worlds. |
+| `conditions` | string[] | Editable | **New in v2.4.** The world's named-event registry. Each entry is a natural-language event description (fixture: `["The marmut eats the marmalade"]`), matched to a `triggerOnEvent` condition by **exact text**. Keep the two in sync — the plugin warns on drift in either direction, never errors. What the registry *does* is an open question; see below. Absent entirely in pre-v2.4 worlds. |
 | `title` | string | Editable | World name |
 | `description` | string | Editable | User-facing blurb shown in the world browser |
 | `background` | string | Editable | Initial story situation sent to the AI |
@@ -158,7 +163,8 @@ teaches is usable in a tracked item:
 | Scalars under labels | `gold: 120` | Steps 1–2 |
 | Sequences | `- apples`<br>`- pears` | Step 3 |
 | Mappings nested in mappings | `sword:`<br>`  damage: 8` | Step 5 |
-| Sequences nested in mappings, and mappings nested in sequences | `skills:`<br>`  - id: fireball`<br>`    depends_on:`<br>`      - flame_dart` | Step 6 |
+| Mappings nested in sequences | `- id: fireball`<br>`  name: Fireball` | Step 4 |
+| Sequences nested in mappings | `skills:`<br>`  - id: fireball`<br>`    depends_on:`<br>`      - flame_dart` | Step 6 |
 | Empty sequence | `depends_on: []` | Step 6 |
 | Block scalars — `\|` literal (keeps line breaks), `>` folded (joins into one line) | `backstory: \|`<br>`  Line one.`<br>`  Line two.` | Step 7 |
 | Comments | `# not part of the value` | Step 8 |
@@ -225,7 +231,7 @@ For `category: "condition"`, the condition has a `type`:
 | `triggerOnTrackedItem` | `{inequality, requiredValue, trackedItemID, textComparison}` | `inequality` one of: `at_least`, `at_most`, `is_exactly`, `not_equal`, `contains`. `not_equal` maps to the UI label "is not exactly" (KB-empirical; import survival [PENDING TEST] as of May 2026 — Source: iw_knowledge_base_v2_8.md). `contains` is for text-type comparisons. `requiredValue` may be a formula string like `"1d4+skill_charm"` and must always be a JSON string (not a number — IW crashes on import if non-string). `trackedItemID` may reference a tracked-item ID OR a synthetic `skill_<name>` ID for skill comparisons. `textComparison` is used for text-type tracked items. The condition object also carries top-level `inequality` and `trackedItemID` fields duplicating those inside `data` — preserve both. |
 | `triggerOnRandomChance` | `string` (formula) | Formula evaluated each turn, compared against a random number. E.g., `"15+round(turn_number%random)"` or a simple `"30"` for 30% |
 | `triggerOnTurn` | `integer` | Fires when the current turn number ≥ the integer value of `data`. E.g., `data: 5` fires from turn 5 onward (combined with `canTriggerMoreThanOnce: false` for a one-shot; with `canTriggerMoreThanOnce: true` to repeat every eligible turn from that turn on). |
-| `triggerOnEvent` | `string` | AI-evaluated condition. `data` is a free-form natural-language description of an event (e.g., `"Someone says the words 'dummy bunny' to you"`). The AI reads the narrative each turn and fires the trigger when it judges the described event has occurred. Use for events that cannot be reduced to a tracked-item comparison or random chance — anything requiring narrative judgment. Valid both as a top-level condition and as a sub-condition inside a `category: "logic"` block. **v2.4:** the same string should also be listed in the world's top-level [`conditions`](#1-top-level-fields) registry, which is what makes the event selectable in the editor's trigger UI. |
+| `triggerOnEvent` | `string` | AI-evaluated condition. `data` is a free-form natural-language description of an event (e.g., `"Someone says the words 'dummy bunny' to you"`). The AI reads the narrative each turn and fires the trigger when it judges the described event has occurred. Use for events that cannot be reduced to a tracked-item comparison or random chance — anything requiring narrative judgment. Valid both as a top-level condition and as a sub-condition inside a `category: "logic"` block. **v2.4:** the same string should also be listed verbatim in the world's top-level [`conditions`](#1-top-level-fields) registry — keep the two in sync. **Max 10 AI-evaluated events per world** (each costs an extra AI evaluation per turn); the plugin warns past the cap. |
 | `triggerBlockers` | `{blockers: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `blockers` is the array of trigger IDs that must NOT have fired; if any have, this trigger is blocked. `firedThisTurn` is **an open question** — see below. |
 | `triggerPrereqs` | `{prereqs: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `prereqs` is the array of trigger IDs that must have fired first. `firedThisTurn` is **an open question** — see below. |
 
@@ -266,7 +272,7 @@ Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level
 | `effectModifyInstructionBlock` | `{id, content}` | — | Modifies an Extra Instruction Block by ID |
 | `effectModifyKeywordBlock` | `{id, content, keywords}` | — | Modifies a Keyword Instruction Block by ID — replaces both content AND keywords |
 | `effectSetTrackedItemValue` | `{action, newValue, replaceWith, trackedItemID}` | `trackedItemID` | `action` one of: `set`, `add` (append), `subtract` (remove if present), `replace` (string-replace). **`replaceWith` must be present in `data` for all actions** (use `""` when unused); it is only *consumed* by the `replace` action (KB-empirical import requirement; Source: iw_knowledge_base_v2_8.md). Both the data object AND the effect object carry `trackedItemID`. |
-| `effectModifyTrackedItemDetails` | `{trackedItemID, override flags, new field values}` | `trackedItemID` | Modify the tracked item itself, not its value. The complete set of override flags (as of v2.2) is: `overrideName`, `overrideDescription`, `overrideUpdateInstructions`, `overrideVisibility`, `overrideAutoUpdate`. When a flag is true, the corresponding new value is applied. Whether this effect also gains override flags for the new v2.2 tracked-item fields (`formatExample`, `enforceFormat`, `formatSchema`, `variableName`) is unconfirmed by the fixture — treat as unsupported until a fixture shows otherwise. |
+| `effectModifyTrackedItemDetails` | `{trackedItemID, override flags, new field values}` | `trackedItemID` | Modify the tracked item itself, not its value. The complete set of override flags (as of v2.4) is: `overrideName`, `overrideDescription`, `overrideUpdateInstructions`, `overrideVisibility`, `overrideAutoUpdate`. When a flag is true, the corresponding new value is applied. Whether this effect also gains override flags for the new v2.2 tracked-item fields (`formatExample`, `enforceFormat`, `formatSchema`, `variableName`) is unconfirmed by the fixture — treat as unsupported until a fixture shows otherwise. |
 | `effectPresentChoice` | `{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId}` | — | Present a choice to the player. `choices` is newline-separated. `selectionMode`: `"single"` or `"multiple"`. `valueDelimiter`: `"newline"` or `"comma"` (how multi-selections are stored). `updateMode`: only `"replace"` is currently defined; the validator should warn (not error) on other values in case the platform adds new modes. `min/maxSelections`: integers or null. Result is written to `targetTrackedItemId`. Blocking — the game pauses until the player chooses. |
 | `effectRequestInput` | `{inputMode, requestText, requiresInput, targetTrackedItemId}` | — | Request free-text input from the player. `inputMode`: `"multi"` (multiline) or presumably `"single"`. `requiresInput`: boolean. Result is written to `targetTrackedItemId`. Blocking, same as `effectPresentChoice`. |
 | `effectFireRandomTrigger` | null or omitted | — | Fire a random trigger (selection pool/weighting unconfirmed). Historically absent from the schema but **confirmed working in real worlds** (KB-empirical; Source: iw_knowledge_base_v2_8.md 'Import Test Results'). **Stripped in Start-of-Game triggers** — use only in regular triggers. |

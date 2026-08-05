@@ -2,7 +2,7 @@
 
 JSON key: `triggerEvents` — array of trigger objects.
 
-For the canonical list of v2.2 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
+For the canonical list of v2.4 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
 
 ---
 
@@ -64,9 +64,17 @@ Same shape as `triggerPrereqs`, with the array under `blockers` instead of `prer
 "data": { "blockers": ["PKRVGe1E"], "firedThisTurn": false }
 ```
 
-**`firedThisTurn` is an open question — emit `false`.** The canonical fixture shows only `false`, on both condition types. The name suggests it narrows the gate from "the listed trigger fired at any point" to "…fired on the current turn", but that reading is unverified and the platform's behaviour when it is `true` is untested. Don't set `true` unless the author has confirmed the behaviour in-game.
+**`firedThisTurn` is an open question — emit `false`.** The canonical fixture shows only `false`, on both condition types.
 
-**Both shapes are read; only the new one is written.** Worlds authored before v2.4 carry the bare array, and the plugin's validator still resolves their trigger IDs — it warns about the legacy shape rather than erroring. When you edit such a world, migrating the condition to the object form is a safe, self-contained improvement; leaving it alone is also fine.
+The documented default behaviour gives the guess its shape. The wiki describes prereqs as *"met if all of the selected triggers have fired at least once in **any previous turn**"* and blockers as *"met if one or more of the selected triggers **has ever** fired"* (wiki-sourced, and predating v2.4). So the baseline really is "at any point in the past", which makes "`firedThisTurn` toggles exactly that" the most plausible reading — but plausible is not verified, and the platform's behaviour when it is `true` is untested.
+
+A second reading nothing rules out: `firedThisTurn` may be **platform-managed runtime state** — a per-turn flag the exporter writes — rather than an authoring knob at all. `false` on both fixture instances is equally consistent with that.
+
+Either way the advice is the same: **emit `false`**, and don't set `true` unless the author has confirmed the behaviour in-game.
+
+**Both shapes are read; only the new one is written.** Worlds authored before v2.4 carry the bare array, and the plugin's validator still resolves their trigger IDs — it warns about the legacy shape rather than erroring.
+
+**Migrate a legacy condition when you touch its world.** Whether the *platform* migrates the bare array on import is unverified. If it does not — if an unrecognized bare array is ignored under v2.4 — the gate silently stops gating, and the trigger fires more often than intended. An over-firing trigger produces no error and no warning in-game, so it is among the hardest failures for an author to notice. Migrating is a small, self-contained edit; leaving it is an unquantified risk.
 
 **Reference by ID, not by name.** Both `triggerPrereqs` and `triggerBlockers` reference trigger `id` values, not trigger `name` values. Use `mint_ids("triggerEvent", n)` to allocate IDs, and keep a mapping handy while authoring.
 
@@ -80,9 +88,18 @@ Schema v2.4 adds a top-level `conditions: string[]` to the world. Each entry is 
 { "type": "triggerOnEvent", "category": "condition", "data": "The marmut eats the marmalade" }
 ```
 
-Declaring the event is what makes it selectable in the world editor's trigger UI. An undeclared `triggerOnEvent` still evaluates at runtime — the AI reads the condition's own `data` string — so the plugin **warns, never errors**. But the author loses the round-trip: they can't pick the event from the editor dropdown, and a later edit in the UI may not see it.
+**Exact-text keying is well-supported.** The fixture's one entry matches its one `triggerOnEvent` `data` string byte-for-byte, and nothing else links them — no ID, no index — so text is the only available key. Case, internal whitespace and trailing punctuation are all significant; the plugin applies no normalization beyond trimming outer whitespace, because the platform's own matching rule is undocumented and inventing one would trade missed warnings for false ones.
 
-**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Match the string exactly; the registry is keyed by text, not by ID. Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array.
+**What the registry *does* is an open question.** Two readings fit the evidence:
+
+1. **Author-maintained registry** — declaring an event is what makes it selectable in the editor's trigger UI, and an undeclared event still evaluates at runtime (the AI reads the condition's own `data`) but can't be picked from the dropdown.
+2. **Platform-derived index** — the platform regenerates `conditions` on save from the `triggerOnEvent` strings already in the world. This would also explain how the world-level cap of ten AI-evaluated events is enforced, which reading 1 leaves unaccounted for.
+
+Nothing in the schema, the fixture, or the wiki settles it. **The authoring instruction is identical either way**, which is why the plugin warns rather than erroring: keep the two in sync.
+
+**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array. The validator also warns in the reverse direction, on a declared entry no `triggerOnEvent` uses: a dead dropdown entry under reading 1, stale data under reading 2.
+
+**The cap is ten.** `validate_world` warns past it. Each AI-evaluated event costs an extra AI evaluation every turn, so the cap is a cost ceiling as much as a platform limit.
 
 ---
 

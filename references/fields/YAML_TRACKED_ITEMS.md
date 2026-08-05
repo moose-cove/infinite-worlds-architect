@@ -165,9 +165,12 @@ Compare to the matching `formatExample`, which is the same shape filled in:
   does `$puppy.stats.friendliness += 1` needs `stats.friendliness` to exist and
   be a number). Use `enforceFormat: false` (or omit) for advisory structure where
   the AI has more latitude.
-- **Enforcement follows the nesting.** If `formatSchema` declares a `stats:`
-  sub-map, `enforceFormat: true` holds the value to that sub-map too — which is
-  what makes a nested path safe to write from a script.
+- **Whether enforcement recurses into sub-maps is unverified.** The fixture proves
+  the platform *stores* a nested `formatSchema`; nothing proves it *enforces* one,
+  or that enforcement descends past the top level. Treat a nested `formatSchema`
+  as strong guidance to the AI rather than a hard guarantee — and don't rely on it
+  to make a nested script path unconditionally safe. This matters because scripts
+  are transactional: one drifted entry rolls back the entire run.
 
 ---
 
@@ -238,8 +241,10 @@ dots is all nesting costs at the script layer** — a field two levels down is n
 harder to reach than a top-level one, which is why grouping related fields into a
 sub-map is essentially free once the AI is reliably producing the shape.
 
-Because `enforceFormat` is `true`, every entry is guaranteed to carry a `stats`
-map with a numeric `friendliness`, so the script's `+= 1` is safe. The loop
+`enforceFormat` is `true` here, which is the strongest available signal that every
+entry will carry a `stats` map with a numeric `friendliness` — though whether the
+platform enforces *through* the nesting is unverified (see above), so treat it as
+very likely rather than guaranteed. The loop
 variable `$puppy` is assignable and writes back to the real item — see
 [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md#5-statement-set-scripts-only)
 §5. The whole script is transactional: if any entry were malformed, nothing
