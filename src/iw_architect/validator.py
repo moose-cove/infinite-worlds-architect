@@ -153,6 +153,63 @@ def _skill_ids(world: dict) -> set[str]:
     return {f"skill_{_snake(s)}" for s in world.get("skills", [])}
 
 
+# Top-level arrays whose entries every Tier 2 check assumes are objects.
+_ENTITY_ARRAY_FIELDS = (
+    "possibleCharacters",
+    "NPCs",
+    "trackedItems",
+    "triggerEvents",
+    "instructionBlocks",
+    "loreBookEntries",
+)
+
+
+def _sanitize_entity_arrays(world: dict, errors: list[str]) -> dict:
+    """Return a copy of ``world`` with malformed entity-array entries dropped.
+
+    Nine separate Tier 2 checks call ``.get()`` on the members of these arrays, and a single
+    non-dict entry (``"trackedItems": ["oops"]``) crashed every one of them. Guarding each
+    check individually would be nine near-identical isinstance gates that are easy to forget
+    on the tenth check; filtering once here is one gate that cannot be forgotten.
+
+    Dropping is the right disposition rather than reporting-and-continuing: Tier 1 has
+    already emitted a structural type error for each of these entries, so re-describing them
+    adds nothing, and there is no meaningful semantic check to run against a bare scalar. The
+    error appended here exists so the report says *why* semantic coverage is incomplete
+    instead of silently analyzing a subset.
+
+    Nested condition/effect arrays are cleaned too — they are walked just as widely.
+    """
+    cleaned = dict(world)
+    for field in _ENTITY_ARRAY_FIELDS:
+        value = world.get(field)
+        if not isinstance(value, list):
+            if field in cleaned:
+                cleaned[field] = []  # Tier 1 reported the type; keep Tier 2 iterable
+            continue
+        kept = [entry for entry in value if isinstance(entry, dict)]
+        if len(kept) != len(value):
+            errors.append(
+                f"{field}: {len(value) - len(kept)} entry/entries are not objects and were "
+                "skipped by semantic validation"
+            )
+        cleaned[field] = kept
+
+    triggers: list[dict] = []
+    for trigger in cleaned.get("triggerEvents", []):
+        trigger = dict(trigger)
+        for sub in ("triggerConditions", "triggerEffects"):
+            value = trigger.get(sub)
+            if isinstance(value, list):
+                trigger[sub] = [entry for entry in value if isinstance(entry, dict)]
+            elif sub in trigger:
+                trigger[sub] = []
+        triggers.append(trigger)
+    if "triggerEvents" in cleaned:
+        cleaned["triggerEvents"] = triggers
+    return cleaned
+
+
 def _check_schema_version(world: dict, errors: list[str], warnings: list[str]) -> None:
     version = world.get("schemaVersion")
     if version is None:
@@ -179,11 +236,8 @@ def _check_duplicate_ids(world: dict, errors: list[str], warnings: list[str]) ->
         if not isinstance(entities, list):
             return  # Tier 1 already reported the type error
         for entity in entities:
-            # This runs before every other Tier 2 check, so a non-dict entry here would crash
-            # the whole pass and make the downstream isinstance guards unreachable.
             if not isinstance(entity, dict):
-                errors.append(f"{label}: entry is not an object ({type(entity).__name__})")
-                continue
+                continue  # dropped and reported by _sanitize_entity_arrays
             eid = entity.get(id_field)
             if eid is not None:
                 if eid in seen:
@@ -1065,6 +1119,9 @@ def validate_world(world_path: str) -> str:
     # world must never surface to an MCP caller as a raw traceback. Individual checks guard
     # their own inputs (see _MAX_CONDITION_DEPTH and the isinstance gates); this is the net
     # under those, so a gap in one of them degrades to a reported error instead of a crash.
+    # Drop malformed entity entries once, rather than gating nine checks individually.
+    world = _sanitize_entity_arrays(world, errors)
+
     try:
         _check_schema_version(world, errors, warnings)
         _check_duplicate_ids(world, errors, warnings)
