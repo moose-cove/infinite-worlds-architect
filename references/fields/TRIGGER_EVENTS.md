@@ -2,7 +2,7 @@
 
 JSON key: `triggerEvents` — array of trigger objects.
 
-For the canonical list of v2.2 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
+For the canonical list of v2.4 condition types and effect types with their `data` shapes, see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#5-triggerevents). This file covers *authoring judgments* — when to use which option — not the type catalog.
 
 ---
 
@@ -46,14 +46,60 @@ turn.
 - `true`: fires every turn its conditions are met. Use for recurring mechanics, ambient effects, periodic state shifts.
 
 ### `triggerPrereqs` (condition type, not a top-level field)
-Listed under `triggerConditions` with `category: "condition"`, `type: "triggerPrereqs"`, and `data: string[]` of trigger IDs. The named triggers must have already fired before this one becomes eligible.
+Listed under `triggerConditions` with `category: "condition"` and `type: "triggerPrereqs"`. The named triggers must have already fired before this one becomes eligible.
+
+**Schema v2.4 changed `data` from a bare array to an object:**
+
+```jsonc
+// pre-v2.4                     // v2.4 — emit this
+"data": ["PKRVGe1E"]            "data": { "prereqs": ["PKRVGe1E"], "firedThisTurn": false }
+```
 
 If a prerequisite fires on the same turn, it only satisfies the condition if it appears earlier in the trigger list.
 
 ### `triggerBlockers` (condition type)
-Same shape as `triggerPrereqs`. The named triggers must NOT have fired previously. If any have fired, this trigger is permanently blocked.
+Same shape as `triggerPrereqs`, with the array under `blockers` instead of `prereqs`. The named triggers must NOT have fired previously. If any have fired, this trigger is permanently blocked.
+
+```jsonc
+"data": { "blockers": ["PKRVGe1E"], "firedThisTurn": false }
+```
+
+**`firedThisTurn` is an open question — emit `false`.** The canonical fixture shows only `false`, on both condition types.
+
+The documented default behaviour gives the guess its shape. The wiki describes prereqs as *"met if all of the selected triggers have fired at least once in **any previous turn**"* and blockers as *"met if one or more of the selected triggers **has ever** fired"* (wiki-sourced, and predating v2.4). So the baseline really is "at any point in the past", which makes "`firedThisTurn` toggles exactly that" the most plausible reading — but plausible is not verified, and the platform's behaviour when it is `true` is untested.
+
+A second reading nothing rules out: `firedThisTurn` may be **platform-managed runtime state** — a per-turn flag the exporter writes — rather than an authoring knob at all. `false` on both fixture instances is equally consistent with that.
+
+Either way the advice is the same: **emit `false`**, and don't set `true` unless the author has confirmed the behaviour in-game.
+
+**Both shapes are read; only the new one is written.** Worlds authored before v2.4 carry the bare array, and the plugin's validator still resolves their trigger IDs — it warns about the legacy shape rather than erroring.
+
+**Migrate a legacy condition when you touch its world.** Whether the *platform* migrates the bare array on import is unverified. If it does not — if an unrecognized bare array is ignored under v2.4 — the gate silently stops gating, and the trigger fires more often than intended. An over-firing trigger produces no error and no warning in-game, so it is among the hardest failures for an author to notice. Migrating is a small, self-contained edit; leaving it is an unquantified risk.
 
 **Reference by ID, not by name.** Both `triggerPrereqs` and `triggerBlockers` reference trigger `id` values, not trigger `name` values. Use `mint_ids("triggerEvent", n)` to allocate IDs, and keep a mapping handy while authoring.
+
+### Top-level `conditions` — the named-event registry (v2.4)
+
+Schema v2.4 adds a top-level `conditions: string[]` to the world. Each entry is a natural-language event description, and it is the *declaration* half of `triggerOnEvent`:
+
+```jsonc
+"conditions": ["The marmut eats the marmalade"],
+// …
+{ "type": "triggerOnEvent", "category": "condition", "data": "The marmut eats the marmalade" }
+```
+
+**Exact-text keying is well-supported.** The fixture's one entry matches its one `triggerOnEvent` `data` string byte-for-byte, and nothing else links them — no ID, no index — so text is the only available key. Case, internal whitespace and trailing punctuation are all significant; the plugin applies no normalization beyond trimming outer whitespace, because the platform's own matching rule is undocumented and inventing one would trade missed warnings for false ones.
+
+**What the registry *does* is an open question.** Two readings fit the evidence:
+
+1. **Author-maintained registry** — declaring an event is what makes it selectable in the editor's trigger UI, and an undeclared event still evaluates at runtime (the AI reads the condition's own `data`) but can't be picked from the dropdown.
+2. **Platform-derived index** — the platform regenerates `conditions` on save from the `triggerOnEvent` strings already in the world. This would also explain how the world-level cap of ten AI-evaluated events is enforced, which reading 1 leaves unaccounted for.
+
+Nothing in the schema, the fixture, or the wiki settles it. **The authoring instruction is identical either way**, which is why the plugin warns rather than erroring: keep the two in sync.
+
+**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array. The validator also warns in the reverse direction, on a declared entry no `triggerOnEvent` uses: a dead dropdown entry under reading 1, stale data under reading 2.
+
+**The cap is ten.** `validate_world` warns past it. Each AI-evaluated event costs an extra AI evaluation every turn, so the cap is a cost ceiling as much as a platform limit.
 
 ---
 
@@ -61,13 +107,13 @@ Same shape as `triggerPrereqs`. The named triggers must NOT have fired previousl
 
 | When you need… | Use |
 |---|---|
-| AI-judged event in the narrative | `triggerOnEvent` — natural-language description. **Max 10 per world.** Each costs an extra AI evaluation per turn. |
+| AI-judged event in the narrative | `triggerOnEvent` — natural-language description. **Max 10 per world.** Each costs an extra AI evaluation per turn. v2.4: also declare the event text in the top-level `conditions` array. |
 | Specific turn number (or "after turn N") | `triggerOnTurn` — integer. Combine with `canTriggerMoreThanOnce: true` for recurring beats from a turn onward. |
 | Game-start setup | Top-level `triggerOnStartOfGame: true` on the trigger itself (not a `triggerConditions` entry). |
 | Restriction to specific player characters | `triggerOnCharacter` — array of `characterId` values from `possibleCharacters`. |
 | State-based gating (number/text/XML comparison) | `triggerOnTrackedItem` — supports `at_least`, `is_exactly`, `at_most` (numbers), `contains` (text/XML). Supports compound logic via `category: "logic"` with `and`/`or`. |
 | Probabilistic firing | `triggerOnRandomChance` — formula string (e.g., `"30"` for 30%, or `"15+round(turn_number%random)"` for dynamic). |
-| Chained triggers | `triggerPrereqs` and `triggerBlockers` (see meta-fields above). |
+| Chained triggers | `triggerPrereqs` and `triggerBlockers` — v2.4 object shape `{prereqs\|blockers: [...], firedThisTurn: false}` (see meta-fields above). |
 
 `triggerOnEvent` is the most flexible but also the noisiest. The AI's evaluation can produce false positives (firing when the situation didn't really occur) and false negatives (failing to fire when it did). Use very explicit language and prefer concrete cues over abstract ones. "The player has explicitly handed the dagger to Mira" is more reliable than "The player has surrendered."
 
@@ -176,4 +222,4 @@ comparison.
 
 ## Variable replacement in effect data
 
-The `<<item_name>>` syntax works in all effect data string fields. References resolve at runtime using the current value of the named tracked item (spaces become underscores, lowercase). Math and dice functions also work — `<<1d20>>`, `<<gold * 2>>`, `<<round(turn_number/3)>>`. See [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#9-template-variable-system) §9 for the full template-variable system.
+The `<<item_name>>` syntax works in all effect data string fields. References resolve at runtime using the current value of the named tracked item (spaces become underscores, lowercase). Math and dice functions also work — `<<1d20>>`, `<<gold * 2>>`, `<<round(turn_number/3)>>`. See [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system) §9 for the full template-variable system.

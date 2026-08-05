@@ -1,12 +1,12 @@
 # AI Runtime Mechanics
 
-This document explains what happens *at play time* when a player takes a turn in an Infinite Worlds story. The schema doc (`WORLD_JSON_SCHEMA_v2.2.md`) tells you what fields a world has and what shape they take. This doc tells you what the Storyteller AI actually does with them — what it produces each turn, how variables resolve, how skill checks are evaluated.
+This document explains what happens *at play time* when a player takes a turn in an Infinite Worlds story. The schema doc (`WORLD_JSON_SCHEMA_v2.4.md`) tells you what fields a world has and what shape they take. This doc tells you what the Storyteller AI actually does with them — what it produces each turn, how variables resolve, how skill checks are evaluated.
 
 Read this before designing `instructions`, `authorStyle`, `descriptionRequest`, `evaluationRequest`, or any trigger effect that shapes AI output. If you don't understand what the AI emits, you can't usefully constrain it.
 
 > **Documentation status.** Infinite Worlds evolves over time, and specific
 > platform behaviors may shift between releases. This document describes the
-> *expected* behavior as of v2.2. If observed behavior contradicts what's
+> *expected* behavior as of v2.4. If observed behavior contradicts what's
 > documented here, flag the discrepancy to the user rather than silently
 > working around it — surfacing drift is how the docs stay correct.
 
@@ -22,9 +22,9 @@ Any text field in the world JSON (and most trigger-effect string fields) support
 Whenever the player uses <<skill_persuasion>>, apply a +1 bonus to the outcome.
 ```
 
-For the full list of supported variable forms (tracked items, skills, `turn_number`, `random`, `XdY` dice, math operators) see `WORLD_JSON_SCHEMA_v2.2.md` §9.
+For the full list of supported variable forms (tracked items, skills, `turn_number`, `random`, `XdY` dice, math operators) see `WORLD_JSON_SCHEMA_v2.4.md` §9.
 
-**New in v2.2 — PawScript expressions.** The `<<…>>` interpolation syntax above is a **PawScript expression**: a read-only evaluation, legal anywhere adventure text is typed (`instructions`, `descriptionRequest`, tracked-item `description`, etc.). Expressions never mutate state — for that, see PawScript **scripts**, which run only inside `effectRunScript` trigger effects (§3 and `WORLD_JSON_SCHEMA_v2.2.md`'s `effectRunScript` row). Full PawScript syntax reference: https://infiniteworlds.app/pawscript-reference and https://infiniteworlds.app/pawscript-expressions-guide.
+**New in v2.2 — PawScript expressions.** The `<<…>>` interpolation syntax above is a **PawScript expression**: a read-only evaluation, legal anywhere adventure text is typed (`instructions`, `descriptionRequest`, tracked-item `description`, etc.). Expressions never mutate state — for that, see PawScript **scripts**, which run only inside `effectRunScript` trigger effects (§3 and `WORLD_JSON_SCHEMA_v2.4.md`'s `effectRunScript` row). Full PawScript syntax reference: https://infiniteworlds.app/pawscript-reference and https://infiniteworlds.app/pawscript-expressions-guide.
 
 ### Context provided to the AI each turn
 
@@ -184,14 +184,14 @@ lifecycle:
   isn't true: an expression typed into `instructions` cannot mutate a
   tracked item the way `effectRunScript` can.
 
-See the `effectRunScript` row in `WORLD_JSON_SCHEMA_v2.2.md` §5 for the
+See the `effectRunScript` row in `WORLD_JSON_SCHEMA_v2.4.md` §5 for the
 data shape, and https://infiniteworlds.app/pawscript-script-guide for the
 full scripting language reference.
 
 ### Documented behavior may evolve
 
 This document describes the *expected* behavior of Infinite Worlds as
-of v2.2. The platform updates over time, and specific behaviors may
+of v2.4. The platform updates over time, and specific behaviors may
 shift. If observed behavior contradicts what's documented here — a
 trigger firing on a different turn than expected, a tracked item not
 updating as described, a different evaluation order — flag the
@@ -209,7 +209,7 @@ The world's `instructions` field is the primary lever for shaping the fields abo
 - "When the player attempts a deception, mark `evaluation` as DENIED if their `<<skill_charisma>>` is below 3" → AI uses the skill template variable in its evaluation logic.
 - "Track the relationship between the player and Mira in `secretInfo`" → AI writes a running note into `secretInfo` each turn.
 
-The world's `descriptionRequest` is a more surgical lever: it specifically overrides how `outcomeDescription` is composed (point of view, tense, naming rules, what to push into `secretInfo` vs the visible narrative). See [`WORLD_JSON_SCHEMA_v2.2.md`](../WORLD_JSON_SCHEMA_v2.2.md#1-top-level-fields) §1 for the field's exact role; this doc just notes that `descriptionRequest` lives downstream of `instructions` in the prompt pipeline and can therefore correct or constrain things `instructions` couldn't reach.
+The world's `descriptionRequest` is a more surgical lever: it specifically overrides how `outcomeDescription` is composed (point of view, tense, naming rules, what to push into `secretInfo` vs the visible narrative). See [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#1-top-level-fields) §1 for the field's exact role; this doc just notes that `descriptionRequest` lives downstream of `instructions` in the prompt pipeline and can therefore correct or constrain things `instructions` couldn't reach.
 
 ---
 
@@ -311,7 +311,7 @@ These strings have been removed from IW and will be **silently stripped on impor
 
 ## 8. Cross-references
 
-- **Trigger conditions and effects** — see `WORLD_JSON_SCHEMA_v2.2.md` §5 for the v2.2 canonical list, including the new `effectRunScript` type. The set of effect/condition types is the source of truth there, not in this document.
-- **Template variables** — see `WORLD_JSON_SCHEMA_v2.2.md` §9 for the full `<<…>>` syntax.
+- **Trigger conditions and effects** — see `WORLD_JSON_SCHEMA_v2.4.md` §5 for the v2.4 canonical list, including the new `effectRunScript` type. The set of effect/condition types is the source of truth there, not in this document.
+- **Template variables** — see `WORLD_JSON_SCHEMA_v2.4.md` §9 for the full `<<…>>` syntax.
 - **Field allocation strategy** — see `FIELD_ALLOCATION_STRATEGY.md` for which kinds of content belong in which field (always-on `instructions` vs keyword-gated `loreBookEntries` vs trigger-gated effects).
 - **PawScript scripting** — see `mechanics/PAWSCRIPT.md` for the full scripting model (syntax, tracked-item mutation rules, transactional semantics) and §3 above for how scripts fit into the turn lifecycle.

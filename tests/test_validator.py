@@ -10,6 +10,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 
 def _write_world(world: dict) -> str:
     """Write a world dict to a temp file and return the path."""
@@ -216,7 +218,7 @@ def test_trigger_prereqs_unknown_id():
                     "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
                     "category": "condition",
                     "type": "triggerPrereqs",
-                    "data": ["DOES_NOT_EXIST"],
+                    "data": {"prereqs": ["DOES_NOT_EXIST"], "firedThisTurn": False},
                 }
             ],
         }
@@ -244,7 +246,7 @@ def test_trigger_blockers_unknown_id():
                     "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
                     "category": "condition",
                     "type": "triggerBlockers",
-                    "data": ["DOES_NOT_EXIST"],
+                    "data": {"blockers": ["DOES_NOT_EXIST"], "firedThisTurn": False},
                 }
             ],
         }
@@ -252,6 +254,491 @@ def test_trigger_blockers_unknown_id():
     result = _validate(world)
     assert not result["valid"]
     assert any("DOES_NOT_EXIST" in e for e in result["errors"])
+
+
+# ── schema v2.4: gate-condition data shape (triggerPrereqs / triggerBlockers) ──
+
+
+def _world_with_gate_condition(ctype: str, data):
+    """A one-trigger world whose sole condition is `ctype` carrying `data`."""
+    world = _base_world()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": ctype,
+                    "data": data,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+@pytest.mark.parametrize(
+    ("ctype", "key"),
+    [("triggerPrereqs", "prereqs"), ("triggerBlockers", "blockers")],
+)
+def test_gate_condition_legacy_array_still_cross_checked(ctype, key):
+    """The pre-v2.4 bare-array shape must still resolve trigger IDs, with a warning.
+
+    Regression guard: the old code gated on ``isinstance(data, list)``, so the v2.4 object
+    shape silently skipped the check entirely. Both shapes must reach the same lookup.
+    """
+    result = _validate(_world_with_gate_condition(ctype, ["DOES_NOT_EXIST"]))
+    assert not result["valid"]
+    assert any("DOES_NOT_EXIST" in e for e in result["errors"])
+    assert any("pre-v2.4 bare-array form" in w for w in result["warnings"]), result["warnings"]
+    assert any(key in w for w in result["warnings"]), result["warnings"]
+
+
+@pytest.mark.parametrize("ctype", ["triggerPrereqs", "triggerBlockers"])
+@pytest.mark.parametrize("data", ["TRIG0001", None, 7, True], ids=["str", "null", "int", "bool"])
+def test_gate_condition_scalar_data_is_an_error(ctype, data):
+    """`data` that is neither the v2.4 object nor a legacy array is an error, not a skip.
+
+    Silently skipping is the failure mode this whole change exists to prevent, so an
+    unrecognized shape must be loud.
+    """
+    result = _validate(_world_with_gate_condition(ctype, data))
+    assert not result["valid"]
+    assert any("must be an object" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize(
+    ("ctype", "key"),
+    [("triggerPrereqs", "prereqs"), ("triggerBlockers", "blockers")],
+)
+def test_gate_condition_object_missing_id_list_is_an_error(ctype, key):
+    result = _validate(_world_with_gate_condition(ctype, {"firedThisTurn": True}))
+    assert not result["valid"]
+    assert any(f"missing the '{key}' list" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize("ctype", ["triggerPrereqs", "triggerBlockers"])
+def test_gate_condition_missing_fired_this_turn_warns(ctype):
+    """A well-formed object with no `firedThisTurn` is valid but worth flagging."""
+    key = "prereqs" if ctype == "triggerPrereqs" else "blockers"
+    result = _validate(_world_with_gate_condition(ctype, {key: ["TRIG0001"]}))
+    assert result["valid"], result["errors"]
+    assert any("no boolean 'firedThisTurn'" in w for w in result["warnings"]), result["warnings"]
+
+
+# ── schema v2.4: triggerOnEvent ↔ top-level `conditions` registry ──────────────
+
+
+def _world_with_event_condition(event: str, declared: list[str] | None):
+    world = _base_world()
+    if declared is not None:
+        world["conditions"] = declared
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerOnEvent",
+                    "data": event,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+def test_trigger_on_event_not_in_conditions_registry_warns():
+    """An undeclared event still evaluates, so this is a warning — never an error."""
+    result = _validate(_world_with_event_condition("The marmot eats the marmalade", []))
+    assert result["valid"], result["errors"]
+    assert any(
+        "not declared in the world's top-level 'conditions' registry" in w
+        for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_trigger_on_event_declared_in_conditions_registry_is_silent():
+    event = "The marmot eats the marmalade"
+    result = _validate(_world_with_event_condition(event, [event]))
+    assert result["valid"], result["errors"]
+    assert not any("not declared in the top-level" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_conditions_entry_with_no_matching_trigger_on_event_warns():
+    """The reverse direction: a declared event nothing uses.
+
+    Under the registry reading that's a dead entry in the editor's dropdown; under the
+    competing derived-index reading it's stale data. Worth surfacing either way.
+    """
+    result = _validate(_world_with_event_condition("Used event", ["Used event", "Orphan event"]))
+    assert result["valid"], result["errors"]
+    assert any(
+        "'Orphan event' is not used by any triggerOnEvent" in w for w in result["warnings"]
+    ), result["warnings"]
+
+
+def test_trigger_on_event_count_over_cap_warns():
+    """The documented world-level cap of 10 AI-evaluated events.
+
+    Wiki-corroborated rather than fixture-proven, so it warns and is deliberately NOT encoded
+    as `maxItems` in the JSON Schema — a Tier 1 error would be too strong for the evidence.
+    """
+    events = [f"Event number {i}" for i in range(11)]
+    world = _world_with_event_condition(events[0], events)
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    assert any("documented cap is 10" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_trigger_on_event_count_at_cap_is_silent():
+    """Exactly 10 is fine — the cap is inclusive."""
+    events = [f"Event number {i}" for i in range(10)]
+    result = _validate(_world_with_event_condition(events[0], events))
+    assert not any("documented cap" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_trigger_on_event_nested_in_logic_condition_is_still_checked():
+    """Advanced-logic triggers nest conditions under a `logic` combinator — recurse into it."""
+    world = _base_world()
+    world["conditions"] = []
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "advancedLogic": True,
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "hi",
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "logic",
+                    "operator": "or",
+                    "data": [
+                        {
+                            "id": "ccac5aa8-13cc-cc5a-f032-2016af92a391",
+                            "category": "condition",
+                            "type": "triggerOnEvent",
+                            "data": "A buried event",
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    result = _validate(world)
+    assert any("A buried event" in w for w in result["warnings"]), result["warnings"]
+
+
+# ── validate_world always returns a report, never raises ──────────────────────
+#
+# `validate_world` is an MCP tool whose docstring promises a JSON report with 'valid',
+# 'errors' and 'warnings'. A malformed world must surface as errors in that report, never as
+# a traceback to the caller.
+#
+# Every assertion below is written to fail if its SPECIFIC guard is removed. That is harder
+# than it looks here, because the guards are layered: leaf-level type checks sit under an
+# outer catch-all wrapper in validate_world, so "did it return a report" is satisfied by the
+# wrapper even when the leaf guard is gone. Asserting only that would test nothing. Each test
+# therefore pins the *mechanism*, not just the outcome.
+
+_BACKSTOP_MESSAGE = "Semantic validation stopped on malformed world data"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, 5, "The marmut eats the marmalade", [1, 2, 3], {"a": 1}],
+    ids=["null", "number", "bare-string", "list-of-non-strings", "object"],
+)
+def test_malformed_conditions_handled_by_its_own_guard(value):
+    """`conditions` present but not a list[str].
+
+    `world.get("conditions", [])` only defaults when the key is ABSENT, so an explicit
+    `"conditions": null` used to raise TypeError straight out of validate_world. A bare
+    string was worse than a crash — it iterated the string's characters and silently built
+    garbage into the declared-event set.
+
+    The load-bearing assertion is the LAST one. Returning a report is not enough: with the
+    isinstance guard removed, the TypeError is still caught by validate_world's outer
+    wrapper, so a report still comes back and a weaker test would pass. Asserting that the
+    backstop message is *absent* proves the leaf guard did the work.
+    """
+    world = _base_world()
+    world["conditions"] = value
+    result = _validate(world)  # must not raise
+    assert isinstance(result["errors"], list)
+    assert isinstance(result["warnings"], list)
+    assert not any(_BACKSTOP_MESSAGE in e for e in result["errors"]), (
+        "conditions was handled by the outer catch-all rather than by the isinstance guard "
+        f"in _check_event_conditions_registered: {result['errors']}"
+    )
+
+
+def test_non_dict_entity_entries_handled_by_its_own_guard():
+    """A non-dict entry in an entity array crashed `_check_duplicate_ids`.
+
+    That check runs first, so the crash pre-empted every later check — including their own
+    isinstance guards, which were therefore unreachable on real malformed input.
+
+    Note the placeholder values. An earlier version of this test used the string
+    ``"not an object"`` and asserted that substring appeared in the errors — which passed
+    even with the guard removed, because Tier 1's jsonschema message echoes the offending
+    value back (``[trackedItems.0] 'not an object' is not of type 'object'``) and happened to
+    contain the same words. The placeholders below are deliberately chosen to be absent from
+    every message the validator can generate, and the assertion pins the guard's own format.
+    """
+    world = _base_world()
+    world["trackedItems"] = ["placeholder-scalar"]
+    world["NPCs"] = [42]
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("trackedItems: 1 entry/entries are not objects" in e for e in result["errors"]), (
+        result["errors"]
+    )
+    assert any("NPCs: 1 entry/entries are not objects" in e for e in result["errors"]), result[
+        "errors"
+    ]
+    assert not any(_BACKSTOP_MESSAGE in e for e in result["errors"]), (
+        "sanitization did not cover every check that walks entity arrays; the outer "
+        f"catch-all absorbed a crash instead: {result['errors']}"
+    )
+
+
+def test_non_dict_condition_and_effect_entries_are_sanitized():
+    """The same hazard one level down, inside a trigger.
+
+    `triggerConditions` / `triggerEffects` are walked about as widely as the top-level entity
+    arrays, so they get the same treatment.
+    """
+    world = _base_world()
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Test Trigger",
+            "triggerEffects": ["placeholder-scalar", 42],
+            "triggerConditions": [7, None],
+        }
+    ]
+    result = _validate(world)  # must not raise
+    assert not any(_BACKSTOP_MESSAGE in e for e in result["errors"]), result["errors"]
+
+
+def test_tier2_backstop_converts_unanticipated_exceptions_into_errors():
+    """The outer wrapper around the Tier 2 block.
+
+    This one cannot be reached by feeding `validate_world` a malformed world — the leaf
+    guards intercept everything Tier 1 doesn't already reject, which is exactly what they
+    are for. So the backstop is exercised by forcing a check to raise something no guard
+    anticipates. Without the wrapper this propagates and `validate_world` raises instead of
+    returning a report, breaking its documented contract.
+    """
+    from iw_architect import validator as validator_module
+
+    def _boom(world, errors, warnings):
+        raise RuntimeError("simulated unanticipated failure")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(validator_module, "_check_xml_deprecation", _boom)
+        with pytest.raises(RuntimeError):
+            # RuntimeError is deliberately NOT in the wrapper's except clause — the contract
+            # covers malformed *data*, not arbitrary bugs, and swallowing every exception
+            # would hide real defects. This documents where that line is drawn.
+            _validate(_base_world())
+
+    def _type_boom(world, errors, warnings):
+        raise TypeError("simulated malformed-data failure")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(validator_module, "_check_xml_deprecation", _type_boom)
+        result = _validate(_base_world())  # must not raise
+    assert not result["valid"]
+    assert any(_BACKSTOP_MESSAGE in e for e in result["errors"]), result["errors"]
+
+
+def test_tier2_backstop_converts_recursion_errors_into_errors():
+    """The `except RecursionError` arm of the Tier 2 wrapper.
+
+    Split from the test above because the two `except` clauses are independently deletable,
+    and a mutation removing only this one left the suite green. It needs a monkeypatch rather
+    than a deep world: given the depth cap and the parser-level guard, no input reaching Tier 2
+    can still blow the stack — which is the point, but it also means this arm is only
+    observable by forcing it.
+    """
+    from iw_architect import validator as validator_module
+
+    def _recursion_boom(world, errors, warnings):
+        raise RecursionError("simulated stack exhaustion")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(validator_module, "_check_xml_deprecation", _recursion_boom)
+        result = _validate(_base_world())  # must not raise
+    assert not result["valid"]
+    assert any("nested too deeply to analyze" in e for e in result["errors"]), result["errors"]
+
+
+def _world_with_event_buried_at_depth(depth: int, event: str):
+    """A world whose sole triggerOnEvent sits under `depth` nested `logic` combinators."""
+    world = _base_world()
+    world["conditions"] = []
+    node = {"id": "cc-1", "category": "condition", "type": "triggerOnEvent", "data": event}
+    for i in range(depth):
+        node = {"id": f"lg-{i}", "category": "logic", "operator": "and", "data": [node]}
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Deep",
+            "advancedLogic": True,
+            "triggerEffects": [{"id": "aa-1", "type": "effectShowMessage", "data": "hi"}],
+            "triggerConditions": [node],
+        }
+    ]
+    return world
+
+
+def test_condition_walk_descends_up_to_the_depth_cap():
+    """Just under the cap, the walk still reaches the buried condition.
+
+    Paired with the test below: this one proves the walker works at depth, so that the
+    truncation assertion there cannot pass merely because the walker is broken.
+    """
+    from iw_architect.validator import _MAX_CONDITION_DEPTH
+
+    world = _world_with_event_buried_at_depth(_MAX_CONDITION_DEPTH - 5, "shallow buried event")
+    result = _validate(world)
+    assert any("shallow buried event" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_condition_walk_stops_at_the_depth_cap():
+    """Past the cap, the walk stops rather than recursing toward a stack overflow.
+
+    Asserting *truncation* is what makes this test load-bearing. An earlier version nested
+    300 levels and only asserted "a report came back" — which passed with the cap removed
+    too, because 300 frames never approach CPython's recursion limit. The cap made no
+    observable difference, so the test proved nothing.
+
+    Note the layering: reached through `validate_world`'s file path, `json.loads` is actually
+    the tighter constraint (its scanner recurses more per level than these walkers do), so a
+    world deep enough to overflow the walkers fails to parse first and is reported as such.
+    The cap therefore matters most for callers who hand an already-parsed dict to the check
+    functions directly. Either way it must be observable, or it will be refactored away.
+    """
+    from iw_architect.validator import _MAX_CONDITION_DEPTH
+
+    world = _world_with_event_buried_at_depth(_MAX_CONDITION_DEPTH + 50, "over-cap buried event")
+    result = _validate(world)  # must not raise
+    assert not any("over-cap buried event" in w for w in result["warnings"]), (
+        "the condition walk descended past _MAX_CONDITION_DEPTH — the depth cap is not "
+        f"limiting recursion: {result['warnings']}"
+    )
+
+
+def _world_with_dangling_prereq_at_depth(depth: int):
+    """A world whose buried triggerPrereqs points at a trigger that does not exist."""
+    world = _base_world()
+    node = {
+        "id": "cc-1",
+        "category": "condition",
+        "type": "triggerPrereqs",
+        "data": {"prereqs": ["NOSUCHTRIGGER"], "firedThisTurn": False},
+    }
+    for i in range(depth):
+        node = {"id": f"lg-{i}", "category": "logic", "operator": "and", "data": [node]}
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "Deep",
+            "advancedLogic": True,
+            "triggerEffects": [{"id": "aa-1", "type": "effectShowMessage", "data": "hi"}],
+            "triggerConditions": [node],
+        }
+    ]
+    return world
+
+
+def test_cross_reference_walk_descends_up_to_the_depth_cap():
+    """`_check_cross_references` has its own walker and its own cap — cover it separately.
+
+    Paired with the test below, exactly as the `_walk` pair above. Two walkers means two caps
+    means two tests; a mutation removing only this one survived a suite that covered the other.
+    """
+    from iw_architect.validator import _MAX_CONDITION_DEPTH
+
+    result = _validate(_world_with_dangling_prereq_at_depth(_MAX_CONDITION_DEPTH - 5))
+    assert any("NOSUCHTRIGGER" in e for e in result["errors"]), result["errors"]
+
+
+def test_cross_reference_walk_stops_at_the_depth_cap():
+    """Past the cap the cross-reference walk stops, so the buried dangling ID goes unreported.
+
+    This encodes a real trade-off rather than an unambiguous win: beyond
+    ``_MAX_CONDITION_DEPTH`` a genuine broken reference is silently *not* checked. That is
+    the accepted cost of never exhausting the stack, and the cap is set far past anything the
+    IW editor can produce. If that judgment is ever revisited, this test is where the
+    behaviour is written down.
+    """
+    from iw_architect.validator import _MAX_CONDITION_DEPTH
+
+    result = _validate(_world_with_dangling_prereq_at_depth(_MAX_CONDITION_DEPTH + 50))
+    assert not any("NOSUCHTRIGGER" in e for e in result["errors"]), (
+        "the cross-reference walk descended past _MAX_CONDITION_DEPTH — its depth cap is "
+        f"not limiting recursion: {result['errors']}"
+    )
+
+
+def test_unparseably_deep_world_reports_instead_of_crashing():
+    """Nesting past what CPython's JSON scanner can parse is reported, not raised.
+
+    Built as raw text: `json.dump` recurses per level too, so the test helper cannot write a
+    file this deep.
+    """
+    from iw_architect.validator import validate_world
+
+    inner = '{"id":"cc-1","category":"condition","type":"triggerOnEvent","data":"x"}'
+    node = inner
+    for i in range(5000):
+        node = f'{{"id":"lg-{i}","category":"logic","operator":"and","data":[{node}]}}'
+    world = _base_world()
+    world["triggerEvents"] = []
+    trigger = (
+        '{"id":"TRIG0001","name":"Deep","advancedLogic":true,'
+        '"triggerEffects":[{"id":"aa-1","type":"effectShowMessage","data":"hi"}],'
+        f'"triggerConditions":[{node}]}}'
+    )
+    text = json.dumps(world).replace('"triggerEvents": []', f'"triggerEvents": [{trigger}]')
+    tmp = tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False)
+    tmp.write(text)
+    tmp.close()
+    try:
+        result = json.loads(validate_world(tmp.name))  # must not raise
+    finally:
+        Path(tmp.name).unlink(missing_ok=True)
+    assert not result["valid"]
+    assert any("too deep to parse" in e for e in result["errors"]), result["errors"]
 
 
 # ── Duplicate IDs ─────────────────────────────────────────────────────────────
@@ -648,7 +1135,7 @@ def test_audit_world_fixture():
     """audit_world must return findings (not error) on the canonical fixture."""
     from iw_architect.tools.analysis import audit_world
 
-    fixture = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
+    fixture = Path(__file__).parent.parent / "example-world-schema-v2.4.json"
     result = json.loads(audit_world(str(fixture)))
     assert "findings" in result
     assert isinstance(result["findings"], list)

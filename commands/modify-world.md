@@ -100,9 +100,13 @@ Once the author's requested changes are complete:
 1. mint_ids("trackedItem", 1)
 2. Determine positionInList
 3. Prefer dataType: "yaml"; if yaml, set a unique snake_case variableName (the PawScript $handle)
-4. If initialValueBasedOnPC="character", also add initialTrackedItemValues to each character
-5. validate_world
+4. Shape the YAML to the data — nesting to any depth is fully supported; mirror it in
+   formatSchema and set enforceFormat: true if a script reads the item
+5. If initialValueBasedOnPC="character", also add initialTrackedItemValues to each character
+6. validate_world
 ```
+
+> YAML tracked items accept the whole YAML language — nested maps, lists inside maps, records inside lists, block scalars (`|` / `>`), comments, quoting — per <https://infiniteworlds.app/yaml-guide>. Never flatten a genuinely hierarchical structure to avoid nesting. Scripts reach nested fields by chaining dots (`$puppy.stats.friendliness`); if you add nesting to an item an existing script reads, update that script's paths in the same edit or it will fail and roll back.
 
 ### Adding a trigger
 
@@ -112,10 +116,16 @@ Once the author's requested changes are complete:
 1. mint_ids("triggerEvent", 1)               → trigger ID
 2. mint_ids("triggerStep", <conds + effects>) → one distinct UUID per condition AND per effect
 3. Build the trigger object — if an effect is effectRunScript, its script may only reference
-   existing tracked-item variableNames and must never write to $player/$game
-4. Edit: append to triggerEvents array
-5. validate_world
+   existing tracked-item variableNames and must never write to $player/$game.
+   v2.4 shapes: triggerPrereqs/triggerBlockers take
+   data: {prereqs|blockers: [...], firedThisTurn: false} — not a bare array
+4. If a condition is triggerOnEvent, add its exact event string to the world's
+   top-level `conditions` array in this same edit
+5. Edit: append to triggerEvents array
+6. validate_world
 ```
+
+> The v2.4 gate-condition shape and the `conditions` registry are covered in [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) — including why a pre-v2.4 bare array you find in an existing world is not a bug, and how to build a `conditions` array when migrating a world that lacks one.
 
 > `triggerStep` is a synthetic kind that yields UUIDs (the format required for condition/effect `id` fields). Every condition and every effect needs its own distinct UUID — duplicate IDs within the conditions array (or within the effects array) fail validation, and any reused ID makes runtime references ambiguous. Mint one fresh UUID per step.
 

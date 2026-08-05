@@ -42,8 +42,8 @@ tests/
 
 references/                                          # On-demand authoring + schema references
 ├── README.md                                        # Index, authoring-intent lookup, ID-format table
-├── WORLD_JSON_SCHEMA_v2.2.md                        # Human-readable schema reference
-├── world_v2.2.schema.json                           # JSON Schema artifact (Tier 1 validator)
+├── WORLD_JSON_SCHEMA_v2.4.md                        # Human-readable schema reference
+├── world_v2.4.schema.json                           # JSON Schema artifact (Tier 1 validator)
 ├── mechanics/                                       # Runtime and platform behaviour
 │   ├── AI_RUNTIME_MECHANICS.md                      # Runtime/turn-lifecycle behavior
 │   ├── PAWSCRIPT.md                                 # PawScript expressions + scripts (effectRunScript)
@@ -155,6 +155,13 @@ The three versions must be **equal** at all times. CI's `version-bump` job fails
 - **Minor (`0.2.0` → `0.3.0`)** — new commands, new MCP tools, new optional schema fields, new validator warnings, new skill content. Additive, backwards-compatible.
 - **Major (`0.2.0` → `1.0.0`)** — schema breaking changes (renamed/removed fields, stricter required-ness), removed commands or tools, renamed MCP tool surfaces, anything that would force a world author to edit existing `world.json` files. **Pre-1.0 exception:** while the project is still pre-1.0, renamed MCP tool surfaces are treated as **minor** bumps rather than major — pre-1.0 semver conventionally allows breaking changes in minor increments.
 
+**Platform world-schema version bumps** (e.g. v2.2 → v2.4) don't get their own tier — classify by what the change does to *existing worlds*, not by the size of the version jump:
+
+- **Minor** if the validator accepts both the old and new shapes and no existing `world.json` is forced to change. A shape change the plugin reads bidirectionally is additive from a user's perspective; renaming the plugin's own schema artifacts (`world_vX.Y.schema.json`, `WORLD_JSON_SCHEMA_vX.Y.md`) is an internal file move, not a schema field rename, and doesn't trip major on its own. This is what v2.2 → v2.4 was (`0.17.0`).
+- **Major** if a previously-valid world becomes unreadable or newly invalid — a shape the validator can no longer parse, a field that becomes required, or a removal with no back-compat path.
+
+Whenever a bump renames a schema artifact, grep the whole repo for the old filenames **and** for prose currency claims (`v2.2 schema`, `as of v2.2`, `the v2.2 enum`) — the link tests catch paths, not sentences. Keep "New in v2.2" / "deprecated as of v2.2" provenance notes; only update claims that assert which version is *current*.
+
 **Workflow:**
 
 1. When starting a branch, decide the bump level based on the planned change. If you don't know yet, default to patch and revisit before opening the PR.
@@ -178,24 +185,24 @@ uv run python -m iw_architect.server
 
 ## Source-of-truth rules (from DESIGN_BRIEF_v2.md §3)
 
-1. **`example-world-schema-v2.2.json` is the schema.** If `validate_world` reports errors on the fixture, the validator is wrong — fix the validator to accept the fixture. (`example-world-schema-v2.1.json` is retained as a back-compat fixture — it must still validate with only warnings, never errors.)
+1. **`example-world-schema-v2.4.json` is the schema.** If `validate_world` reports errors on the fixture, the validator is wrong — fix the validator to accept the fixture. (`example-world-schema-v2.2.json` and `example-world-schema-v2.1.json` are retained as back-compat fixtures — they must still validate with only warnings, never errors. v2.2 is load-bearing: it is the only fixture carrying the pre-v2.4 bare-array shape for `triggerPrereqs` / `triggerBlockers`.)
 2. **Read before writing.** Always call `Read` on the JSON before any `Edit`.
 3. **Pass-through preservation.** Unknown fields survive because the agent edits in place.
 4. **`schemaVersion` is load-bearing.** Read and write it on every world.
 5. **The validator enforces; the schema doc explains; the fixture is ground truth.**
-6. **The wiki can be stale.** [`infiniteworlds.mywikis.wiki`](https://infiniteworlds.mywikis.wiki/) documents some pre-v2.1 conventions that have since been consolidated or renamed (e.g., the wiki shows `canContinueEndedGame` as a standalone boolean; v2.1 actually folds that semantic into `effectEndsGame.data`). When the wiki and `world_v2.2.schema.json` / `example-world-schema-v2.2.json` disagree, the schema and fixture win — and flag the divergence so the docs can be updated.
+6. **The wiki can be stale.** [`infiniteworlds.mywikis.wiki`](https://infiniteworlds.mywikis.wiki/) documents some pre-v2.1 conventions that have since been consolidated or renamed (e.g., the wiki shows `canContinueEndedGame` as a standalone boolean; v2.1 actually folds that semantic into `effectEndsGame.data`). When the wiki and `world_v2.4.schema.json` / `example-world-schema-v2.4.json` disagree, the schema and fixture win — and flag the divergence so the docs can be updated.
 
 ## Design constraints
 
 - **No write tools.** The plugin has no add/modify/remove MCP tools. The agent edits `world.json` directly with Claude Code's native `Read`, `Edit`, `Write` tools.
-- **Single source of schema truth.** `references/world_v2.2.schema.json` is the canonical schema artifact. `validator.py` enforces it (Tier 1 jsonschema + Tier 2 custom checks). `schema_model.py` derives `SCHEMA_SUMMARY` from it at import time for the LLM-facing summary. When the platform schema evolves, edit the JSON Schema — the rest follows.
+- **Single source of schema truth.** `references/world_v2.4.schema.json` is the canonical schema artifact. `validator.py` enforces it (Tier 1 jsonschema + Tier 2 custom checks). `schema_model.py` derives `SCHEMA_SUMMARY` from it at import time for the LLM-facing summary. When the platform schema evolves, edit the JSON Schema — the rest follows.
 - **Warn, don't error** on unknown top-level keys, unknown effect types, and future schema versions — the platform may add fields the validator doesn't know about. Build-time strictness is enforced separately by `test_fixture_schema_coverage_nested` in `tests/test_round_trip.py`.
 
 ## Adding a new platform feature
 
 The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it automatically, so there is no second place to update.
 
-1. **Edit the JSON Schema** at `references/world_v2.2.schema.json`:
+1. **Edit the JSON Schema** at `references/world_v2.4.schema.json`:
    - For a new top-level field: add an entry to `properties` with `description`, `x-iw-category`, optionally `default`, `x-iw-note`, `enum`.
    - For a new entity field: add it under the relevant `$defs.<entity>.properties`. If required, also add the field name to that `$defs.<entity>.required` array.
    - For a new effect/condition type: add an entry to `$defs.triggerEffect.x-iw-effect-types` or `$defs.triggerCondition.x-iw-condition-types`. Register the type in `validator.py`'s `_KNOWN_EFFECT_TYPES` / `_KNOWN_CONDITION_TYPES` set so it stops warning as "unknown".

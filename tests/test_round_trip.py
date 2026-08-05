@@ -13,8 +13,12 @@ from pathlib import Path
 
 import pytest
 
-FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
-# The prior-version fixture is retained for the back-compat test below.
+FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.4.json"
+# Prior-version fixtures are retained for the back-compat tests below. v2.2 is the more
+# load-bearing of the two: it is the only fixture carrying the pre-v2.4 bare-array shape
+# for triggerPrereqs / triggerBlockers, so it is what proves the validator still reads
+# worlds authored before the v2.4 gate-condition shape change.
+FIXTURE_PATH_V22 = Path(__file__).parent.parent / "example-world-schema-v2.2.json"
 FIXTURE_PATH_V21 = Path(__file__).parent.parent / "example-world-schema-v2.1.json"
 
 
@@ -61,27 +65,80 @@ def test_fixture_passes_validator():
 
 
 def test_fixture_schema_version():
-    """Fixture must have schemaVersion 2.2."""
+    """Fixture must have schemaVersion 2.4."""
     fixture = json.loads(FIXTURE_PATH.read_text())
-    assert fixture["schemaVersion"] == 2.2
+    assert fixture["schemaVersion"] == 2.4
 
 
 def test_v21_fixture_still_validates_clean():
-    """Back-compat: the prior-version fixture must still validate with NO errors.
+    """Back-compat: the oldest retained fixture must still validate with NO errors.
 
     v2.1 worlds lack the v2.2 tracked-item fields (variableName, enforceFormat, …) and
     must remain valid — the new fields are all optional. The only surfaced findings are
-    warnings (e.g. the 'schemaVersion 2.1 older than expected 2.2' notice, plus the
+    warnings (e.g. the 'schemaVersion 2.1 older than expected 2.4' notice, plus the
     XML-deprecation warning for the fixture's XML tracked item).
     """
     from iw_architect.validator import validate_world
 
     result = json.loads(validate_world(str(FIXTURE_PATH_V21)))
     assert result["errors"] == [], (
-        "v2.1 fixture must still validate clean under the v2.2 validator:\n"
+        "v2.1 fixture must still validate clean under the v2.4 validator:\n"
         + "\n".join(f"  - {e}" for e in result["errors"])
     )
     assert any("older" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_v22_fixture_still_validates_clean():
+    """Back-compat: the v2.2 fixture must still validate with NO errors.
+
+    v2.4 changed the `data` shape of triggerPrereqs / triggerBlockers from a bare array
+    of trigger IDs to an object. Worlds authored before v2.4 carry the array, so the
+    validator must keep reading it — degrading to a warning, never an error.
+    """
+    from iw_architect.validator import validate_world
+
+    result = json.loads(validate_world(str(FIXTURE_PATH_V22)))
+    assert result["errors"] == [], (
+        "v2.2 fixture must still validate clean under the v2.4 validator:\n"
+        + "\n".join(f"  - {e}" for e in result["errors"])
+    )
+    assert any("older" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_v22_fixture_legacy_gate_shape_still_cross_checked():
+    """The pre-v2.4 bare-array gate shape must still resolve trigger IDs, and must warn.
+
+    Scope note, because this is easy to misread: this test does **not** guard the silent-skip
+    bug. The old ``isinstance(data, list)`` code handled *list*-shaped data correctly — that
+    was never what broke. What broke was *dict*-shaped data falling through every branch. So
+    the "unknown trigger id" assertion below cannot distinguish old code from new; under that
+    mutation only the bare-array *warning* assertion fails.
+
+    The tests that actually guard the silent skip are ``test_trigger_prereqs_unknown_id`` and
+    ``test_trigger_blockers_unknown_id`` in ``test_validator.py``, which carry dict-shaped
+    ``data``. If those payloads are ever weakened back to bare lists, this test will keep
+    passing while the regression goes uncovered.
+    """
+    from iw_architect.validator import validate_world
+
+    world = json.loads(FIXTURE_PATH_V22.read_text())
+    for trigger in world["triggerEvents"]:
+        for cond in trigger.get("triggerConditions", []):
+            if cond.get("type") == "triggerPrereqs":
+                cond["data"] = ["nosuchid"]
+
+    with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False) as f:
+        json.dump(world, f)
+        tmp = f.name
+    try:
+        result = json.loads(validate_world(tmp))
+        assert any("triggerPrereqs references unknown trigger id" in e for e in result["errors"]), (
+            "legacy bare-array triggerPrereqs must still be cross-checked; got errors: "
+            f"{result['errors']}"
+        )
+        assert any("pre-v2.4 bare-array form" in w for w in result["warnings"]), result["warnings"]
+    finally:
+        Path(tmp).unlink(missing_ok=True)
 
 
 def test_fixture_pawscript_no_cross_reference_warnings():
@@ -96,14 +153,24 @@ def test_fixture_pawscript_no_cross_reference_warnings():
     assert not any("read-only at runtime" in w for w in result["warnings"]), result["warnings"]
 
 
-def test_scaffold_schema_version_is_2_2(tmp_path):
-    """create_new_world_json must emit schemaVersion 2.2."""
+def test_scaffold_schema_version_is_2_4(tmp_path):
+    """create_new_world_json must emit schemaVersion 2.4."""
     from iw_architect.tools.helpers import create_new_world_json
 
     output = tmp_path / "scaffold_version.json"
     create_new_world_json(str(output), title="Test World")
     world = json.loads(output.read_text())
-    assert world["schemaVersion"] == 2.2
+    assert world["schemaVersion"] == 2.4
+
+
+def test_scaffold_seeds_empty_conditions_registry(tmp_path):
+    """schema v2.4: the scaffold seeds `conditions` so authors see the field exists."""
+    from iw_architect.tools.helpers import create_new_world_json
+
+    output = tmp_path / "scaffold_conditions.json"
+    create_new_world_json(str(output), title="Test World")
+    world = json.loads(output.read_text())
+    assert world["conditions"] == []
 
 
 def test_format_world_for_review_writes_file(tmp_path):
@@ -209,8 +276,8 @@ def test_make_draft_world_copies_bumps_and_fronts_version(tmp_path):
 
     world = json.loads(draft.read_text())
     assert next(iter(world)) == "version", "version must be the first key in the draft"
-    assert world["version"] == "1.07", "fixture version 1.06 must bump to 1.07"
-    assert result["version"] == {"from": "1.06", "to": "1.07"}
+    assert world["version"] == "1.09", "fixture version 1.08 must bump to 1.09"
+    assert result["version"] == {"from": "1.08", "to": "1.09"}
 
     # The source is the protected baseline: byte-for-byte unchanged.
     assert source.read_bytes() == source_bytes_before

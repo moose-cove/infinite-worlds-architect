@@ -1,6 +1,6 @@
 # Field Guide: Tracked Items
 
-JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#4-trackeditems) §4.
+JSON key: `trackedItems` — array of tracked item objects. For exact field shapes see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#4-trackeditems) §4.
 
 This file covers *authoring judgments* about tracked items: when to use them, how to choose `dataType` and `visibility`, what `updateInstructions` actually shape.
 
@@ -55,7 +55,7 @@ If you're uncertain whether something should be `number` or `text`: pick `number
 
 ## Choosing `visibility`
 
-The v2.2 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`.
+The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`, `hidden_boring`.
 
 | Value | Who sees the value | When to use |
 |---|---|---|

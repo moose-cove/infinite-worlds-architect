@@ -2,7 +2,7 @@
 
 Covers: `title`, `description`, `background`, `firstInput`, `objective`.
 
-For field shapes see [`WORLD_JSON_SCHEMA_v2.2.md`](../../WORLD_JSON_SCHEMA_v2.2.md#1-top-level-fields) §1. For broader allocation rules see [`FIELD_ALLOCATION_STRATEGY.md`](../guidance/FIELD_ALLOCATION_STRATEGY.md).
+For field shapes see [`WORLD_JSON_SCHEMA_v2.4.md`](../../WORLD_JSON_SCHEMA_v2.4.md#1-top-level-fields) §1. For broader allocation rules see [`FIELD_ALLOCATION_STRATEGY.md`](../guidance/FIELD_ALLOCATION_STRATEGY.md).
 
 ---
 

@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://infiniteworlds.app/schemas/world_v2.2",
-  "title": "Infinite Worlds World v2.2",
+  "$id": "https://infiniteworlds.app/schemas/world_v2.4",
+  "title": "Infinite Worlds World v2.4",
   "description": "Schema for Infinite Worlds story world JSON files. Single source of truth — schema_model.SCHEMA_SUMMARY is derived from this document at import time. IW-specific metadata uses x-iw-* extensions, which jsonschema validators ignore.",
-  "x-iw-schema-version": 2.2,
+  "x-iw-schema-version": 2.4,
   "type": "object",
   "required": ["schemaVersion", "title"],
   "properties": {
@@ -245,6 +245,14 @@
       "x-iw-category": "editable",
       "default": false
     },
+    "conditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Named-event registry (schema v2.4). Each string is a natural-language event the AI watches for; a `triggerOnEvent` condition is matched to an entry by exact text. Keep the two in sync.",
+      "x-iw-category": "editable",
+      "default": [],
+      "x-iw-note": "New in v2.4. Absent entirely in pre-v2.4 worlds. Exact-text keying is well-supported: the fixture's single entry matches its single triggerOnEvent `data` byte-for-byte, and no ID or index links them, so text is the only available key. OPEN QUESTION: what the registry DOES is unverified. It may drive selectability in the world editor's trigger UI (the reading this plugin's guidance assumes), or it may be a platform-maintained index of the events already in use — which would also explain how the documented world-level cap of ten AI-evaluated events is enforced. The authoring instruction is identical under either reading: keep `conditions` in sync with your triggerOnEvent strings. Tier 2 warns on drift in both directions, never errors."
+    },
     "permissionsOnceShared": {
       "type": "object",
       "description": "Permissions granted to other users once this world is shared.",
@@ -417,7 +425,8 @@
         "dataType": {
           "type": "string",
           "enum": ["text", "number", "xml", "yaml"],
-          "description": "Storage data type. 'yaml' is the recommended structured format (schema v2.2) — enforceable via formatSchema. 'xml' is deprecated in favor of 'yaml' for structured data."
+          "description": "Storage data type. 'yaml' is the recommended structured format (schema v2.2) — enforceable via formatSchema. 'xml' is deprecated in favor of 'yaml' for structured data.",
+          "x-iw-note": "A 'yaml' item may hold ANY valid YAML structure, to arbitrary depth — scalars, mappings, sequences, mappings nested in sequences, sequences nested in mappings, and block scalars ('|' literal, '>' folded). There is no flat-key restriction. See https://infiniteworlds.app/yaml-guide. PawScript walks nested paths with dots ($item.stats.friendliness)."
         },
         "visibility": {
           "type": "string",
@@ -452,6 +461,7 @@
         "formatSchema": {
           "type": "string",
           "description": "Pseudo-schema describing the item's structure (schema v2.2): lines of 'field: type' where type is 'text' or 'number', and a trailing '...:' line meaning 'more entries like this'. For a list-of-records value (the common case) the fields are prefixed with a leading '- ' YAML list marker, e.g. '- name: text'. Empty when unused.",
+          "x-iw-note": "The pseudo-schema mirrors the value's own nesting: a field whose value is a sub-map is written as a bare 'field:' line with its children indented beneath it, and '...:' may appear at any level to mean 'more keys like these here'. It is not restricted to a flat list of leaf fields — see the puppy tracker in the canonical fixture, whose 'stats:' block nests 'friendliness' and 'energy'.",
           "x-iw-category": "editable"
         },
         "driftAcknowledgedForName": {
@@ -522,15 +532,18 @@
         },
         "triggerOnEvent": {
           "data": "string (natural-language event description)",
-          "description": "AI-evaluated: fires when AI judges the described event occurred"
+          "description": "AI-evaluated: fires when AI judges the described event occurred",
+          "x-iw-note": "Schema v2.4: the event string should also appear in the world's top-level `conditions` array, which is what registers it in the editor's trigger UI. Tier 2 validation warns when it does not."
         },
         "triggerPrereqs": {
-          "data": "string[] (trigger IDs that must have fired)",
-          "description": "Gates on prior trigger execution"
+          "data": "{prereqs: string[] (trigger IDs that must have fired), firedThisTurn: boolean}",
+          "description": "Gates on prior trigger execution",
+          "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `prereqs`, plus `firedThisTurn`. The legacy bare-array form is still accepted on read (older worlds carry it) and is treated as prereqs; emit the object form for new authoring. OPEN QUESTION: the fixture shows firedThisTurn only as false. Its name suggests it narrows the gate from 'fired at any point' to 'fired on the current turn', but that is unverified — emit false unless an author has confirmed the other behaviour in-game."
         },
         "triggerBlockers": {
-          "data": "string[] (trigger IDs that must NOT have fired)",
-          "description": "Blocked if any listed trigger has fired"
+          "data": "{blockers: string[] (trigger IDs that must NOT have fired), firedThisTurn: boolean}",
+          "description": "Blocked if any listed trigger has fired",
+          "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `blockers`, plus `firedThisTurn`. The legacy bare-array form is still accepted on read and is treated as blockers; emit the object form for new authoring. OPEN QUESTION: the fixture shows firedThisTurn only as false. Its name suggests it narrows the block from 'fired at any point' to 'fired on the current turn', but that is unverified — emit false unless an author has confirmed the other behaviour in-game."
         },
         "logic": {
           "operator": "and|or",
@@ -613,7 +626,8 @@
         },
         "effectRunScript": {
           "data": "string (PawScript source)",
-          "description": "Run a PawScript script (the string in `data`) when the trigger fires (schema v2.2). Scripts can ONLY mutate tracked items, referenced as $<variableName>; the natives $player and $game are read-only. Execution is transactional: any error rolls back all changes, is logged to World Debug, and the game continues. No unbounded loops. Docs: https://infiniteworlds.app/pawscript-script-guide and https://infiniteworlds.app/pawscript-reference"
+          "description": "Run a PawScript script (the string in `data`) when the trigger fires (schema v2.2). Scripts can ONLY mutate tracked items, referenced as $<variableName>; the natives $player and $game are read-only. Execution is transactional: any error rolls back all changes, is logged to World Debug, and the game continues. No unbounded loops. Docs: https://infiniteworlds.app/pawscript-script-guide and https://infiniteworlds.app/pawscript-reference",
+          "x-iw-note": "Nested YAML is reached by chaining dots: $item.stats.friendliness. A `for each` loop variable behaves the same way ($puppy.stats.friendliness += 1), so the depth of a YAML tracked item does not limit what a script can read or write."
         }
       }
     },

@@ -6,10 +6,10 @@ This directory holds authoring and schema references for the `infinite-worlds-ar
 
 | File | Purpose |
 |---|---|
-| `world_v2.2.schema.json` | The canonical JSON Schema. Used by `validate_world` and the `SCHEMA_SUMMARY` deriver. Authoritative for field shapes, required-ness, enums, and `x-iw-*` semantics. |
-| `WORLD_JSON_SCHEMA_v2.2.md` | Human-readable schema walkthrough. Use when the JSON Schema `description` strings are too terse. |
+| `world_v2.4.schema.json` | The canonical JSON Schema. Used by `validate_world` and the `SCHEMA_SUMMARY` deriver. Authoritative for field shapes, required-ness, enums, and `x-iw-*` semantics. |
+| `WORLD_JSON_SCHEMA_v2.4.md` | Human-readable schema walkthrough. Use when the JSON Schema `description` strings are too terse. |
 
-The canonical fixture lives at `example-world-schema-v2.2.json` in the plugin root — ground truth for *real* IW field shapes. If the validator rejects the fixture, the validator is wrong. (`example-world-schema-v2.1.json` is retained alongside it as a back-compat fixture — not canonical; it must still validate with only warnings.)
+The canonical fixture lives at `example-world-schema-v2.4.json` in the plugin root — ground truth for *real* IW field shapes. If the validator rejects the fixture, the validator is wrong. (`example-world-schema-v2.2.json` and `example-world-schema-v2.1.json` are retained alongside it as back-compat fixtures — not canonical; they must still validate with only warnings.)
 
 ## `mechanics/` — Runtime and platform behaviour
 
