@@ -1,0 +1,348 @@
+{
+  "favorite": false,
+  "title": "SCHEMA PROBE B — event cap and AI model enum",
+  "description": "Isolated instrument world for the two probes most likely to be rejected or silently truncated on import. Kept separate from Probe A so a hard failure here costs nothing there. Not a playable adventure — do not publish.",
+  "background": "A featureless white room containing twelve numbered doors. Nothing happens here unless a trigger makes it happen.",
+  "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery.",
+  "authorStyle": "Terse and clinical.",
+  "recommendedAIModel": "smilodon",
+  "firstInput": "I count the doors.",
+  "objective": "Advance turns so the probe triggers fire.",
+  "imageModel": "manticore",
+  "imageStyle": "photo_1",
+  "illustrationStyleNonCharacterLowPriority": "",
+  "illustrationStyleNonCharacterHighPriority": "",
+  "illustrationStyleCharacterLowPriority": "",
+  "illustrationStyleCharacterHighPriority": "",
+  "imageStyleCharacterPre": "",
+  "imageStyleCharacterPost": "",
+  "imageStyleNonCharacterPre": "",
+  "imageStyleNonCharacterPost": "",
+  "mature": false,
+  "nsfw": false,
+  "contentWarnings": "",
+  "enableAISpecificInstructionBlocks": true,
+  "previewImage": "",
+  "fullSizePreviewImage": "",
+  "previewImageOptions": [],
+  "fullSizePreviewImageOptions": [],
+  "currentPreviewImageIndex": 0,
+  "imagePromptDetails": {
+    "illustrGenre": "",
+    "illustrClothes": "",
+    "illustrSetting": "",
+    "illustrSubject": "",
+    "illustrAppearance": "",
+    "illustrIsCharacter": false,
+    "illustrExpressionPosition": ""
+  },
+  "permissionsOnceShared": {
+    "sharing": false,
+    "editing": false
+  },
+  "allowChangeCharacterName": true,
+  "allowChangeCharacterDescription": true,
+  "allowChangeCharacterSkills": true,
+  "allowChangeCharacterItemValues": true,
+  "allowChangeCharacterPortrait": true,
+  "allowChangeCharacterNewPortrait": true,
+  "conditions": [
+    "PROBE CAP event 01",
+    "PROBE CAP event 02",
+    "PROBE CAP event 03",
+    "PROBE CAP event 04",
+    "PROBE CAP event 05",
+    "PROBE CAP event 06",
+    "PROBE CAP event 07",
+    "PROBE CAP event 08",
+    "PROBE CAP event 09",
+    "PROBE CAP event 10",
+    "PROBE CAP event 11",
+    "PROBE CAP event 12"
+  ],
+  "descriptionRequest": "",
+  "evaluationRequest": "",
+  "summaryRequest": "",
+  "schemaVersion": 2.4,
+  "charSelectText": "Pick the probe character.",
+  "skills": [
+    "Observation",
+    "Patience"
+  ],
+  "possibleCharacters": [
+    {
+      "name": "Probe Subject",
+      "description": "A plain figure in a grey coat who exists only so the world has a player character.",
+      "portrait": "",
+      "fullSizePortrait": "",
+      "portraitOptions": [],
+      "fullSizePortraitOptions": [],
+      "currentPortraitIndex": 0,
+      "characterId": "PrbSubj2",
+      "skills": {
+        "Observation": 3,
+        "Patience": 3
+      },
+      "initialTrackedItemValues": []
+    }
+  ],
+  "triggerEvents": [
+    {
+      "id": "PrbCap01",
+      "name": "CAP 01",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000001",
+          "data": "PROBE CAP 01 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000101",
+          "data": "PROBE CAP event 01",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap02",
+      "name": "CAP 02",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000002",
+          "data": "PROBE CAP 02 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000102",
+          "data": "PROBE CAP event 02",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap03",
+      "name": "CAP 03",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000003",
+          "data": "PROBE CAP 03 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000103",
+          "data": "PROBE CAP event 03",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap04",
+      "name": "CAP 04",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000004",
+          "data": "PROBE CAP 04 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000104",
+          "data": "PROBE CAP event 04",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap05",
+      "name": "CAP 05",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000005",
+          "data": "PROBE CAP 05 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000105",
+          "data": "PROBE CAP event 05",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap06",
+      "name": "CAP 06",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000006",
+          "data": "PROBE CAP 06 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000106",
+          "data": "PROBE CAP event 06",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap07",
+      "name": "CAP 07",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000007",
+          "data": "PROBE CAP 07 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000107",
+          "data": "PROBE CAP event 07",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap08",
+      "name": "CAP 08",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000008",
+          "data": "PROBE CAP 08 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000108",
+          "data": "PROBE CAP event 08",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap09",
+      "name": "CAP 09",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000009",
+          "data": "PROBE CAP 09 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000109",
+          "data": "PROBE CAP event 09",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap10",
+      "name": "CAP 10",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000010",
+          "data": "PROBE CAP 10 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000110",
+          "data": "PROBE CAP event 10",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap11",
+      "name": "CAP 11 — first past the documented cap",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000011",
+          "data": "PROBE CAP 11 fired. This is the first event past the documented cap of ten.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000111",
+          "data": "PROBE CAP event 11",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap12",
+      "name": "CAP 12 — second past the documented cap",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000012",
+          "data": "PROBE CAP 12 fired. This is the second event past the documented cap of ten.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000112",
+          "data": "PROBE CAP event 12",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    }
+  ],
+  "victoryCondition": {
+    "condition": "The player types the word VICTORY.",
+    "text": "Probe complete.",
+    "alreadyFired": false
+  },
+  "defeatCondition": {
+    "condition": "The player types the word DEFEAT.",
+    "text": "Probe aborted.",
+    "alreadyFired": false
+  },
+  "instructionBlocks": [],
+  "loreBookEntries": [],
+  "trackedItems": [],
+  "NPCs": [],
+  "autoAdvanceVersion": false,
+  "version": "1.00",
+  "designNotes": "SCHEMA PROBE B. Isolated instrument world for the AI-evaluated event cap and the recommendedAIModel enum. See probes/README.md in the infinite-worlds-architect repo for the read protocol."
+}
