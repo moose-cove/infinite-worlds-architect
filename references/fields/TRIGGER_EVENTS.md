@@ -214,7 +214,7 @@ comparison.
 
 1. **AND logic only.** All conditions on one trigger must be met simultaneously. For OR logic, create multiple triggers (or use `category: "logic"` with `operator: "or"` when `advancedLogic: true`).
 2. **Evaluation order matters.** `triggerPrereqs` and `triggerBlockers` only recognize triggers that fired earlier in the same evaluation pass (same turn, earlier in the list). Trigger ordering is therefore semantically significant.
-3. **`triggerOnEvent` limit.** Maximum 10 AI-evaluated event conditions per world. Each one is paid for in additional AI evaluation tokens every turn.
+3. **`triggerOnEvent` limit.** Maximum 10 AI-evaluated event conditions per world — documented, but **not enforced at import** (twelve round-tripped untruncated; see the cap discussion above). Treat it as a cost ceiling rather than a hard limit: each one is paid for in additional AI evaluation tokens every turn.
 4. **Pre-game triggers (`triggerOnStartOfGame: true`).** Fire before turn 0, before the player acts. Some effects (notably `effectTellAIWhatToDo`) behave differently or are no-ops in this context — the "next turn" they target is turn 1, not turn 0.
 
 ---

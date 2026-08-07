@@ -119,13 +119,15 @@ Once the author's requested changes are complete:
    existing tracked-item variableNames and must never write to $player/$game.
    v2.4 shapes: triggerPrereqs/triggerBlockers take
    data: {prereqs|blockers: [...], firedThisTurn: false} — not a bare array
+   triggerOnTrackedItem needs a non-empty textComparison (e.g. "contains") —
+   without it IW deletes the whole condition on import
 4. If a condition is triggerOnEvent, add its exact event string to the world's
    top-level `conditions` array in this same edit
 5. Edit: append to triggerEvents array
 6. validate_world
 ```
 
-> The v2.4 gate-condition shape and the `conditions` registry are covered in [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) — including why a pre-v2.4 bare array you find in an existing world is not a bug, and how to build a `conditions` array when migrating a world that lacks one.
+> The v2.4 gate-condition shape and the `conditions` registry are covered in [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) — including why a pre-v2.4 bare array you find in an existing world **must be migrated** (IW deletes the condition on import rather than migrating it, silently ungating the trigger), and how to build a `conditions` array when migrating a world that lacks one.
 
 > `triggerStep` is a synthetic kind that yields UUIDs (the format required for condition/effect `id` fields). Every condition and every effect needs its own distinct UUID — duplicate IDs within the conditions array (or within the effects array) fail validation, and any reused ID makes runtime references ambiguous. Mint one fresh UUID per step.
 

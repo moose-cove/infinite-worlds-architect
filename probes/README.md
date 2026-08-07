@@ -20,8 +20,10 @@ Do not publish either world.
 > **On import risk.** These were originally split so that a hard import failure on the risky
 > probes could not take the valuable ones down with it. Probe A's run largely falsified that
 > premise: IW's import is **lenient and lossy**, not strict and rejecting. Every unrecognized
-> construct in Probe A — two legacy gate shapes, one malformed condition, one array
-> `initialPCValue` — was silently dropped while the world imported successfully. Rejection is
+> construct in Probe A — two legacy gate shapes, one condition missing `textComparison`, and
+> one `"player"`-scoped per-character entry — was silently dropped while the world imported
+> successfully. (The array `initialPCValue` was the *pre-probe* suspect and turned out to be
+> fine; Probe B's 2×2 cleared it.) Rejection is
 > no longer the failure mode to design around; **silent deletion is**. That is why Probe B now
 > carries the follow-ups rather than a third file existing to isolate them.
 
@@ -49,7 +51,15 @@ Probe A established the real noise floor, which is narrower than expected:
   `summaryRequest`, `instructionBlocks`, `loreBookEntries` and `NPCs` were dropped when
   empty — but `contentWarnings: ""`, `previewImage: ""`, `previewImageOptions: []` and
   `autoAdvanceVersion: false` all survived. Do not generalize this to "IW strips empties".
-- **Key order held.** Both probes are authored in IW's canonical order and came back in it.
+- **Key order held — with one exception.** Top-level key order and every array's element order
+  came back as authored. But the **per-character `skills` map** was reordered in *both* probes:
+  `{"Observation": 3, "Patience": 3}` → `{"Patience": 3, "Observation": 3}`. The world-level
+  `skills` *array* held its order, so this is specific to the object — consistent with it being
+  deserialized into an unordered map server-side. Don't chase it as a finding.
+- **IW injects a default in at least one place.** Probe B's character had no
+  `portraitPromptDetails` key and came back with `portraitPromptDetails: {}`. Probe A's was
+  populated and survived intact. So "lenient and lossy" is not only subtractive — diffing a
+  round trip will show additions too.
 - **`version` held**, because both probes set `autoAdvanceVersion: false`.
 - **No ID was renamed.** All probe IDs are alphanumeric, which is what avoids the
   tracked-item rename hazard. Still match entities by `name`, so that a rename would show up
@@ -75,9 +85,10 @@ cause.
 
 Consequence: importing a pre-v2.4 world under v2.4 converts every gated trigger into an
 ungated one. There is no error and no warning, in-game or in the export. Worse, **the
-exported world validates with fewer warnings than the input**, because the legacy-shape
-warning has nothing left to fire on. Migration is not housekeeping; it is the only thing
-standing between a legacy world and losing its gates.
+exported world validates strictly more cleanly than the input** — `probe-a-core.json` reports
+4 errors / 4 warnings, `probe-a-imported.json` 0 errors / 4 warnings — because the messages
+have nothing left to fire on. Migration is not housekeeping; it is the only thing standing
+between a legacy world and losing its gates.
 
 **P3 — the `conditions` registry is author-maintained, not platform-derived.** The array
 came back byte-identical: still missing the used-but-undeclared event, still holding the
@@ -124,10 +135,26 @@ understated the damage — the condition is destroyed, not the key. Both cases a
 | array | `"player"` | **entry deleted** |
 | string | `"character"` | survived |
 
-Clean main effect, no interaction. **Scope matters:** all five tracked *items* survived
-byte-identical, including the two whose item-level `initialValueBasedOnPC` is `"player"`. So
-`"player"` is valid on the item and fatal on the per-character entry — coherent, since
-`"player"` means the value is not per-character.
+Clean main effect, no interaction — the array form of `initialPCValue` is **cleared**, which
+was the pre-probe suspect. What survived is `"player"` as the fatal factor.
+
+> **⚠ Known confound — this 2×2 does not establish which *level* is fatal.** The probe design
+> deliberately held each entry's `initialValueBasedOnPC` **equal to its backing tracked item's**
+> ("so only the intended factor varies" — which was right for the shape-vs-scope question and
+> wrong for this one). Entry scope across the four cells is `character, player, player,
+> character`; item scope is the *identical* `character, player, player, character`. They covary
+> perfectly, so nothing separates:
+>
+> - **(a)** a player-scoped **entry** is deleted — what `validate_world` assumes, or
+> - **(b)** a player-scoped **item** drops its per-character entries — arguably the more
+>   natural implementation.
+>
+> All five tracked *items* did survive byte-identical, including the two backing deleted
+> entries — but an item record surviving says nothing about whether its *setting* caused the
+> entry's deletion. Under (b) the validator has a false negative (item `"player"` + entry
+> `"character"`) and a false positive (the reverse). **Neither cell has ever been imported.**
+> The rule errors anyway because it is correct in every observed case and both readings agree
+> the world is broken. Resolving this is Probe C's job.
 
 ### Answered by Probe B
 
@@ -136,10 +163,29 @@ twelve triggers survived with conditions intact; nothing was rejected or truncat
 with P3 ruling out registry regeneration, both import-side mechanisms are now excluded, so the
 cap is applied at runtime or is purely advisory. **Still needs play data.**
 
-**P12 — `recommendedAIModel: "smilodon"` is valid.** Round-tripped byte-identical. First
-confirmed value for that enum, closing one of the two open questions carried since
-`DESIGN_BRIEF_v2.md` §9. The full enum is still unknown; the editor's model dropdown should
-name it.
+**P12 — `recommendedAIModel: "smilodon"` is accepted and preserved.** Round-tripped
+byte-identical: the first known-authorable value for a field the fixture only ever shows as
+`null`. Stated precisely, because it is easy to overclaim — survival proves IW *stores* the
+string, not that it validates the field or honours it at runtime. No bogus-model control was
+run, so we cannot even show IW rejects a nonsense value. **The `DESIGN_BRIEF_v2.md` §9 open
+question was the full enum, and it remains open** — this narrows it by one value rather than
+closing it.
+
+### Still open — needs another round trip (Probe C)
+
+**P10-followup — which level is fatal, the entry or its backing item?** The only unresolved
+question that a round trip *can* answer, and the one carrying a live validator rule. Probe C
+needs exactly two cells, both of which break the entry/item covariance every existing cell has:
+
+| Tracked item `initialValueBasedOnPC` | Entry `initialValueBasedOnPC` | Distinguishes |
+|---|---|---|
+| `"player"` | `"character"` | survives ⇒ reading (a); entry deleted ⇒ reading (b) |
+| `"character"` | `"player"` | entry deleted ⇒ reading (a); survives ⇒ reading (b) |
+
+If reading (b) wins, `_check_initial_tracked_item_value_scope` must key off the tracked item
+rather than the entry, and `test_check_reads_the_entry_not_the_item_in_an_untested_platform_cell`
+is the assertion that has to flip. Worth pairing with a `recommendedAIModel` bogus-value
+control (does IW reject an unknown model string, or store anything?) since both are cheap.
 
 ### Still open — all runtime-only
 

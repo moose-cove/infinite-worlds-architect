@@ -77,7 +77,8 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── README.md               # Run + read protocol; recorded results; where findings land
 ├── probe-a-core.json       # Gate shapes, firedThisTurn, conditions registry, YAML, image style
 ├── probe-a-imported.json   # Probe A after an IW import/export round trip — evidence, do not edit
-└── probe-b-cap.json        # Ten-event cap, recommendedAIModel, Probe A factor-isolation follow-ups
+├── probe-b-cap.json        # Ten-event cap, recommendedAIModel, Probe A factor-isolation follow-ups
+└── probe-b-imported.json   # Probe B after an IW import/export round trip — evidence, do not edit
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)

@@ -403,45 +403,58 @@ def _check_tracked_item_condition_data(world: dict, errors: list[str], warnings:
     which the KB had carried as [PENDING TEST] since May 2026 — it round-trips intact.
 
     The prior wording here ("silently stripped on IW import") described the empty-string case
-    as losing a key. It loses the condition. Scope of the evidence: a number-type target item;
-    all three canonical fixtures carry ``textComparison`` on every ``triggerOnTrackedItem``
-    regardless of the target's dataType, so requiring it generally matches the only observed
-    practice. The empty-``inequality`` case below was NOT part of the probe and keeps its
-    original severity rather than inheriting a result it did not earn.
+    as losing a key. It loses the condition.
+
+    Scope of the evidence, stated precisely because this is a *blocking* rule resting on a
+    narrow sample: the probe used a single ``dataType: "number"`` target item. The canonical
+    fixtures corroborate only weakly — all three carry exactly ONE ``triggerOnTrackedItem``
+    between them (the same condition replicated across the three files), and it targets a
+    synthetic ``skill_patience`` ref with no ``dataType`` at all. So "every fixture sets
+    ``textComparison``" is n=1, not broad practice. Requiring it generally is the conservative
+    call — a false positive costs an author one keystroke, a false negative costs them a gate —
+    but text/yaml-typed targets and skill refs are genuinely untested. Revisit if a real world
+    starts hard-failing on a shape IW actually accepts.
+
+    The empty-``inequality`` case below was NOT part of the probe and keeps its original
+    severity rather than inheriting a result it did not earn.
     """
     for trigger in world.get("triggerEvents", []):
         tname = trigger.get("name", trigger.get("id", "?"))
         for cond in trigger.get("triggerConditions", []):
-            if cond.get("type") != "triggerOnTrackedItem":
+            if not isinstance(cond, dict) or cond.get("type") != "triggerOnTrackedItem":
                 continue
             data = cond.get("data")
-            if not isinstance(data, dict):
-                continue
             cond_id = cond.get("id", "?")
 
+            # The payload normally lives in `data`, but worlds also carry these fields flat on
+            # the condition object — `_check_cross_references` already reads `trackedItemID`
+            # both ways. Resolve the same way here so a flat-shaped condition can't skip the
+            # textComparison rule entirely, which is the exact shape IW deletes.
+            payload = data if isinstance(data, dict) else cond
+
             # rec 1: empty-string inequality is stripped on import (KB-sourced, not re-tested)
-            if data.get("inequality") == "":
+            if payload.get("inequality") == "":
                 warnings.append(
                     f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
                     "data.inequality is empty string — silently stripped on IW import"
                 )
-            if "textComparison" not in data:
+
+            # Type-check rather than testing for absence: `null`, `0`, `false`, `[]` and a
+            # whitespace-only string are all ways of spelling "unset", and every one of them
+            # is the shape the probe proved fatal. Testing only `not in` / `== ""` let four of
+            # those five through.
+            tc = payload.get("textComparison")
+            if not isinstance(tc, str) or not tc.strip():
+                shown = "missing" if tc is None else f"{tc!r}"
                 errors.append(
                     f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
-                    "data.textComparison is missing — IW deletes the whole condition on "
-                    "import, leaving the trigger under-gated with no error. Set it (e.g. "
-                    '"contains", as every canonical fixture does)'
-                )
-            elif data.get("textComparison") == "":
-                errors.append(
-                    f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
-                    "data.textComparison is an empty string — IW deletes the whole condition "
-                    "on import, leaving the trigger under-gated with no error. Set a real "
-                    'value (e.g. "contains") or remove the condition'
+                    f"data.textComparison is {shown} — IW deletes the whole condition on "
+                    "import, leaving the trigger under-gated with no error. Set a non-empty "
+                    'string (e.g. "contains") or remove the condition'
                 )
 
             # rec 2: non-string requiredValue causes an AttributeError crash on IW import
-            rv = data.get("requiredValue")
+            rv = payload.get("requiredValue")
             if rv is not None and not isinstance(rv, str):
                 errors.append(
                     f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
@@ -779,11 +792,17 @@ def _check_event_conditions_registered(world: dict, errors: list[str], warnings:
 
     Warning, never error. The fixture pairs one `conditions` entry with one `triggerOnEvent`
     whose `data` matches it byte-for-byte, and there is no ID or index linking the two, so
-    exact text is the only available key. What the registry *does* is an open question: it may
-    drive selectability in the editor's trigger UI, or it may be a platform-maintained index of
-    the events already in use (which would also explain how the documented world-level cap of
-    ten AI-evaluated events is enforced). The sync guidance is identical under either reading,
-    so that is all this check asserts.
+    exact text is the only available key.
+
+    What the registry *does* is still an open question, but one reading is now ruled out.
+    CONFIRMED 2026-08-06 (probes/probe-a-core.json): the registry is AUTHOR-maintained, not
+    platform-derived — it round-tripped byte-identical, still missing a used-but-undeclared
+    event and still carrying an unused declared one. IW neither regenerated nor reconciled it.
+    So the "platform-maintained index of events in use" reading this docstring used to offer
+    is dead, and with it the theory that registry regeneration is how the ten-event cap gets
+    enforced (probe P11 separately imported twelve events untruncated). The live reading is
+    that it drives selectability in the editor's trigger UI. The sync guidance is unchanged —
+    a desync costs editor selectability, not correctness, which is why this stays a warning.
 
     Matching is exact after `strip()`. Case, internal whitespace and trailing punctuation are
     all significant — no normalization is applied, because the platform's own matching rule is
@@ -857,27 +876,48 @@ def _check_initial_tracked_item_value_scope(
 
     CONFIRMED 2026-08-06 by the probes/probe-b-cap.json round trip. An entry in
     ``possibleCharacters[].initialTrackedItemValues`` whose ``initialValueBasedOnPC`` is
-    ``"player"`` is DELETED on import. The 2x2 isolated it to that field alone:
+    ``"player"`` is DELETED on import. The 2x2 varied the value shape against the scope:
 
         array  + "character" -> survived
         string + "player"    -> DELETED
         array  + "player"    -> DELETED
         string + "character" -> survived
 
-    So the array form of ``initialPCValue`` is fine — it is ``"player"`` that is fatal, at
-    any value shape. This is semantically coherent: ``"player"`` means the value is not
-    per-character, so a per-character override contradicts itself.
+    That cleanly clears the array form of ``initialPCValue`` — it is ``"player"`` that is
+    fatal, at any value shape. The pre-probe theory blamed the array; it was wrong.
 
-    Scope matters. ``"player"`` is perfectly valid on the tracked ITEM
-    (``trackedItems[].initialValueBasedOnPC``) — every such item round-tripped byte-identical
-    in the same import, including the two backing the deleted entries. Only the per-character
-    entry is affected, which is why this check deliberately does not look at ``trackedItems``.
+    KNOWN LIMIT OF THE EXPERIMENT — do not overstate this rule. In every cell of both probes,
+    the per-character ENTRY's ``initialValueBasedOnPC`` and its backing tracked ITEM's
+    ``initialValueBasedOnPC`` were held equal (deliberately, to vary one factor — but it means
+    the two levels covary perfectly and nothing separates them). So the evidence is equally
+    consistent with two readings:
+
+        (a) a player-scoped ENTRY is deleted            <- what this check assumes
+        (b) a player-scoped ITEM drops its per-character entries
+
+    Reading (b) is arguably the more natural implementation. The two decisive cells —
+    item "player" + entry "character", and item "character" + entry "player" — have never
+    been imported. Under (b) this check has a false negative (the first cell) and a false
+    positive (the second). It errors regardless because it is correct in every case actually
+    observed, and because both readings agree the world is broken; but a future Probe C should
+    run those two cells before this is treated as settled. See probes/README.md.
+
+    What IS separately established: ``"player"`` on the tracked ITEM is not by itself fatal to
+    the item — every such item round-tripped byte-identical, including the two backing the
+    deleted entries. That is why this check does not error on ``trackedItems``. It does not,
+    however, establish that the item's setting is innocent of the ENTRY's deletion.
     """
     for character in world.get("possibleCharacters", []):
         if not isinstance(character, dict):
             continue
-        cname = character.get("name", character.get("characterId", "?"))
-        for entry in character.get("initialTrackedItemValues", []):
+        cname = character.get("name") or character.get("characterId") or "?"
+        # Author-controlled JSON reachable before Tier 1 passes: `possibleCharacters` is
+        # sanitized upstream but this nested array is not, and a non-list here would raise
+        # and halt every remaining Tier 2 check.
+        entries = character.get("initialTrackedItemValues")
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
             if not isinstance(entry, dict):
                 continue
             if entry.get("initialValueBasedOnPC") != "player":
@@ -886,8 +926,10 @@ def _check_initial_tracked_item_value_scope(
             errors.append(
                 f"Character '{cname}': initialTrackedItemValues entry '{label}' has "
                 "initialValueBasedOnPC 'player'. IW deletes the entry on import — a "
-                "per-character override cannot be player-scoped. Use 'character' here, or "
-                "drop the entry and set the value on the tracked item itself"
+                "per-character override cannot be player-scoped. Set both this entry and its "
+                "tracked item to 'character', or drop the entry and set the value on the "
+                "tracked item itself (only observed with the item player-scoped too, so "
+                "changing the entry alone is untested)"
             )
 
 
@@ -901,16 +943,28 @@ def _check_initial_tracked_item_value_scope(
 # CONFIRMED 2026-08-06 by the probes/probe-a-core.json round trip: IW does NOT migrate the
 # legacy bare array on import. It DELETES the condition, leaving `triggerConditions: []` with
 # the trigger's id, name and effects intact — an ungated trigger, with no error in-game or in
-# the export. The re-exported world then validates with FEWER warnings than the input,
-# because the message below has nothing left to fire on. Controls: two same-anchor gates in
+# the export. The re-exported world then validates STRICTLY MORE CLEANLY than the input,
+# because the message below has nothing left to fire on: probe-a-core.json reports 4 errors /
+# 4 warnings, probe-a-imported.json 0 errors / 4 warnings. (Under the pre-2026-08-07 validator
+# the same effect showed up in the warning column; promoting this to an error moved it. The
+# point is unchanged — the damage erases its own evidence.) Controls: two same-anchor gates in
 # the v2.4 object form round-tripped byte-identical in the same import.
 #
-# The bare array is therefore fatal — but it is fatal on IMPORT, not on the page. A world that
-# honestly declares schemaVersion <= 2.2 is correct for its own version, and the v2.1/v2.2
-# fixtures are the only regression coverage for reading the legacy shape at all (CLAUDE.md
-# source-of-truth rule 1 requires they validate with warnings, never errors). So this errors
-# only on a world claiming v2.4+ while carrying a v2.2 shape — self-contradictory on its face
-# — and otherwise warns, with the confirmed consequence spelled out either way.
+# The bare array is therefore fatal — but it is fatal on IMPORT, not on the page.
+#
+# Why the severity is version-conditional, stated honestly: this is a PLUGIN BACK-COMPAT
+# accommodation, not observed platform leniency. No probe has imported a bare-array gate in a
+# world declaring 2.2, and the likelier reading is that IW parses the `data` shape and never
+# consults schemaVersion at all — in which case a v2.2-declaring world loses its gates exactly
+# as hard. The split exists because the v2.1/v2.2 fixtures are the only regression coverage for
+# READING the legacy shape, and CLAUDE.md source-of-truth rule 1 requires they validate with
+# warnings and never errors. Erroring only on a world claiming v2.4+ while carrying a v2.2
+# shape — self-contradictory on its face — satisfies that without blessing the old shape: the
+# message is identical at both severities and says "migrate before importing" either way.
+#
+# Note on the comparison: schemaVersion is a JSON *number*, so 2.10 and 2.1 are the same value
+# and cannot be distinguished. Don't "fix" this into a tuple parse — the platform has the same
+# ambiguity, and it has so far shipped 2.1 -> 2.2 -> 2.4.
 _GATE_CONDITION_DATA_KEYS = {
     "triggerPrereqs": "prereqs",
     "triggerBlockers": "blockers",
