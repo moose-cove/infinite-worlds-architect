@@ -85,9 +85,50 @@ For lore book entry IDs (`loreBookEntries[].id`), check:
 
 ---
 
+## Import Is Lenient and Lossy — Never Strict
+
+**The single most important thing to know about IW import.** Confirmed 2026-08-06 across two
+probe round trips (`probes/probe-a-core.json`, `probes/probe-b-cap.json`): IW does not reject
+a world it cannot fully understand. It **imports the world successfully and silently deletes
+the parts it did not accept**, leaving everything around them intact.
+
+Four distinct constructs were destroyed this way in those two imports, with no error message
+in-game, in the editor, or in the export:
+
+| Construct | What survived | What was deleted |
+|---|---|---|
+| Pre-v2.4 bare-array `triggerPrereqs`/`triggerBlockers` | trigger id, name, effects | the gate condition — trigger left ungated |
+| `triggerOnTrackedItem` with absent or empty `textComparison` | trigger id, name, effects | the entire condition |
+| `initialTrackedItemValues` entry with `initialValueBasedOnPC: "player"` | the character, the tracked item | the per-character entry |
+| *(control)* the same shapes done correctly | everything, byte-identical | nothing |
+
+Two consequences worth internalising:
+
+1. **A successful import proves nothing.** "It imported fine" is not evidence the world is
+   intact. Only a re-export diff is.
+2. **The damage erases its own evidence.** Because the offending construct is gone, a
+   re-exported world validates *more cleanly* than the file that went in. In the Probe A run
+   the export carried strictly fewer warnings than the source, while being semantically
+   broken. Never treat a clean post-import validation as confirmation.
+
+The practical rule: **validate before importing, not after.** `validate_world` is the only
+place these constructs are still visible.
+
+---
+
 ## Other Import Findings
 
-**`hideSkillSystem: false` stripped on import.** IW strips optional boolean fields when set to their default (`false`) value. Do not rely on its presence in exported JSON. Only include it when `true`.
+**Empty-field stripping is field-specific — do not generalize it.** `hideSkillSystem: false`
+is stripped on import; only include it when `true`. But the broader claim this note used to
+make — that IW strips any optional boolean set to its default — is **too broad**. In both
+2026-08-06 probe round trips, `descriptionRequest`, `evaluationRequest`, `summaryRequest`,
+`instructionBlocks`, `loreBookEntries` and `NPCs` were dropped when empty, while
+`contentWarnings: ""`, `previewImage: ""`, `previewImageOptions: []`, `mature: false`,
+`nsfw: false`, `favorite: false` and `autoAdvanceVersion: false` all survived untouched. The
+stripping applies to a specific set of fields, not to a general "empty means absent" rule.
+
+**`autoAdvanceVersion: false` holds `version` still across a round trip.** Useful when
+diffing an import: it removes the version-drift noise described below.
 
 **`version` auto-increments per save, not per import.** A world imported as `v3.00` and then edited twice will show `v3.02`. The `version` field counts any save event when `autoAdvanceVersion: true` — not just the first import. Do not use `version` to count imports.
 

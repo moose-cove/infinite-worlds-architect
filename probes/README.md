@@ -8,10 +8,12 @@ the wiki.
 | File | Covers | Status |
 |---|---|---|
 | `probes/probe-a-core.json` | Gate-condition shapes, `firedThisTurn`, the `conditions` registry, `hidden_boring`, `not_equal`, nested YAML, image-style precedence, menu-backed `initialPCValue` | **Round trip run** — see [Recorded results](#recorded-results) |
-| `probes/probe-b-cap.json` | The ten-event cap, `recommendedAIModel`, and the factor-isolating follow-ups Probe A's results demanded | Not yet run |
+| `probes/probe-b-cap.json` | The ten-event cap, `recommendedAIModel`, and the factor-isolating follow-ups Probe A's results demanded | **Round trip run** — see [Recorded results](#recorded-results) |
 
-Both validate clean (`valid: true`). Every warning `validate_world` emits on them is an
-intended probe, not a defect — see [Expected validator warnings](#expected-validator-warnings).
+Both have now been run, and their `-imported.json` counterparts are committed as evidence.
+Both source files **now fail validation** — see
+[Expected validator output](#expected-validator-output), which explains why that is the
+correct end state rather than a regression.
 
 Do not publish either world.
 
@@ -95,16 +97,56 @@ remain open.
 `enforceFormat: true`, round-tripped exactly. Storage is confirmed; precedence (P9) and
 enforcement recursion (P7) are runtime questions still open.
 
-### Confounded — reruns folded into Probe B
+### Confounded in Probe A, resolved by Probe B
 
-**P6** — the whole `triggerOnTrackedItem` condition was dropped, same as P1. But the probe
-omitted `textComparison`, so the result cannot distinguish "IW rejects `not_equal`" from
-"IW rejects a condition with no `textComparison`". Probe B's P6a–P6d isolate the two factors.
+**P6 — `textComparison` is effectively mandatory; `not_equal` was never the problem.**
+Probe A dropped the whole condition, but its probe omitted `textComparison`, so the cause was
+ambiguous. Probe B's 2×2 settled it:
 
-**P10** — the array `initialPCValue` + `"player"` entry was dropped entirely while the
-string + `"character"` control survived. But with no array + `"character"` control in the
-probe, the array form, the `"player"` value, and the pairing are all still live suspects.
-Probe B's P10a–P10d complete the 2×2.
+| `inequality` | `textComparison` | Result |
+|---|---|---|
+| `not_equal` | `"contains"` | survived byte-identical |
+| `at_least` | *absent* | **condition deleted** |
+| `at_least` | `"contains"` | survived (control ✓) |
+| `not_equal` | `""` | **condition deleted** |
+
+`at_least` is fixture-proven and still died purely for lacking the key, so the fatal factor is
+`textComparison`, not the inequality. This clears `not_equal`'s `[PENDING TEST]` marker as
+confirmed working, and shows the old validator wording ("silently stripped on IW import")
+understated the damage — the condition is destroyed, not the key. Both cases are now errors.
+
+**P10 — `"player"` is fatal on a per-character entry; the array form is fine.** The full 2×2:
+
+| Shape | `initialValueBasedOnPC` | Result |
+|---|---|---|
+| array | `"character"` | survived |
+| string | `"player"` | **entry deleted** |
+| array | `"player"` | **entry deleted** |
+| string | `"character"` | survived |
+
+Clean main effect, no interaction. **Scope matters:** all five tracked *items* survived
+byte-identical, including the two whose item-level `initialValueBasedOnPC` is `"player"`. So
+`"player"` is valid on the item and fatal on the per-character entry — coherent, since
+`"player"` means the value is not per-character.
+
+### Answered by Probe B
+
+**P11 — the ten-event cap is not enforced at import.** All twelve `conditions` entries and all
+twelve triggers survived with conditions intact; nothing was rejected or truncated. Combined
+with P3 ruling out registry regeneration, both import-side mechanisms are now excluded, so the
+cap is applied at runtime or is purely advisory. **Still needs play data.**
+
+**P12 — `recommendedAIModel: "smilodon"` is valid.** Round-tripped byte-identical. First
+confirmed value for that enum, closing one of the two open questions carried since
+`DESIGN_BRIEF_v2.md` §9. The full enum is still unknown; the editor's model dropdown should
+name it.
+
+### Still open — all runtime-only
+
+P2 semantics (does `firedThisTurn: true` narrow the gate?), P4's editor-UI read, P7
+enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, and P13
+(does a condition-less trigger fire every turn or stay dormant?). None of these can be read
+from a round trip; each needs a played session or a generated image.
 
 ---
 
@@ -261,25 +303,45 @@ wording should reflect that.
 
 ---
 
-## Expected validator warnings
+## Expected validator output
 
-All intentional; do not "fix" them.
+**Both probe source files now fail validation, and that is correct.** Do not "fix" them.
 
-**`probes/probe-a-core.json`** (6) — two pre-v2.4 bare-array gate warnings (P1a, P1b), two
-undeclared-`triggerOnEvent` warnings (P3a, P4), two orphan-declared-event warnings (P3C and
-P4's near-miss entry).
+An earlier version of this file said that a validator change making these probes error "means
+the change needs rethinking". That guard was written when the probes were instruments waiting
+to be run, and it no longer applies: both have been run, their results are recorded above, and
+the plugin has since been taught that the constructs they carry are destructive. The files are
+now **historical records of things that break**, so the validator agreeing with them is the
+intended end state.
 
-**`probes/probe-b-cap.json`** (2) — one empty-string `textComparison` warning (P6d, which is
-the probe), and one twelve-events-over-the-cap-of-ten warning (P11).
+`probes/probe-a-core.json` — 4 errors, 4 warnings. The errors are P1a and P1b (legacy
+bare-array gates), P6 (missing `textComparison`) and P10 (`"player"`-scoped entry) — the four
+constructs the probes proved IW deletes. The warnings are the `conditions`-registry desyncs,
+which are genuinely warnings: P3 showed a desync costs editor selectability, not correctness.
 
-If a future validator change makes these files error rather than warn, the probes have become
-unimportable and the change needs rethinking.
+`probes/probe-b-cap.json` — 4 errors, 1 warning. Errors: P6b, P6d, P10b, P10c. Warning: the
+twelve-events-over-ten cap (P11), which stays a warning because import-time enforcement was
+ruled out and runtime enforcement is untested.
+
+The useful invariant is the inverse one, and it holds: **both `-imported.json` files validate
+with zero errors**, because IW already deleted everything the validator now objects to. The
+validator's errors and the platform's deletions line up exactly. If that ever stops being
+true, something has drifted.
+
+The three canonical fixtures must continue to validate with **zero errors** (`CLAUDE.md`
+source-of-truth rule 1). That is why the legacy-gate rule is version-conditional rather than
+flat — see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md).
 
 ---
 
 ## After the run
 
-Findings land in three places, in this order:
+Six findings from these two round trips landed in v0.18.0: P1, P3, P5, P6, P10 and P12. Three
+validator rules changed with them — the legacy-gate warning became a version-conditional
+error, the `textComparison` warning became an error and gained a missing-key case, and
+`"player"`-scoped per-character entries became an error.
+
+For future runs, findings land in three places, in this order:
 
 1. **`references/world_v2.4.schema.json`** — rewrite the relevant `x-iw-note`. These notes
    are the single source of truth; `SCHEMA_SUMMARY` derives from them at import time.

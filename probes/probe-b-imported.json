@@ -1,0 +1,541 @@
+{
+  "favorite": false,
+  "title": "SCHEMA PROBE B — event cap, AI model enum, and Probe A follow-ups",
+  "description": "Instrument world for the ten-event cap and the recommendedAIModel enum, plus the factor-isolating follow-ups Probe A's results demanded. Not a playable adventure — do not publish.",
+  "background": "A featureless white room containing twelve numbered doors. Nothing happens here unless a trigger makes it happen.",
+  "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery.",
+  "authorStyle": "Terse and clinical.",
+  "recommendedAIModel": "smilodon",
+  "firstInput": "I count the doors.",
+  "objective": "Advance turns so the probe triggers fire.",
+  "imageModel": "manticore",
+  "imageStyle": "photo_1",
+  "illustrationStyleNonCharacterLowPriority": "",
+  "illustrationStyleNonCharacterHighPriority": "",
+  "illustrationStyleCharacterLowPriority": "",
+  "illustrationStyleCharacterHighPriority": "",
+  "imageStyleCharacterPre": "",
+  "imageStyleCharacterPost": "",
+  "imageStyleNonCharacterPre": "",
+  "imageStyleNonCharacterPost": "",
+  "mature": false,
+  "nsfw": false,
+  "contentWarnings": "",
+  "enableAISpecificInstructionBlocks": true,
+  "previewImage": "",
+  "fullSizePreviewImage": "",
+  "previewImageOptions": [],
+  "fullSizePreviewImageOptions": [],
+  "currentPreviewImageIndex": 0,
+  "imagePromptDetails": {
+    "illustrGenre": "",
+    "illustrClothes": "",
+    "illustrSetting": "",
+    "illustrSubject": "",
+    "illustrAppearance": "",
+    "illustrIsCharacter": false,
+    "illustrExpressionPosition": ""
+  },
+  "permissionsOnceShared": {
+    "sharing": false,
+    "editing": false
+  },
+  "allowChangeCharacterName": true,
+  "allowChangeCharacterDescription": true,
+  "allowChangeCharacterSkills": true,
+  "allowChangeCharacterItemValues": true,
+  "allowChangeCharacterPortrait": true,
+  "allowChangeCharacterNewPortrait": true,
+  "conditions": [
+    "PROBE CAP event 01",
+    "PROBE CAP event 02",
+    "PROBE CAP event 03",
+    "PROBE CAP event 04",
+    "PROBE CAP event 05",
+    "PROBE CAP event 06",
+    "PROBE CAP event 07",
+    "PROBE CAP event 08",
+    "PROBE CAP event 09",
+    "PROBE CAP event 10",
+    "PROBE CAP event 11",
+    "PROBE CAP event 12"
+  ],
+  "schemaVersion": 2.4,
+  "charSelectText": "Pick the probe character.",
+  "skills": [
+    "Observation",
+    "Patience"
+  ],
+  "possibleCharacters": [
+    {
+      "name": "Probe Subject",
+      "description": "A plain figure in a grey coat who exists only so the world has a player character.",
+      "portrait": "",
+      "portraitPromptDetails": {},
+      "fullSizePortrait": "",
+      "portraitOptions": [],
+      "fullSizePortraitOptions": [],
+      "currentPortraitIndex": 0,
+      "characterId": "PrbSubj2",
+      "skills": {
+        "Patience": 3,
+        "Observation": 3
+      },
+      "initialTrackedItemValues": [
+        {
+          "id": "PrbBMen01",
+          "visibility": "everyone",
+          "name": "P10a Array Character",
+          "initialPCValue": [
+            "PROBE P10A OPTION ALPHA",
+            "PROBE P10A OPTION BETA",
+            "PROBE P10A OPTION GAMMA"
+          ],
+          "initialValueBasedOnPC": "character"
+        },
+        {
+          "id": "PrbBMen04",
+          "visibility": "everyone",
+          "name": "P10d String Character",
+          "initialPCValue": "PROBE P10D SINGLE VALUE",
+          "initialValueBasedOnPC": "character"
+        }
+      ]
+    }
+  ],
+  "triggerEvents": [
+    {
+      "id": "PrbCap01",
+      "name": "CAP 01",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000001",
+          "data": "PROBE CAP 01 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000101",
+          "data": "PROBE CAP event 01",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap02",
+      "name": "CAP 02",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000002",
+          "data": "PROBE CAP 02 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000102",
+          "data": "PROBE CAP event 02",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap03",
+      "name": "CAP 03",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000003",
+          "data": "PROBE CAP 03 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000103",
+          "data": "PROBE CAP event 03",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap04",
+      "name": "CAP 04",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000004",
+          "data": "PROBE CAP 04 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000104",
+          "data": "PROBE CAP event 04",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap05",
+      "name": "CAP 05",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000005",
+          "data": "PROBE CAP 05 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000105",
+          "data": "PROBE CAP event 05",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap06",
+      "name": "CAP 06",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000006",
+          "data": "PROBE CAP 06 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000106",
+          "data": "PROBE CAP event 06",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap07",
+      "name": "CAP 07",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000007",
+          "data": "PROBE CAP 07 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000107",
+          "data": "PROBE CAP event 07",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap08",
+      "name": "CAP 08",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000008",
+          "data": "PROBE CAP 08 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000108",
+          "data": "PROBE CAP event 08",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap09",
+      "name": "CAP 09",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000009",
+          "data": "PROBE CAP 09 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000109",
+          "data": "PROBE CAP event 09",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap10",
+      "name": "CAP 10",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000010",
+          "data": "PROBE CAP 10 fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000110",
+          "data": "PROBE CAP event 10",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap11",
+      "name": "CAP 11 — first past the documented cap",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000011",
+          "data": "PROBE CAP 11 fired. This is the first event past the documented cap of ten.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000111",
+          "data": "PROBE CAP event 11",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCap12",
+      "name": "CAP 12 — second past the documented cap",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000012",
+          "data": "PROBE CAP 12 fired. This is the second event past the documented cap of ten.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000112",
+          "data": "PROBE CAP event 12",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6a01",
+      "name": "P6a not_equal WITH textComparison",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000201",
+          "data": "PROBE P6a fired — not_equal survived import when textComparison was present.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000211",
+          "data": {
+            "inequality": "not_equal",
+            "requiredValue": "99",
+            "trackedItemID": "PrbBNum01",
+            "textComparison": "contains"
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "not_equal",
+          "trackedItemID": "PrbBNum01"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6b01",
+      "name": "P6b at_least WITHOUT textComparison",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000202",
+          "data": "PROBE P6b fired — a fixture-proven inequality survived import with textComparison absent.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6c01",
+      "name": "P6c at_least WITH textComparison control",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000203",
+          "data": "PROBE P6c fired — the fixture-mirroring positive control survived import.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000213",
+          "data": {
+            "inequality": "at_least",
+            "requiredValue": "1",
+            "trackedItemID": "PrbBNum01",
+            "textComparison": "contains"
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "at_least",
+          "trackedItemID": "PrbBNum01"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6d01",
+      "name": "P6d not_equal with empty textComparison",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000204",
+          "data": "PROBE P6d fired — an empty-string textComparison did not cost the condition.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP1301",
+      "name": "P13 Empty triggerConditions",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000205",
+          "data": "PROBE P13 fired — a trigger with an empty triggerConditions array fires rather than staying dormant. This is the state Probe A showed a legacy gate condition gets reduced to.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [],
+      "canTriggerMoreThanOnce": true
+    }
+  ],
+  "victoryCondition": {
+    "condition": "The player types the word VICTORY.",
+    "text": "Probe complete.",
+    "alreadyFired": false
+  },
+  "defeatCondition": {
+    "condition": "The player types the word DEFEAT.",
+    "text": "Probe aborted.",
+    "alreadyFired": false
+  },
+  "trackedItems": [
+    {
+      "id": "PrbBNum01",
+      "name": "P6 Inequality Target",
+      "positionInList": 0,
+      "dataType": "number",
+      "visibility": "everyone",
+      "description": "PROBE P6: the shared target of the four inequality/textComparison variants. Holds 3, so not_equal vs 99 is TRUE and at_least vs 1 is TRUE — every variant should fire if its condition survived import.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "3",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "p6_inequality_target",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen01",
+      "name": "P10a Array Character",
+      "positionInList": 1,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10a: array initialPCValue paired with initialValueBasedOnPC 'character' — the combination the canonical fixture demonstrates. Positive control.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": false,
+      "variableName": "p10a_array_character",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen02",
+      "name": "P10b String Player",
+      "positionInList": 2,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10b: plain string initialPCValue paired with initialValueBasedOnPC 'player'. Isolates whether 'player' alone is the problem.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "player",
+      "autoUpdate": false,
+      "variableName": "p10b_string_player",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen03",
+      "name": "P10c Array Player",
+      "positionInList": 3,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10c: array initialPCValue paired with initialValueBasedOnPC 'player'. Replicates the combination Probe A saw dropped, in a different world.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "player",
+      "autoUpdate": false,
+      "variableName": "p10c_array_player",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen04",
+      "name": "P10d String Character",
+      "positionInList": 4,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10d: plain string initialPCValue paired with initialValueBasedOnPC 'character'. Baseline control — Probe A already showed this survives.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": false,
+      "variableName": "p10d_string_character",
+      "driftAcknowledgedForName": null
+    }
+  ],
+  "autoAdvanceVersion": false,
+  "version": "1.00",
+  "designNotes": "SCHEMA PROBE B. The AI-evaluated event cap, the recommendedAIModel enum, and the factor-isolating follow-ups to Probe A: which of not_equal / absent textComparison cost P6 its condition, which of the array form / 'player' cost P10 its entry, and whether a trigger with no conditions fires or stays dormant. See probes/README.md in the infinite-worlds-architect repo for the read protocol."
+}
