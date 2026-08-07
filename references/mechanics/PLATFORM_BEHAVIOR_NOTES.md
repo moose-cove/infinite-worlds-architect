@@ -85,9 +85,81 @@ For lore book entry IDs (`loreBookEntries[].id`), check:
 
 ---
 
+## Import Is Lenient and Lossy — Never Strict
+
+**The single most important thing to know about IW import.** Confirmed 2026-08-06 across two
+probe round trips (`probes/probe-a-core.json`, `probes/probe-b-cap.json`): IW does not reject
+a world it cannot fully understand. It **imports the world successfully and silently deletes
+the parts it did not accept**, leaving everything around them intact.
+
+Three distinct construct classes, across five probe cells, were destroyed this way — with no
+error message in-game, in the editor, or in the export:
+
+| Construct | What survived | What was deleted |
+|---|---|---|
+| Pre-v2.4 bare-array `triggerPrereqs`/`triggerBlockers` | trigger id, name, effects | the gate condition — trigger left ungated |
+| `triggerOnTrackedItem` with absent or empty `textComparison` | trigger id, name, effects | the entire condition |
+| `initialTrackedItemValues` entry with `initialValueBasedOnPC: "player"` | the character, the tracked item | the per-character entry |
+| *(control)* each of those shapes done correctly | the construct under test, byte-identical | nothing |
+
+**The likely single rule behind the first two.** Every destroyed *condition* — bare array where
+an object was expected, object missing a required sub-key, object with an empty required
+sub-key — produced a byte-for-byte identical outcome: the condition vanishes, the trigger's
+`id`/`name`/`triggerEffects` survive, `triggerConditions` becomes `[]`. The generalisation
+**"IW drops any trigger condition whose `data` payload it cannot parse, and never reports it"**
+is better supported than three unrelated rules, and it predicts the same fate for malformed
+condition shapes nobody has probed yet. Treat any condition `data` you are unsure of as
+load-bearing. (The `initialTrackedItemValues` deletion is a separate mechanism — not a
+condition.)
+
+Two consequences worth internalising:
+
+1. **A successful import proves nothing.** "It imported fine" is not evidence the world is
+   intact. Only a re-export diff is.
+2. **The damage erases its own evidence.** Because the offending construct is gone, a
+   re-exported world validates *strictly more cleanly* than the file that went in:
+   `probe-a-core.json` reports 4 errors / 4 warnings, `probe-a-imported.json` 0 errors /
+   4 warnings — while being semantically broken. Never treat a clean post-import validation
+   as confirmation.
+
+The practical rule: **validate before importing, not after.** `validate_world` is the only
+place these constructs are still visible.
+
+### Import is also *additive* — it does not only delete
+
+"Lossy" is the headline, but deletion is not the only mutation. Two changes were made to
+constructs that were not under test at all, both reproducible from the committed probe pairs:
+
+- **A character with no `portraitPromptDetails` gains `portraitPromptDetails: {}`.** Probe B's
+  character omitted the key entirely and came back carrying an empty object. (Probe A's
+  character had it fully populated and it survived intact.) This is default injection, and it
+  is the counter-example to reading "lenient and lossy" as "only ever removes".
+- **The per-character `skills` *map* comes back reordered.** `{"Observation": 3, "Patience": 3}`
+  → `{"Patience": 3, "Observation": 3}`, identically in both probes — consistent with it being
+  deserialized into an unordered map server-side. Note the contrast: the **world-level**
+  `skills` *array* held its order in both runs, as did every other array. **Never treat
+  per-character skills-map ordering as meaningful**, and don't chase it as a finding when
+  diffing a round trip.
+
+Neither is harmful, and neither affects validation — but both mean a naive "is the export
+byte-identical to the source?" check will report a false positive on any world.
+
+---
+
 ## Other Import Findings
 
-**`hideSkillSystem: false` stripped on import.** IW strips optional boolean fields when set to their default (`false`) value. Do not rely on its presence in exported JSON. Only include it when `true`.
+**Empty-field stripping is field-specific — do not generalize it.** `hideSkillSystem: false`
+is stripped on import; only include it when `true` *(KB-sourced, not re-tested — neither probe
+carried `hideSkillSystem`)*. But the broader claim this note used to
+make — that IW strips any optional boolean set to its default — is **too broad**. In both
+2026-08-06 probe round trips, `descriptionRequest`, `evaluationRequest`, `summaryRequest`,
+`instructionBlocks`, `loreBookEntries` and `NPCs` were dropped when empty, while
+`contentWarnings: ""`, `previewImage: ""`, `previewImageOptions: []`, `mature: false`,
+`nsfw: false`, `favorite: false` and `autoAdvanceVersion: false` all survived untouched. The
+stripping applies to a specific set of fields, not to a general "empty means absent" rule.
+
+**`autoAdvanceVersion: false` holds `version` still across a round trip.** Useful when
+diffing an import: it removes the version-drift noise described below.
 
 **`version` auto-increments per save, not per import.** A world imported as `v3.00` and then edited twice will show `v3.02`. The `version` field counts any save event when `autoAdvanceVersion: true` — not just the first import. Do not use `version` to count imports.
 
@@ -112,7 +184,12 @@ Accessible via the Storyteller option menu (Storyteller must be enabled first). 
 
 > **"Extra-hidden"** is IW's official term for the boring modifier (`ai_only_boring` / `hidden_boring`). The `_boring` suffix in the JSON maps to the "Extra-hidden" UI concept.
 
-> **Status of `hidden_boring` / `ai_only_boring` as `visibility` values — KB-empirical, `[PENDING TEST]`.** These are newly-added `visibility` enum values (added to the schema's `visibility` enum) and have **not** yet been confirmed by an import round-trip test. `hidden_boring` is **AI-cannot-read** — the storyteller AI cannot see its value (same read-visibility as `hidden`); the `_boring` modifier additionally hides it from the standard "Hidden tracked items" view unless "Extra-hidden" is checked. Treat these as authorable-but-import-test-pending rather than settled values until a fixture confirms round-trip survival.
+> **Status of `hidden_boring` / `ai_only_boring` as `visibility` values — split as of 2026-08-06.** These are newly-added `visibility` enum values (added to the schema's `visibility` enum).
+>
+> - **`hidden_boring` — CONFIRMED.** Probe A (`probes/probe-a-core.json`, item `PrbHidBor`) round-tripped it through an IW import byte-identical. It survives import and is safe to author.
+> - **`ai_only_boring` — still `[PENDING TEST]`.** Neither probe exercised it. Authorable, but round-trip survival is assumed from its sibling rather than observed.
+>
+> Read-visibility semantics for both remain KB-sourced and untested at runtime: `hidden_boring` is **AI-cannot-read** — the storyteller AI cannot see its value (same read-visibility as `hidden`); the `_boring` modifier additionally hides it from the standard "Hidden tracked items" view unless "Extra-hidden" is checked. Import survival is what the probe settled; what the AI can actually read is not.
 
 ### Active Instructions Panel
 

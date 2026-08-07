@@ -147,7 +147,7 @@
     },
     "recommendedAIModel": {
       "type": ["string", "null"],
-      "description": "Recommended AI model identifier. Enum of valid values is an open question; fixture currently only shows null.",
+      "description": "Recommended AI model identifier. The fixture only shows null. As of 2026-08-06, 'smilodon' is CONFIRMED accepted and preserved — it round-tripped byte-identical through an import — making it the one known-authorable value. That is survival, not validation: no bogus-model control was run, so it is unproven that IW checks this field at all or honours it at runtime. The full enum remains open (the original DESIGN_BRIEF_v2.md §9 question); the world editor's model dropdown should name it. Note that thinking variants are distinct strings ('smilodon' and 'smilodon-thinking' are not interchangeable, as selectedAIProfiles already documents).",
       "x-iw-category": "editable"
     },
     "charSelectText": {
@@ -251,7 +251,7 @@
       "description": "Named-event registry (schema v2.4). Each string is a natural-language event the AI watches for; a `triggerOnEvent` condition is matched to an entry by exact text. Keep the two in sync.",
       "x-iw-category": "editable",
       "default": [],
-      "x-iw-note": "New in v2.4. Absent entirely in pre-v2.4 worlds. Exact-text keying is well-supported: the fixture's single entry matches its single triggerOnEvent `data` byte-for-byte, and no ID or index links them, so text is the only available key. OPEN QUESTION: what the registry DOES is unverified. It may drive selectability in the world editor's trigger UI (the reading this plugin's guidance assumes), or it may be a platform-maintained index of the events already in use — which would also explain how the documented world-level cap of ten AI-evaluated events is enforced. The authoring instruction is identical under either reading: keep `conditions` in sync with your triggerOnEvent strings. Tier 2 warns on drift in both directions, never errors."
+      "x-iw-note": "New in v2.4. Absent entirely in pre-v2.4 worlds. Exact-text keying is well-supported: the fixture's single entry matches its single triggerOnEvent `data` byte-for-byte, and no ID or index links them, so text is the only available key. CONFIRMED 2026-08-06: the registry is AUTHOR-MAINTAINED, not platform-derived. A round trip returned it byte-identical — still missing an event a triggerOnEvent used but had not declared, still holding a declared entry nothing used. The platform does not regenerate it, which also rules out regeneration as the mechanism enforcing the ten-event cap (a separate round trip kept all twelve entries, so the cap is not applied at import either). Keep `conditions` in sync with your triggerOnEvent strings. Tier 2 warns on drift in both directions, never errors, because a desync costs editor selectability rather than correctness."
     },
     "permissionsOnceShared": {
       "type": "object",
@@ -364,7 +364,8 @@
         },
         "initialValueBasedOnPC": {
           "type": "string",
-          "enum": ["same", "character", "player"]
+          "enum": ["same", "character", "player"],
+          "x-iw-note": "'player' is structurally in the enum but is FATAL here: CONFIRMED 2026-08-06, IW DELETES a per-character initialTrackedItemValues entry scoped to 'player' on import, at any initialPCValue shape. The 2x2 varied value shape against scope — array+'character' and string+'character' both survived, array+'player' and string+'player' were both deleted — which clears the array form (the pre-probe theory blamed it) and pins the fatal factor to 'player'. LIMIT OF THE EVIDENCE: in every cell the entry's initialValueBasedOnPC and its backing tracked ITEM's initialValueBasedOnPC were held equal, so the experiment cannot separate 'a player-scoped ENTRY is deleted' from 'a player-scoped ITEM drops its per-character entries'; the two decisive mixed cells have never been imported. Tier 2 errors on the entry regardless, because that is correct in every observed case and both readings agree the world is broken. Fix by setting BOTH the entry and its item to 'character', or by dropping the entry and setting the value on the item — changing the entry alone is untested. The enum still lists 'player' because it is valid on the tracked ITEM itself (trackedItems[].initialValueBasedOnPC): every such item round-tripped byte-identical, though that does not prove the item's setting is innocent of the entry's deletion."
         }
       },
       "required": ["id", "visibility", "initialPCValue", "initialValueBasedOnPC"]
@@ -432,7 +433,7 @@
           "type": "string",
           "enum": ["everyone", "ai_only", "ai_only_boring", "player_only", "hidden", "hidden_boring"],
           "description": "Who can see this value.",
-          "x-iw-note": "hidden_boring: AI cannot read the item (same readability as 'hidden'). Developer-confirmed; import survival KB-marked [PENDING TEST] as of May 2026. Source: iw_knowledge_base_v2_8.md."
+          "x-iw-note": "hidden_boring: AI cannot read the item (same readability as 'hidden'). Developer-confirmed, and import survival CONFIRMED 2026-08-06 by round trip — the value came back unchanged, clearing the [PENDING TEST] the KB carried as of May 2026. Source: iw_knowledge_base_v2_8.md."
         },
         "description": { "type": "string", "description": "Authoring description of what this variable represents." },
         "updateInstructions": { "type": "string", "description": "Instructions for how the AI should update this value." },
@@ -520,7 +521,7 @@
           "data": "{inequality, requiredValue, trackedItemID, textComparison}",
           "description": "Fires based on tracked item or skill value comparison",
           "inequalities": ["at_least", "is_exactly", "at_most", "contains", "not_equal"],
-          "x-iw-note": "not_equal: UI label 'is not exactly'; maps to JSON value 'not_equal'. KB-empirical; import survival [PENDING TEST] as of May 2026. Source: iw_knowledge_base_v2_8.md."
+          "x-iw-note": "not_equal: UI label 'is not exactly'; maps to JSON value 'not_equal'. Import survival CONFIRMED 2026-08-06 — it round-tripped byte-identical, clearing the [PENDING TEST] the KB carried as of May 2026. The same probe found the real hazard is elsewhere: a triggerOnTrackedItem whose `textComparison` is ABSENT or an EMPTY STRING has its entire condition deleted on import, whatever the inequality (fixture-proven `at_least` died for lacking the key). Always set textComparison. Source: iw_knowledge_base_v2_8.md."
         },
         "triggerOnRandomChance": {
           "data": "string (formula, e.g. '30' for 30%)",
@@ -538,12 +539,12 @@
         "triggerPrereqs": {
           "data": "{prereqs: string[] (trigger IDs that must have fired), firedThisTurn: boolean}",
           "description": "Gates on prior trigger execution",
-          "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `prereqs`, plus `firedThisTurn`. The legacy bare-array form is still accepted on read (older worlds carry it) and is treated as prereqs; emit the object form for new authoring. OPEN QUESTION: the fixture shows firedThisTurn only as false. Its name suggests it narrows the gate from 'fired at any point' to 'fired on the current turn', but that is unverified — emit false unless an author has confirmed the other behaviour in-game."
+          "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `prereqs`, plus `firedThisTurn`. The legacy bare-array form is still READ (older worlds carry it) and treated as prereqs, but CONFIRMED 2026-08-06: IW does NOT migrate it on import — it DELETES the condition, leaving triggerConditions empty and the trigger ungated, with no error in-game or in the export. Same-anchor object-form controls round-tripped byte-identical in that import. Tier 2 errors on a world declaring v2.4+ with this shape and warns below (so the v2.1/v2.2 back-compat fixtures still validate); migrate before importing either way. OPEN QUESTION: the fixture shows firedThisTurn only as false; true survived a round trip, so it is at least author-writable, but its runtime meaning is still untested — emit false unless an author has confirmed the other behaviour in-game."
         },
         "triggerBlockers": {
           "data": "{blockers: string[] (trigger IDs that must NOT have fired), firedThisTurn: boolean}",
           "description": "Blocked if any listed trigger has fired",
-          "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `blockers`, plus `firedThisTurn`. The legacy bare-array form is still accepted on read and is treated as blockers; emit the object form for new authoring. OPEN QUESTION: the fixture shows firedThisTurn only as false. Its name suggests it narrows the block from 'fired at any point' to 'fired on the current turn', but that is unverified — emit false unless an author has confirmed the other behaviour in-game."
+          "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `blockers`, plus `firedThisTurn`. The legacy bare-array form is still READ and treated as blockers, but CONFIRMED 2026-08-06: IW does NOT migrate it on import — it DELETES the condition, leaving triggerConditions empty and the trigger unblocked, with no error in-game or in the export. Tier 2 errors on a world declaring v2.4+ with this shape and warns below (so the v2.1/v2.2 back-compat fixtures still validate); migrate before importing either way. OPEN QUESTION: the fixture shows firedThisTurn only as false; true survived a round trip, so it is at least author-writable, but its runtime meaning is still untested — emit false unless an author has confirmed the other behaviour in-game."
         },
         "logic": {
           "operator": "and|or",

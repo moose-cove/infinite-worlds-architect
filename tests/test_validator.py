@@ -291,16 +291,44 @@ def _world_with_gate_condition(ctype: str, data):
     [("triggerPrereqs", "prereqs"), ("triggerBlockers", "blockers")],
 )
 def test_gate_condition_legacy_array_still_cross_checked(ctype, key):
-    """The pre-v2.4 bare-array shape must still resolve trigger IDs, with a warning.
+    """The pre-v2.4 bare-array shape must still resolve trigger IDs, and now errors on v2.4.
 
-    Regression guard: the old code gated on ``isinstance(data, list)``, so the v2.4 object
-    shape silently skipped the check entirely. Both shapes must reach the same lookup.
+    Two regression guards in one. First: the old code gated on ``isinstance(data, list)``, so
+    the v2.4 object shape silently skipped the ID lookup entirely — both shapes must reach it.
+    Second: a world declaring v2.4 while carrying a v2.2 gate shape is self-contradictory, and
+    the probe confirmed IW deletes the condition on import, so it is an error rather than a
+    warning. The dangling-ID error must survive alongside the shape error, not replace it.
     """
     result = _validate(_world_with_gate_condition(ctype, ["DOES_NOT_EXIST"]))
     assert not result["valid"]
-    assert any("DOES_NOT_EXIST" in e for e in result["errors"])
+    assert any("DOES_NOT_EXIST" in e for e in result["errors"]), result["errors"]
+    assert any("pre-v2.4 bare-array form" in e for e in result["errors"]), result["errors"]
+    assert any(key in e for e in result["errors"]), result["errors"]
+    assert not any("pre-v2.4 bare-array form" in w for w in result["warnings"]), result["warnings"]
+
+
+@pytest.mark.parametrize(
+    ("ctype", "key"),
+    [("triggerPrereqs", "prereqs"), ("triggerBlockers", "blockers")],
+)
+def test_gate_condition_legacy_array_only_warns_below_v24(ctype, key):
+    """A world that honestly declares a pre-v2.4 schemaVersion gets a warning, not an error.
+
+    This is the contract that keeps ``example-world-schema-v2.1.json`` and
+    ``example-world-schema-v2.2.json`` validating with warnings only (CLAUDE.md
+    source-of-truth rule 1). Those two fixtures are the only regression coverage for reading
+    the legacy gate shape at all, so an unconditional error here would delete that coverage.
+    The message is identical at both severities — the author still learns the gate will be
+    destroyed on import.
+    """
+    world = _world_with_gate_condition(ctype, ["DOES_NOT_EXIST"])
+    world["schemaVersion"] = 2.2
+    result = _validate(world)
     assert any("pre-v2.4 bare-array form" in w for w in result["warnings"]), result["warnings"]
     assert any(key in w for w in result["warnings"]), result["warnings"]
+    assert not any("pre-v2.4 bare-array form" in e for e in result["errors"]), result["errors"]
+    # The shape is advisory here, but a dangling reference is still a hard error.
+    assert any("DOES_NOT_EXIST" in e for e in result["errors"]), result["errors"]
 
 
 @pytest.mark.parametrize("ctype", ["triggerPrereqs", "triggerBlockers"])
@@ -1309,19 +1337,33 @@ def _trigger_world_with_effect(
 
 
 def test_empty_inequality_warns():
-    # rec 1: empty-string inequality silently stripped on IW import → WARNING
+    """rec 1: empty-string inequality is stripped on IW import → WARNING.
+
+    ``textComparison`` is supplied so this isolates the inequality factor. Without it the
+    condition would error on the missing key instead, and the test would pass for the wrong
+    reason — which is exactly how Probe A's P6 confounded itself.
+    """
     world = _trigger_world_with_condition(
-        {"inequality": "", "requiredValue": "5", "trackedItemID": "ITEM00001"}
+        {
+            "inequality": "",
+            "requiredValue": "5",
+            "trackedItemID": "ITEM00001",
+            "textComparison": "contains",
+        }
     )
     result = _validate(world)
-    assert result["valid"]  # warning, not error
+    assert result["valid"], result["errors"]  # warning, not error
     assert any("inequality" in w and "silently stripped" in w for w in result["warnings"]), result[
         "warnings"
     ]
 
 
-def test_empty_text_comparison_warns():
-    # rec 1: empty-string textComparison silently stripped on IW import → WARNING
+def test_empty_text_comparison_errors():
+    """An empty-string textComparison costs the condition its existence → ERROR.
+
+    Probe B's P6d: IW deleted the whole condition, not just the key. The previous wording
+    ("silently stripped") described losing a field and was a warning; both were wrong.
+    """
     world = _trigger_world_with_condition(
         {
             "inequality": "contains",
@@ -1331,10 +1373,260 @@ def test_empty_text_comparison_warns():
         }
     )
     result = _validate(world)
-    assert result["valid"]
-    assert any("textComparison" in w and "silently stripped" in w for w in result["warnings"]), (
-        result["warnings"]
+    assert not result["valid"]
+    assert any(
+        "textComparison" in e and "deletes the whole condition" in e for e in result["errors"]
+    ), result["errors"]
+
+
+def test_missing_text_comparison_errors():
+    """An absent textComparison is as fatal as an empty one → ERROR.
+
+    Probe B's P6b used ``at_least`` — a fixture-proven inequality — with no ``textComparison``
+    at all, and IW still deleted the condition. That is what isolated the fatal factor to the
+    missing key rather than to ``not_equal``, which round-tripped intact whenever the key was
+    present (P6a).
+    """
+    world = _trigger_world_with_condition(
+        {"inequality": "at_least", "requiredValue": "1", "trackedItemID": "ITEM00001"}
     )
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("textComparison" in e and "missing" in e for e in result["errors"]), result["errors"]
+
+
+def test_not_equal_with_text_comparison_is_accepted():
+    """``not_equal`` is not the problem — it round-trips intact when textComparison is set.
+
+    Probe B's P6a. The KB carried ``not_equal`` as [PENDING TEST] for import survival since
+    May 2026; this pins the confirmed result so a future tightening cannot quietly re-flag it.
+    """
+    world = _trigger_world_with_condition(
+        {
+            "inequality": "not_equal",
+            "requiredValue": "99",
+            "trackedItemID": "ITEM00001",
+            "textComparison": "contains",
+        }
+    )
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    assert not any("textComparison" in e for e in result["errors"]), result["errors"]
+
+
+# ── schema v2.4: per-character tracked-item override scope ───────────────────
+
+
+def _world_with_initial_tracked_item_value(based_on_pc: str, value) -> dict:
+    """A world whose one character carries one initialTrackedItemValues entry."""
+    world = _base_world()
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Probe Item",
+            "positionInList": 0,
+            "dataType": "text",
+            "visibility": "everyone",
+            "autoUpdate": False,
+            "initialValueBasedOnPC": "player",
+            "variableName": "probe_item",
+        }
+    ]
+    world["possibleCharacters"] = [
+        {
+            "name": "Probe Subject",
+            "characterId": "CHAR0001",
+            "initialTrackedItemValues": [
+                {
+                    "id": "ITEM00001",
+                    "name": "Probe Item",
+                    "visibility": "everyone",
+                    "initialPCValue": value,
+                    "initialValueBasedOnPC": based_on_pc,
+                }
+            ],
+        }
+    ]
+    return world
+
+
+@pytest.mark.parametrize(
+    ("value", "shape"),
+    [("PLAIN", "string"), (["A", "B", "C"], "array")],
+    ids=["string", "array"],
+)
+def test_player_scoped_initial_tracked_item_value_errors(value, shape):
+    """Probe B's P10b/P10c: ``"player"`` deletes the entry on import, at any value shape.
+
+    Parametrized over both shapes because the pre-probe hypothesis blamed the array form.
+    The 2x2 showed a clean main effect on ``initialValueBasedOnPC`` with no interaction, so
+    both shapes must fail identically — a check that only caught the array would reproduce
+    the wrong theory.
+    """
+    result = _validate(_world_with_initial_tracked_item_value("player", value))
+    assert not result["valid"], shape
+    assert any(
+        "initialValueBasedOnPC 'player'" in e and "deletes the entry" in e for e in result["errors"]
+    ), result["errors"]
+
+
+@pytest.mark.parametrize(
+    ("value", "shape"),
+    [("PLAIN", "string"), (["A", "B", "C"], "array")],
+    ids=["string", "array"],
+)
+def test_character_scoped_initial_tracked_item_value_is_accepted(value, shape):
+    """Probe B's P10a/P10d controls: ``"character"`` survives at either value shape.
+
+    The array cell matters most — it is the combination the canonical fixture demonstrates,
+    so flagging it would break real authoring.
+    """
+    result = _validate(_world_with_initial_tracked_item_value("character", value))
+    assert not any("initialValueBasedOnPC" in e for e in result["errors"]), (
+        shape,
+        result["errors"],
+    )
+
+
+def test_check_reads_the_entry_not_the_item_in_an_untested_platform_cell():
+    """Pins CURRENT VALIDATOR behavior in a cell the platform has never been asked about.
+
+    This is deliberately not phrased as a platform claim. The helper always sets item-level
+    ``initialValueBasedOnPC: "player"``, so this case is item ``"player"`` + entry
+    ``"character"`` — and in every cell of both probes those two levels were held EQUAL. The
+    experiment therefore cannot distinguish "a player-scoped entry is deleted" from "a
+    player-scoped item drops its per-character entries"; see the docstring on
+    ``_check_initial_tracked_item_value_scope``.
+
+    Under the second reading IW would delete this entry and the validator would stay silent —
+    a false negative. The test exists so that if a future Probe C resolves the question, this
+    is the assertion that has to change, and it is findable by name.
+    """
+    result = _validate(_world_with_initial_tracked_item_value("character", "PLAIN"))
+    assert result["valid"], result["errors"]
+
+
+# ── textComparison: "unset" has more spellings than absent-or-empty ──────────
+
+
+@pytest.mark.parametrize(
+    "tc",
+    [None, "   ", 0, False, [], {}],
+    ids=["null", "whitespace", "zero", "false", "empty-list", "empty-dict"],
+)
+def test_non_string_text_comparison_errors(tc):
+    """Every non-string (and whitespace-only) textComparison is the fatal shape.
+
+    ``null`` is the one that matters: it is the most natural JSON spelling of "unset" and is
+    semantically identical to the absent key Probe B proved fatal. An earlier version of this
+    rule tested only ``"textComparison" not in data`` plus ``== ""``, so ``null``, ``0``,
+    ``false``, ``[]`` and ``"   "`` all validated clean.
+    """
+    world = _trigger_world_with_condition(
+        {
+            "inequality": "at_least",
+            "requiredValue": "1",
+            "trackedItemID": "ITEM00001",
+            "textComparison": tc,
+        }
+    )
+    result = _validate(world)
+    assert not result["valid"], tc
+    assert any(
+        "textComparison" in e and "deletes the whole condition" in e for e in result["errors"]
+    ), result["errors"]
+
+
+def test_flat_shaped_condition_still_checked_for_text_comparison():
+    """A condition carrying its fields flat, with no ``data`` key, must not skip the rule.
+
+    ``_check_cross_references`` already resolves ``trackedItemID`` as
+    ``data.get(...) or cond.get(...)``, so the flat shape is one the codebase expects to meet.
+    Reading only ``data`` let it bypass the check entirely — and a flat condition has no
+    ``textComparison`` in ``data`` by definition, which is exactly the deleted-on-import shape.
+    """
+    world = _trigger_world_with_condition({})
+    # Drop the `data` key entirely, leaving the flat fields the helper already sets.
+    del world["triggerEvents"][0]["triggerConditions"][0]["data"]
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("textComparison" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [None, 5, "oops", {"a": 1}, [None], [["x"]]],
+    ids=["null", "int", "string", "dict", "list-of-null", "list-of-list"],
+)
+def test_malformed_initial_tracked_item_values_does_not_halt_validation(entries):
+    """Tier 2 runs on worlds that have already failed Tier 1, so it must not raise on garbage.
+
+    ``possibleCharacters`` is sanitized upstream; the nested ``initialTrackedItemValues`` is
+    not. A non-list there used to raise TypeError, which ``validate_world`` catches — but the
+    catch aborts every remaining Tier 2 check, so one malformed key silently disabled the rest
+    of semantic validation.
+    """
+    world = _base_world()
+    world["possibleCharacters"] = [
+        {"name": "C", "characterId": "CHAR0001", "initialTrackedItemValues": entries}
+    ]
+    result = _validate(world)
+    assert not any("Semantic validation stopped" in e for e in result["errors"]), result["errors"]
+
+
+# ── gate-shape severity keys off declared schemaVersion ──────────────────────
+
+
+@pytest.mark.parametrize(
+    ("version", "expect_error"),
+    [
+        (2.4, True),
+        (2.5, True),
+        (3, True),
+        (2.2, False),
+        (2.1, False),
+        (None, False),
+        (True, False),
+        ("2.4", False),
+    ],
+    ids=["2.4", "2.5", "3", "2.2", "2.1", "absent", "bool-true", "string"],
+)
+def test_legacy_gate_severity_by_schema_version(version, expect_error):
+    """A legacy bare-array gate errors at v2.4+ and warns below, with the fallbacks pinned.
+
+    ``bool-true`` is the one worth naming: ``bool`` is a subclass of ``int``, so a refactor to
+    ``float(raw or 0)`` would read ``true`` as version 1.0 and pass every other case here.
+    ``string`` and ``absent`` both fall back to warn — the lenient direction, since Tier 1
+    already reports a non-numeric schemaVersion as a type error.
+    """
+    world = _base_world()
+    if version is None:
+        world.pop("schemaVersion", None)
+    else:
+        world["schemaVersion"] = version
+    world["triggerEvents"] = [
+        {"id": "TRIG0001", "name": "Anchor", "triggerEffects": []},
+        {
+            "id": "TRIG0002",
+            "name": "Gated",
+            "triggerEffects": [],
+            "triggerConditions": [
+                {
+                    "id": "ccac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "category": "condition",
+                    "type": "triggerPrereqs",
+                    "data": ["TRIG0001"],
+                }
+            ],
+        },
+    ]
+    result = _validate(world)
+    errs = [e for e in result["errors"] if "bare-array" in e]
+    warns = [w for w in result["warnings"] if "bare-array" in w]
+    if expect_error:
+        assert errs and not warns, (version, result["errors"], result["warnings"])
+    else:
+        assert warns and not errs, (version, result["errors"], result["warnings"])
 
 
 # ── rec 2: non-string requiredValue ──────────────────────────────────────────

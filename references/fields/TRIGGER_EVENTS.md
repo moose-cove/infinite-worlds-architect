@@ -64,17 +64,19 @@ Same shape as `triggerPrereqs`, with the array under `blockers` instead of `prer
 "data": { "blockers": ["PKRVGe1E"], "firedThisTurn": false }
 ```
 
-**`firedThisTurn` is an open question — emit `false`.** The canonical fixture shows only `false`, on both condition types.
+**`firedThisTurn` is still an open question — emit `false`.** The canonical fixture shows only `false`, on both condition types.
 
 The documented default behaviour gives the guess its shape. The wiki describes prereqs as *"met if all of the selected triggers have fired at least once in **any previous turn**"* and blockers as *"met if one or more of the selected triggers **has ever** fired"* (wiki-sourced, and predating v2.4). So the baseline really is "at any point in the past", which makes "`firedThisTurn` toggles exactly that" the most plausible reading — but plausible is not verified, and the platform's behaviour when it is `true` is untested.
 
-A second reading nothing rules out: `firedThisTurn` may be **platform-managed runtime state** — a per-turn flag the exporter writes — rather than an authoring knob at all. `false` on both fixture instances is equally consistent with that.
+A round trip narrowed this without closing it: `firedThisTurn: true` **survived import unchanged**, so it is at minimum author-writable and not reset on the way in. That weakens the competing reading — that it is platform-managed runtime state the exporter writes — without killing it, since a value can be stored on import and still overwritten at runtime. Its *meaning* remains untested.
 
-Either way the advice is the same: **emit `false`**, and don't set `true` unless the author has confirmed the behaviour in-game.
+The advice is unchanged: **emit `false`**, and don't set `true` unless the author has confirmed the behaviour in-game.
 
-**Both shapes are read; only the new one is written.** Worlds authored before v2.4 carry the bare array, and the plugin's validator still resolves their trigger IDs — it warns about the legacy shape rather than erroring.
+**Migrate a legacy bare array BEFORE importing — the platform destroys it.** Confirmed 2026-08-06 by round trip: IW does not migrate the pre-v2.4 shape. It **deletes the condition outright**, leaving `"triggerConditions": []` with the trigger's ID, name and effects intact. The result is an ungated trigger, with no error in-game and none in the export. Two same-anchor gates in the v2.4 object form round-tripped byte-identical in the same import, so the bare array is definitively the cause.
 
-**Migrate a legacy condition when you touch its world.** Whether the *platform* migrates the bare array on import is unverified. If it does not — if an unrecognized bare array is ignored under v2.4 — the gate silently stops gating, and the trigger fires more often than intended. An over-firing trigger produces no error and no warning in-game, so it is among the hardest failures for an author to notice. Migrating is a small, self-contained edit; leaving it is an unquantified risk.
+The failure is unusually hard to notice, because the damage erases its own evidence: the re-exported world validates with *fewer* warnings than the input, since the legacy-shape message has nothing left to fire on. A world can look cleaner after losing its gates.
+
+The plugin's validator still **reads** both shapes — resolving trigger IDs through either, so a shape change never silently disables the dangling-reference check. Severity is version-conditional: a world declaring `schemaVersion` 2.4 or higher while carrying a v2.2 gate shape is self-contradictory and **errors**; a world honestly declaring 2.2 or lower gets the same message as a **warning**. That split is what keeps `example-world-schema-v2.1.json` and `example-world-schema-v2.2.json` validating with warnings only — they are the only regression coverage for reading the legacy shape at all.
 
 **Reference by ID, not by name.** Both `triggerPrereqs` and `triggerBlockers` reference trigger `id` values, not trigger `name` values. Use `mint_ids("triggerEvent", n)` to allocate IDs, and keep a mapping handy while authoring.
 
@@ -90,16 +92,13 @@ Schema v2.4 adds a top-level `conditions: string[]` to the world. Each entry is 
 
 **Exact-text keying is well-supported.** The fixture's one entry matches its one `triggerOnEvent` `data` string byte-for-byte, and nothing else links them — no ID, no index — so text is the only available key. Case, internal whitespace and trailing punctuation are all significant; the plugin applies no normalization beyond trimming outer whitespace, because the platform's own matching rule is undocumented and inventing one would trade missed warnings for false ones.
 
-**What the registry *does* is an open question.** Two readings fit the evidence:
+**The registry is author-maintained.** Confirmed 2026-08-06 by round trip: a world went in with one event *used but not declared* and one entry *declared but unused*, and `conditions` came back byte-identical — the platform neither added the missing entry nor pruned the orphan. It does not regenerate the array, so keeping it in sync is the author's job (and the plugin's).
 
-1. **Author-maintained registry** — declaring an event is what makes it selectable in the editor's trigger UI, and an undeclared event still evaluates at runtime (the AI reads the condition's own `data`) but can't be picked from the dropdown.
-2. **Platform-derived index** — the platform regenerates `conditions` on save from the `triggerOnEvent` strings already in the world. This would also explain how the world-level cap of ten AI-evaluated events is enforced, which reading 1 leaves unaccounted for.
+This also closes off the competing reading, under which the platform derived `conditions` from the `triggerOnEvent` strings already in use. That reading was the only available explanation for how the ten-event cap gets enforced, so ruling it out reopens the cap question — see below.
 
-Nothing in the schema, the fixture, or the wiki settles it. **The authoring instruction is identical either way**, which is why the plugin warns rather than erroring: keep the two in sync.
+**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array. The validator warns in the reverse direction too, on a declared entry no `triggerOnEvent` uses: a dead dropdown entry. Both stay warnings, never errors — a desync costs editor selectability, not correctness.
 
-**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array. The validator also warns in the reverse direction, on a declared entry no `triggerOnEvent` uses: a dead dropdown entry under reading 1, stale data under reading 2.
-
-**The cap is ten.** `validate_world` warns past it. Each AI-evaluated event costs an extra AI evaluation every turn, so the cap is a cost ceiling as much as a platform limit.
+**The cap is ten, and it is not applied at import.** `validate_world` warns past it. A world carrying twelve declared events and twelve matching triggers round-tripped with all twelve intact — nothing was rejected and nothing truncated. Combined with the author-maintained finding above, both import-side enforcement mechanisms are ruled out, so the cap is either applied at runtime or is purely advisory; that is still untested. Each AI-evaluated event costs an extra AI evaluation every turn regardless, so treat ten as a cost ceiling even if it proves not to be a hard limit.
 
 ---
 
@@ -215,7 +214,7 @@ comparison.
 
 1. **AND logic only.** All conditions on one trigger must be met simultaneously. For OR logic, create multiple triggers (or use `category: "logic"` with `operator: "or"` when `advancedLogic: true`).
 2. **Evaluation order matters.** `triggerPrereqs` and `triggerBlockers` only recognize triggers that fired earlier in the same evaluation pass (same turn, earlier in the list). Trigger ordering is therefore semantically significant.
-3. **`triggerOnEvent` limit.** Maximum 10 AI-evaluated event conditions per world. Each one is paid for in additional AI evaluation tokens every turn.
+3. **`triggerOnEvent` limit.** Maximum 10 AI-evaluated event conditions per world — documented, but **not enforced at import** (twelve round-tripped untruncated; see the cap discussion above). Treat it as a cost ceiling rather than a hard limit: each one is paid for in additional AI evaluation tokens every turn.
 4. **Pre-game triggers (`triggerOnStartOfGame: true`).** Fire before turn 0, before the player acts. Some effects (notably `effectTellAIWhatToDo`) behave differently or are no-ops in this context — the "next turn" they target is turn 1, not turn 0.
 
 ---

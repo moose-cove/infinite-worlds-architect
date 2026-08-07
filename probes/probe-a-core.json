@@ -1,0 +1,437 @@
+{
+  "favorite": false,
+  "title": "SCHEMA PROBE A — v2.4 core unknowns",
+  "description": "A deliberately minimal instrument world. Every field carries a PROBE marker so a re-export diff is readable. Not a playable adventure — do not publish.",
+  "background": "A featureless white room containing a single wooden table. Nothing happens here unless a trigger makes it happen. This world exists to answer questions about how Infinite Worlds handles schema v2.4, not to tell a story.",
+  "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery. The player is expected to advance turns mechanically so that triggers fire.",
+  "authorStyle": "Terse and clinical.",
+  "recommendedAIModel": null,
+  "firstInput": "I look at the table.",
+  "objective": "Advance turns so the probe triggers fire.",
+  "imageModel": "manticore",
+  "imageStyle": "photo_1",
+  "illustrationStyleNonCharacterLowPriority": "PROBE P9 LOWPRI — muted sepia-tone daguerreotype, faded and scratched",
+  "illustrationStyleNonCharacterHighPriority": "PROBE P9 HIGHPRI — stark black-and-white charcoal sketch, heavy cross-hatching, absolutely no colour",
+  "illustrationStyleCharacterLowPriority": "PROBE P9 LOWPRI — muted sepia-tone daguerreotype, faded and scratched",
+  "illustrationStyleCharacterHighPriority": "PROBE P9 HIGHPRI — stark black-and-white charcoal sketch, heavy cross-hatching, absolutely no colour",
+  "imageStyleCharacterPre": "PROBE P9 LEGACY — a vivid neon cyberpunk photograph of",
+  "imageStyleCharacterPost": "saturated magenta and cyan lighting, rain-slick chrome, lens flare",
+  "imageStyleNonCharacterPre": "PROBE P9 LEGACY — a vivid neon cyberpunk photograph of",
+  "imageStyleNonCharacterPost": "saturated magenta and cyan lighting, rain-slick chrome, lens flare",
+  "mature": false,
+  "nsfw": false,
+  "contentWarnings": "",
+  "enableAISpecificInstructionBlocks": true,
+  "previewImage": "",
+  "fullSizePreviewImage": "",
+  "previewImageOptions": [],
+  "fullSizePreviewImageOptions": [],
+  "currentPreviewImageIndex": 0,
+  "imagePromptDetails": {
+    "illustrGenre": "",
+    "illustrClothes": "",
+    "illustrSetting": "",
+    "illustrSubject": "",
+    "illustrAppearance": "",
+    "illustrIsCharacter": false,
+    "illustrExpressionPosition": ""
+  },
+  "permissionsOnceShared": {
+    "sharing": false,
+    "editing": false
+  },
+  "allowChangeCharacterName": true,
+  "allowChangeCharacterDescription": true,
+  "allowChangeCharacterSkills": true,
+  "allowChangeCharacterItemValues": true,
+  "allowChangeCharacterPortrait": true,
+  "allowChangeCharacterNewPortrait": true,
+  "conditions": [
+    "PROBE P3B registered event marker",
+    "PROBE P3C orphan declared event marker",
+    "Probe P4 Near  Miss Event Marker."
+  ],
+  "descriptionRequest": "",
+  "evaluationRequest": "",
+  "summaryRequest": "",
+  "schemaVersion": 2.4,
+  "charSelectText": "Pick the probe character.",
+  "skills": [
+    "Observation",
+    "Patience"
+  ],
+  "possibleCharacters": [
+    {
+      "name": "Probe Subject",
+      "description": "A plain figure in a grey coat who exists only so the world has a player character.",
+      "portrait": "",
+      "portraitPromptDetails": {
+        "illustrGenre": "",
+        "illustrClothes": "a plain grey coat",
+        "illustrSetting": "in a featureless white room",
+        "illustrSubject": "Probe Subject",
+        "illustrAppearance": "an adult of indeterminate age with a neutral expression",
+        "illustrIsCharacter": true,
+        "illustrExpressionPosition": "neutral"
+      },
+      "fullSizePortrait": "",
+      "portraitOptions": [],
+      "fullSizePortraitOptions": [],
+      "currentPortraitIndex": 0,
+      "characterId": "PrbSubj1",
+      "skills": {
+        "Observation": 3,
+        "Patience": 3
+      },
+      "initialTrackedItemValues": [
+        {
+          "id": "PrbMenuIt",
+          "visibility": "everyone",
+          "name": "P10 Menu Item Probe",
+          "initialPCValue": [
+            "PROBE P10 OPTION ALPHA",
+            "PROBE P10 OPTION BETA",
+            "PROBE P10 OPTION GAMMA"
+          ],
+          "initialValueBasedOnPC": "player"
+        },
+        {
+          "id": "PrbNumbr1",
+          "visibility": "everyone",
+          "name": "P6 Not Equal Target",
+          "initialPCValue": "3",
+          "initialValueBasedOnPC": "character"
+        }
+      ]
+    }
+  ],
+  "triggerEvents": [
+    {
+      "id": "PrbAnchr",
+      "name": "P0 Anchor",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000001",
+          "data": "PROBE P0: the anchor trigger fired. Gate probes reference this trigger.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000002",
+          "data": 1,
+          "type": "triggerOnTurn",
+          "category": "condition"
+        }
+      ]
+    },
+    {
+      "id": "PrbLegPr",
+      "name": "P1a Legacy bare-array triggerPrereqs",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000003",
+          "data": "PROBE P1a: a pre-v2.4 bare-array triggerPrereqs still gated this trigger.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000004",
+          "data": [
+            "PrbAnchr"
+          ],
+          "type": "triggerPrereqs",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbLegBl",
+      "name": "P1b Legacy bare-array triggerBlockers",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000005",
+          "data": "PROBE P1b: THIS SHOULD NOT APPEAR after P0 Anchor fires. If it does, the legacy bare-array triggerBlockers was ignored.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000006",
+          "data": [
+            "PrbAnchr"
+          ],
+          "type": "triggerBlockers",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbFtTru",
+      "name": "P2a firedThisTurn true",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000007",
+          "data": "PROBE P2a: a triggerPrereqs with firedThisTurn=true fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000008",
+          "data": {
+            "prereqs": [
+              "PrbAnchr"
+            ],
+            "firedThisTurn": true
+          },
+          "type": "triggerPrereqs",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbFtFls",
+      "name": "P2b firedThisTurn false control",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000009",
+          "data": "PROBE P2b: a triggerPrereqs with firedThisTurn=false fired.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-11110000000a",
+          "data": {
+            "prereqs": [
+              "PrbAnchr"
+            ],
+            "firedThisTurn": false
+          },
+          "type": "triggerPrereqs",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbEvUnr",
+      "name": "P3a Event NOT declared in conditions",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-11110000000b",
+          "data": "PROBE P3a: an undeclared triggerOnEvent still evaluated at runtime.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-11110000000c",
+          "data": "PROBE P3A unregistered event marker",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbEvReg",
+      "name": "P3b Event declared in conditions control",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-11110000000d",
+          "data": "PROBE P3b: a declared triggerOnEvent evaluated at runtime.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-11110000000e",
+          "data": "PROBE P3B registered event marker",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbEvCas",
+      "name": "P4 Near-miss casing punctuation whitespace",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-11110000000f",
+          "data": "PROBE P4: the near-miss triggerOnEvent evaluated at runtime.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000010",
+          "data": "PROBE P4 NEAR MISS EVENT MARKER",
+          "type": "triggerOnEvent",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbNotEq",
+      "name": "P6 not_equal inequality",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000011",
+          "data": "PROBE P6: a not_equal triggerOnTrackedItem condition fired. The target item holds 3 and the required value is 99, so not_equal is TRUE. If this message never appears, not_equal did not survive import intact.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000012",
+          "data": {
+            "inequality": "not_equal",
+            "requiredValue": "99",
+            "trackedItemID": "PrbNumbr1"
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "not_equal",
+          "trackedItemID": "PrbNumbr1"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbNestS",
+      "name": "P7 Nested YAML script walk",
+      "triggerEffects": [
+        {
+          "id": "11110000-1111-4111-8111-111100000013",
+          "data": "PROBE P7: incrementing the nested stats.friendliness of every entry.",
+          "type": "effectShowMessage"
+        },
+        {
+          "id": "11110000-1111-4111-8111-111100000014",
+          "data": "for each $entry in $p7_nested_yaml_enforce\n  $entry.stats.friendliness += 1",
+          "type": "effectRunScript"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "11110000-1111-4111-8111-111100000015",
+          "data": 2,
+          "type": "triggerOnTurn",
+          "category": "condition"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    }
+  ],
+  "victoryCondition": {
+    "condition": "The player types the word VICTORY.",
+    "text": "Probe complete.",
+    "alreadyFired": false
+  },
+  "defeatCondition": {
+    "condition": "The player types the word DEFEAT.",
+    "text": "Probe aborted.",
+    "alreadyFired": false
+  },
+  "instructionBlocks": [],
+  "loreBookEntries": [],
+  "trackedItems": [
+    {
+      "id": "PrbHidBor",
+      "name": "P5 Hidden Boring Probe",
+      "positionInList": 0,
+      "dataType": "text",
+      "visibility": "hidden_boring",
+      "description": "PROBE P5: this item is authored with visibility hidden_boring. Check whether that value survives import.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "PROBE P5 VALUE",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "p5_hidden_boring_probe",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbNumbr1",
+      "name": "P6 Not Equal Target",
+      "positionInList": 1,
+      "dataType": "number",
+      "visibility": "everyone",
+      "description": "PROBE P6: the target of a not_equal triggerOnTrackedItem condition.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "3",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": false,
+      "variableName": "p6_not_equal_target",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbNestYm",
+      "name": "P7 Nested Yaml Enforce",
+      "positionInList": 2,
+      "dataType": "yaml",
+      "visibility": "everyone",
+      "description": "PROBE P7: a YAML tracked item whose formatSchema nests a sub-map, with enforceFormat on. Used to test whether format enforcement recurses past the top level.",
+      "updateInstructions": "On every turn, add one new entry with a made-up name and breed. Deliberately OMIT the stats sub-map on the entry you add, so that drift below the top level can be observed.",
+      "formatExample": "- name: Rex\n  breed: terrier\n  stats:\n    friendliness: 5\n    energy: 10\n  colour: brindle",
+      "enforceFormat": true,
+      "formatSchema": "- name: text\n  breed: text\n  stats:\n    friendliness: number\n    energy: number\n    ...:\n  colour: text\n  ...:",
+      "initialValue": "- name: Rex\n  breed: terrier\n  stats:\n    friendliness: 5\n    energy: 10\n  colour: brindle",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": true,
+      "variableName": "p7_nested_yaml_enforce",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbYamlSc",
+      "name": "P8 Yaml Scalar Coercion",
+      "positionInList": 3,
+      "dataType": "yaml",
+      "visibility": "everyone",
+      "description": "PROBE P8: unquoted YAML scalars that some parsers coerce. Read this item's rendered value in World Debug to see which stayed strings.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "flag_yes: yes\nflag_no: no\nflag_on: on\nflag_off: off\nflag_true: true\nzip_code: 007\nversion_like: 1.10\nquoted_control: \"yes\"",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "p8_yaml_scalar_coercion",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbMenuIt",
+      "name": "P10 Menu Item Probe",
+      "positionInList": 4,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10: this item's per-character initialPCValue is an ARRAY paired with initialValueBasedOnPC 'player'. Check whether character selection offers the choice.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "player",
+      "autoUpdate": false,
+      "variableName": "p10_menu_item_probe",
+      "driftAcknowledgedForName": null
+    }
+  ],
+  "NPCs": [],
+  "autoAdvanceVersion": false,
+  "version": "1.00",
+  "designNotes": "SCHEMA PROBE A. Instrument world for the schema v2.4 open questions. See probes/README.md in the infinite-worlds-architect repo for the read protocol. Every probe marker string begins with the token PROBE."
+}
