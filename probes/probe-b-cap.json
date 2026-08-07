@@ -1,7 +1,7 @@
 {
   "favorite": false,
-  "title": "SCHEMA PROBE B — event cap and AI model enum",
-  "description": "Isolated instrument world for the two probes most likely to be rejected or silently truncated on import. Kept separate from Probe A so a hard failure here costs nothing there. Not a playable adventure — do not publish.",
+  "title": "SCHEMA PROBE B — event cap, AI model enum, and Probe A follow-ups",
+  "description": "Instrument world for the ten-event cap and the recommendedAIModel enum, plus the factor-isolating follow-ups Probe A's results demanded. Not a playable adventure — do not publish.",
   "background": "A featureless white room containing twelve numbered doors. Nothing happens here unless a trigger makes it happen.",
   "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery.",
   "authorStyle": "Terse and clinical.",
@@ -83,7 +83,44 @@
         "Observation": 3,
         "Patience": 3
       },
-      "initialTrackedItemValues": []
+      "initialTrackedItemValues": [
+        {
+          "id": "PrbBMen01",
+          "visibility": "everyone",
+          "name": "P10a Array Character",
+          "initialPCValue": [
+            "PROBE P10A OPTION ALPHA",
+            "PROBE P10A OPTION BETA",
+            "PROBE P10A OPTION GAMMA"
+          ],
+          "initialValueBasedOnPC": "character"
+        },
+        {
+          "id": "PrbBMen02",
+          "visibility": "everyone",
+          "name": "P10b String Player",
+          "initialPCValue": "PROBE P10B SINGLE VALUE",
+          "initialValueBasedOnPC": "player"
+        },
+        {
+          "id": "PrbBMen03",
+          "visibility": "everyone",
+          "name": "P10c Array Player",
+          "initialPCValue": [
+            "PROBE P10C OPTION ALPHA",
+            "PROBE P10C OPTION BETA",
+            "PROBE P10C OPTION GAMMA"
+          ],
+          "initialValueBasedOnPC": "player"
+        },
+        {
+          "id": "PrbBMen04",
+          "visibility": "everyone",
+          "name": "P10d String Character",
+          "initialPCValue": "PROBE P10D SINGLE VALUE",
+          "initialValueBasedOnPC": "character"
+        }
+      ]
     }
   ],
   "triggerEvents": [
@@ -326,6 +363,126 @@
         }
       ],
       "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6a01",
+      "name": "P6a not_equal WITH textComparison",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000201",
+          "data": "PROBE P6a fired — not_equal survived import when textComparison was present.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000211",
+          "data": {
+            "inequality": "not_equal",
+            "requiredValue": "99",
+            "trackedItemID": "PrbBNum01",
+            "textComparison": "contains"
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "not_equal",
+          "trackedItemID": "PrbBNum01"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6b01",
+      "name": "P6b at_least WITHOUT textComparison",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000202",
+          "data": "PROBE P6b fired — a fixture-proven inequality survived import with textComparison absent.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000212",
+          "data": {
+            "inequality": "at_least",
+            "requiredValue": "1",
+            "trackedItemID": "PrbBNum01"
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "at_least",
+          "trackedItemID": "PrbBNum01"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6c01",
+      "name": "P6c at_least WITH textComparison control",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000203",
+          "data": "PROBE P6c fired — the fixture-mirroring positive control survived import.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000213",
+          "data": {
+            "inequality": "at_least",
+            "requiredValue": "1",
+            "trackedItemID": "PrbBNum01",
+            "textComparison": "contains"
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "at_least",
+          "trackedItemID": "PrbBNum01"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP6d01",
+      "name": "P6d not_equal with empty textComparison",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000204",
+          "data": "PROBE P6d fired — an empty-string textComparison did not cost the condition.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [
+        {
+          "id": "22220000-2222-4222-8222-222200000214",
+          "data": {
+            "inequality": "not_equal",
+            "requiredValue": "99",
+            "trackedItemID": "PrbBNum01",
+            "textComparison": ""
+          },
+          "type": "triggerOnTrackedItem",
+          "category": "condition",
+          "inequality": "not_equal",
+          "trackedItemID": "PrbBNum01"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbP1301",
+      "name": "P13 Empty triggerConditions",
+      "triggerEffects": [
+        {
+          "id": "22220000-2222-4222-8222-222200000205",
+          "data": "PROBE P13 fired — a trigger with an empty triggerConditions array fires rather than staying dormant. This is the state Probe A showed a legacy gate condition gets reduced to.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "triggerConditions": [],
+      "canTriggerMoreThanOnce": true
     }
   ],
   "victoryCondition": {
@@ -340,9 +497,95 @@
   },
   "instructionBlocks": [],
   "loreBookEntries": [],
-  "trackedItems": [],
+  "trackedItems": [
+    {
+      "id": "PrbBNum01",
+      "name": "P6 Inequality Target",
+      "positionInList": 0,
+      "dataType": "number",
+      "visibility": "everyone",
+      "description": "PROBE P6: the shared target of the four inequality/textComparison variants. Holds 3, so not_equal vs 99 is TRUE and at_least vs 1 is TRUE — every variant should fire if its condition survived import.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "3",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "p6_inequality_target",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen01",
+      "name": "P10a Array Character",
+      "positionInList": 1,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10a: array initialPCValue paired with initialValueBasedOnPC 'character' — the combination the canonical fixture demonstrates. Positive control.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": false,
+      "variableName": "p10a_array_character",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen02",
+      "name": "P10b String Player",
+      "positionInList": 2,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10b: plain string initialPCValue paired with initialValueBasedOnPC 'player'. Isolates whether 'player' alone is the problem.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "player",
+      "autoUpdate": false,
+      "variableName": "p10b_string_player",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen03",
+      "name": "P10c Array Player",
+      "positionInList": 3,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10c: array initialPCValue paired with initialValueBasedOnPC 'player'. Replicates the combination Probe A saw dropped, in a different world.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "player",
+      "autoUpdate": false,
+      "variableName": "p10c_array_player",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbBMen04",
+      "name": "P10d String Character",
+      "positionInList": 4,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P10d: plain string initialPCValue paired with initialValueBasedOnPC 'character'. Baseline control — Probe A already showed this survives.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": false,
+      "variableName": "p10d_string_character",
+      "driftAcknowledgedForName": null
+    }
+  ],
   "NPCs": [],
   "autoAdvanceVersion": false,
   "version": "1.00",
-  "designNotes": "SCHEMA PROBE B. Isolated instrument world for the AI-evaluated event cap and the recommendedAIModel enum. See probes/README.md in the infinite-worlds-architect repo for the read protocol."
+  "designNotes": "SCHEMA PROBE B. The AI-evaluated event cap, the recommendedAIModel enum, and the factor-isolating follow-ups to Probe A: which of not_equal / absent textComparison cost P6 its condition, which of the array form / 'player' cost P10 its entry, and whether a trigger with no conditions fires or stays dormant. See probes/README.md in the infinite-worlds-architect repo for the read protocol."
 }

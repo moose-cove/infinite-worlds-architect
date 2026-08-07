@@ -73,10 +73,11 @@ hooks/
 ├── citation_gate.py    # Stop hook: enforces evidence citations during a sequel-world flow
 └── hooks.json          # Hook registration (Stop → citation_gate.py)
 
-probes/                 # Instrument worlds for resolving documented schema unknowns
-├── README.md           # Run + read protocol; where findings land afterwards
-├── probe-a-core.json   # Gate shapes, firedThisTurn, conditions registry, YAML, image style
-└── probe-b-cap.json    # Ten-event cap + recommendedAIModel (isolated: higher import risk)
+probes/                     # Instrument worlds for resolving documented schema unknowns
+├── README.md               # Run + read protocol; recorded results; where findings land
+├── probe-a-core.json       # Gate shapes, firedThisTurn, conditions registry, YAML, image style
+├── probe-a-imported.json   # Probe A after an IW import/export round trip — evidence, do not edit
+└── probe-b-cap.json        # Ten-event cap, recommendedAIModel, Probe A factor-isolation follow-ups
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)
