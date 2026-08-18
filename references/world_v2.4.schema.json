@@ -546,6 +546,11 @@
           "description": "Blocked if any listed trigger has fired",
           "x-iw-note": "Shape changed in schema v2.4: `data` was a bare string[] of trigger IDs through v2.2 and is now an object wrapping that array as `blockers`, plus `firedThisTurn`. The legacy bare-array form is still READ and treated as blockers, but CONFIRMED 2026-08-06: IW does NOT migrate it on import — it DELETES the condition, leaving triggerConditions empty and the trigger unblocked, with no error in-game or in the export. Tier 2 errors on a world declaring v2.4+ with this shape and warns below (so the v2.1/v2.2 back-compat fixtures still validate); migrate before importing either way. OPEN QUESTION: the fixture shows firedThisTurn only as false; true survived a round trip, so it is at least author-writable, but its runtime meaning is still untested — emit false unless an author has confirmed the other behaviour in-game."
         },
+        "triggerOnPawScript": {
+          "data": "string (PawScript boolean expression, e.g. '$favorite_flavor = \"Lemon\"')",
+          "description": "Fires when the PawScript expression evaluates truthy. Deterministic (not AI-evaluated) — evaluated against live tracked-item values each turn.",
+          "x-iw-note": "Observed in the v2.4 fixture (world version 1.09, 2026-08): one condition, `data` a bare expression string comparing a tracked item's `$variableName` to a literal. Tier 2 warns when `data` is not a non-empty string, and when the expression references a `$name` that is not a tracked item's `variableName` (natives `$player`/`$game` and PawScript keywords excepted). OPEN QUESTIONS (probe): whether an erroring/non-boolean expression is treated as false or deletes the condition on import, and whether it counts toward the ten-event AI-evaluation cap (presumed not — no AI evaluation involved)."
+        },
         "logic": {
           "operator": "and|or",
           "data": "object[] (sub-conditions, recursive)",

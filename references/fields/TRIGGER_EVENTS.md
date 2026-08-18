@@ -111,6 +111,7 @@ This also closes off the competing reading, under which the platform derived `co
 | Game-start setup | Top-level `triggerOnStartOfGame: true` on the trigger itself (not a `triggerConditions` entry). |
 | Restriction to specific player characters | `triggerOnCharacter` — array of `characterId` values from `possibleCharacters`. |
 | State-based gating (number/text/XML comparison) | `triggerOnTrackedItem` — supports `at_least`, `is_exactly`, `at_most` (numbers), `contains` (text/XML). Supports compound logic via `category: "logic"` with `and`/`or`. |
+| Scripted state test (compound, arithmetic, or YAML sub-field) | `triggerOnPawScript` — `data` is one PawScript boolean expression, e.g. `$favorite_flavor = "Lemon"` or `$gold >= 50 and $puppies.count > 2`. Evaluated deterministically each turn against live tracked-item values (`$variableName` form, not `<<…>>`). Reach for it instead of stacking `triggerOnTrackedItem` under a `logic` node once the test has more than one clause or needs a computed value. Not AI-evaluated, so presumed **not** to count toward the ten-event cap (unverified). Every `$name` must be a tracked item's `variableName` or a native — the validator warns on anything else. See [`PAWSCRIPT.md` §3](../mechanics/PAWSCRIPT.md#3-expressions-). |
 | Probabilistic firing | `triggerOnRandomChance` — formula string (e.g., `"30"` for 30%, or `"15+round(turn_number%random)"` for dynamic). |
 | Chained triggers | `triggerPrereqs` and `triggerBlockers` — v2.4 object shape `{prereqs\|blockers: [...], firedThisTurn: false}` (see meta-fields above). |
 

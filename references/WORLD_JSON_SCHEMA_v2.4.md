@@ -181,12 +181,15 @@ imply a one-level-deep limit:
     friendliness: 5
     energy: 10
   color: spotted black and white
+  has_scent: true
 ```
 
 Three consequences worth holding onto:
 
 1. **`formatSchema` nests too.** Mirror the value's structure, using a bare `stats:` line with
-   indented children. See the row above.
+   indented children. See the row above. A leaf with nothing after the colon (`has_scent:`) is
+   an **untyped** field — the fixture's way of declaring a boolean, since `text` and `number` are
+   the only named types.
 2. **PawScript walks nested paths with dots.** The fixture's script reads
    `$puppy.stats.friendliness`, not `$puppy.friendliness`. Depth costs nothing at the script
    layer — see [`mechanics/PAWSCRIPT.md`](mechanics/PAWSCRIPT.md).
@@ -214,7 +217,7 @@ Three consequences worth holding onto:
 
 Every condition has `id` (UUID), `category`, `data`, plus type-specific fields.
 
-**`data` is polymorphic** — its shape depends entirely on `type`: a `string[]` for `triggerOnCharacter`, an object for `triggerOnTrackedItem`/`triggerBlockers`/`triggerPrereqs`, a formula string for `triggerOnRandomChance`, an integer for `triggerOnTurn`, a natural-language string for `triggerOnEvent`, and an object array for `category: "logic"`. Do not assume a uniform shape.
+**`data` is polymorphic** — its shape depends entirely on `type`: a `string[]` for `triggerOnCharacter`, an object for `triggerOnTrackedItem`/`triggerBlockers`/`triggerPrereqs`, a formula string for `triggerOnRandomChance`, an integer for `triggerOnTurn`, a natural-language string for `triggerOnEvent`, a PawScript expression string for `triggerOnPawScript`, and an object array for `category: "logic"`. Do not assume a uniform shape.
 
 > **v2.4 shape change.** `triggerBlockers` and `triggerPrereqs` moved from a bare `string[]` of trigger IDs to an object wrapping that array. Read both; write only the new form. Code that pattern-matches on `data` being a list will silently *skip* these conditions rather than fail loudly on a v2.4 world — that is the failure mode to watch for when porting anything that walks the trigger graph.
 >
@@ -234,6 +237,7 @@ For `category: "condition"`, the condition has a `type`:
 | `triggerOnEvent` | `string` | AI-evaluated condition. `data` is a free-form natural-language description of an event (e.g., `"Someone says the words 'dummy bunny' to you"`). The AI reads the narrative each turn and fires the trigger when it judges the described event has occurred. Use for events that cannot be reduced to a tracked-item comparison or random chance — anything requiring narrative judgment. Valid both as a top-level condition and as a sub-condition inside a `category: "logic"` block. **v2.4:** the same string should also be listed verbatim in the world's top-level [`conditions`](#1-top-level-fields) registry — keep the two in sync. **Max 10 AI-evaluated events per world** (each costs an extra AI evaluation per turn); the plugin warns past the cap. |
 | `triggerBlockers` | `{blockers: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `blockers` is the array of trigger IDs that must NOT have fired; if any have, this trigger is blocked. `firedThisTurn` is **an open question** — see below. |
 | `triggerPrereqs` | `{prereqs: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `prereqs` is the array of trigger IDs that must have fired first. `firedThisTurn` is **an open question** — see below. |
+| `triggerOnPawScript` | `string` (PawScript expression) | **New in fixture 1.09 (2026-08).** A deterministic, scripted gate: `data` is a bare PawScript boolean expression that the platform evaluates against live tracked-item values each turn, e.g. `"$favorite_flavor = \"Lemon\""` (the fixture's one sample, on "Test Trigger 3", where `favorite_flavor` is a text tracked item's `variableName`). Use the `$variableName` form, not `<<…>>` interpolation, and combine sub-tests with `and` / `or` inside the one expression — see [`PAWSCRIPT.md` §3](./mechanics/PAWSCRIPT.md#3-expressions-). Prefer it over stacking `triggerOnTrackedItem` conditions under a `logic` node whenever the test is compound, arithmetic, or reaches into a YAML item's sub-fields. Not AI-evaluated, so it is presumed **not** to count toward the ten-event cap (unverified). The plugin warns when `data` is not a non-empty string and when a `$name` in it is not a tracked item's `variableName` or a native (`$player`/`$game`). Behaviour on a malformed or non-boolean expression is an open question — see [`probes/README.md`](../probes/README.md). |
 
 > **Open question — `firedThisTurn`.** The v2.4 fixture shows only `false`, on both the blockers and the prereqs condition. The name suggests it narrows the match from "the listed trigger fired at any point in the past" to "the listed trigger fired on the current turn" — which would make it the switch between a permanent gate and a same-turn interlock — but nothing in the fixture confirms that reading, and the platform's behaviour when it is `true` is untested. **Emit `false`** unless an author explicitly wants the other behaviour and has verified it in-game. The plugin type-checks the field and warns when it is missing; it does not assume semantics beyond that.
 
