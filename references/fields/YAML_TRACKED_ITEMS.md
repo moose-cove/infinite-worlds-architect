@@ -119,6 +119,12 @@ item from PawScript as `$<variableName>` (e.g. `variableName: "player_gold"` →
 `formatSchema` is a lightweight pseudo-schema, one field per line:
 
 - `field: text` or `field: number` — declares a field and its type.
+- `field:` with **nothing after the colon and no children** — declares a field
+  with **no type constraint** (any scalar). This is how the fixture (1.09) declares
+  its boolean field: `has_scent:` in the schema, `has_scent: true` / `false` in the
+  example. `text` and `number` are the only named types the fixture uses; there is
+  no `boolean` keyword, so leave the type blank for booleans (and for anything else
+  you'd rather not pin down).
 - `field:` with **indented children** — declares a field whose value is a sub-map.
 - `...:` — a **continuation marker** meaning "more entries like the ones above"
   (i.e., the structure repeats — it's a list of these records, not a fixed set).
@@ -135,13 +141,14 @@ flat list of leaf fields. This is the fixture's puppy tracker:
     energy: number
     ...:
   color: text
+  has_scent: 
   ...:
 ```
 
 Read it top-down: a **list of records**; each record has `name`, `breed`, a `stats`
-sub-map, and `color`. Inside `stats`, `friendliness` and `energy` are numbers, and
-the nested `...:` says more stat keys are allowed there. The trailing outer `...:`
-says the list may hold any number of such records.
+sub-map, `color`, and an untyped `has_scent`. Inside `stats`, `friendliness` and
+`energy` are numbers, and the nested `...:` says more stat keys are allowed there.
+The trailing outer `...:` says the list may hold any number of such records.
 
 Compare to the matching `formatExample`, which is the same shape filled in:
 
@@ -152,6 +159,7 @@ Compare to the matching `formatExample`, which is the same shape filled in:
     friendliness: 5
     energy: 10
   color: spotted black and white
+  has_scent: true
 ```
 
 ### `formatExample` vs. `formatSchema` vs. `enforceFormat`
@@ -183,6 +191,8 @@ turn a value you meant as *text* into something else:
   `7` — the zeros are lost. Quote it: `"007"`.
 - **`true` / `false` become booleans.** Unquoted `true` is the boolean `true`,
   not the string `"true"`. Quote it when you mean the literal word: `"true"`.
+  When you *want* a boolean — the fixture's `has_scent: true` — leave it unquoted
+  and declare the field untyped (`has_scent:`) in `formatSchema`.
   (Some YAML parsers also coerce `yes` / `no` / `on` / `off` to booleans; whether
   IW's parser does is unverified — quote those too when you mean literal text, to
   be safe.)
@@ -215,6 +225,7 @@ example demonstrates depth rather than implying a flat ceiling.
       energy: number
       ...:
     color: text
+    has_scent: 
     ...:
   ```
 
@@ -227,6 +238,7 @@ example demonstrates depth rather than implying a flat ceiling.
       friendliness: 5
       energy: 10
     color: spotted black and white
+    has_scent: true
   ```
 
 **The `effectRunScript` that walks it** (a "Run a script" trigger effect):

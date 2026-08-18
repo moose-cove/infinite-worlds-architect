@@ -10,6 +10,14 @@ lockstep with the change that warrants it.
 
 ## [Unreleased]
 
+### Added
+
+- **`triggerOnPawScript` condition type (v0.19.0).** The canonical fixture (now world version 1.09, exported 2026-08) carries a new trigger-condition type whose `data` is a bare PawScript boolean expression — `"$favorite_flavor = \"Lemon\""` — evaluated deterministically each turn against live tracked-item values. Before this change the validator flagged the fixture's own condition as an "unknown condition type", violating source-of-truth rule 1. The type is now registered in `_KNOWN_CONDITION_TYPES` and in the schema's `x-iw-condition-types` (so `SCHEMA_SUMMARY` picks it up), and a new Tier 2 check `_check_pawscript_conditions` warns — never errors, one fixture sample is not enough to know how the platform reacts — when `data` is missing / non-string / blank, and when the expression references a `$name` that is neither a tracked item's `variableName` nor a native (`$player` / `$game`), recursing into `category: "logic"` trees. Docs gain the type everywhere condition types are enumerated, with the authoring rule "one `triggerOnPawScript` beats a stack of `triggerOnTrackedItem` under a `logic` node once the test is compound, arithmetic, or reaches into YAML sub-fields", plus the caveat that it is *presumed* not to count toward the ten-event cap. Open questions (malformed-expression handling, cap counting) are written up as Probe C · P14. (`example-world-schema-v2.4.json`, `references/world_v2.4.schema.json`, `src/iw_architect/validator.py`, `references/WORLD_JSON_SCHEMA_v2.4.md`, `references/fields/TRIGGER_EVENTS.md`, `references/mechanics/PAWSCRIPT.md`, `agents/world-architect.md`, `probes/README.md`, `tests/test_validator.py`)
+
+- **`formatSchema` untyped-field form documented.** The fixture's puppy tracker gained a boolean field, `has_scent`, declared in `formatSchema` with nothing after the colon (`has_scent: `) — `text` and `number` are the only named pseudo-schema types, so a blank type is how a boolean (or any deliberately unconstrained scalar) is declared. `YAML_TRACKED_ITEMS.md` documents the form and both copies of the puppy example now match the fixture; the schema doc's copy is updated too. (`references/fields/YAML_TRACKED_ITEMS.md`, `references/WORLD_JSON_SCHEMA_v2.4.md`)
+
+- **`test_make_draft_world_copies_bumps_and_fronts_version` derives the expected bump from the fixture** instead of hardcoding `1.08 → 1.09`, so refreshing the fixture from a platform export no longer breaks an unrelated test. (`tests/test_round_trip.py`)
+
 ### Changed
 
 - **World schema v2.2 → v2.4.** The canonical fixture is now `example-world-schema-v2.4.json`; the schema artifact and human-readable reference are renamed to `references/world_v2.4.schema.json` and `references/WORLD_JSON_SCHEMA_v2.4.md` (root symlink repointed), and `KNOWN_SCHEMA_VERSION` / the `create_new_world_json` scaffold now emit `schemaVersion: 2.4`. Three substantive deltas:

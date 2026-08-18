@@ -87,6 +87,7 @@ _KNOWN_CONDITION_TYPES = {
     "triggerOnEvent",
     "triggerBlockers",
     "triggerPrereqs",
+    "triggerOnPawScript",
 }
 
 # Variables always valid in template expressions
@@ -736,6 +737,63 @@ def _check_pawscript_scripts(world: dict, errors: list[str], warnings: list[str]
                     )
 
 
+def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """Fixture 1.09 (2026-08): validate ``triggerOnPawScript`` condition data.
+
+    The fixture carries exactly one sample — ``data`` is a bare PawScript boolean
+    expression string (``$favorite_flavor = "Lemon"``) — so this is warn-only until a
+    probe establishes how the platform treats malformed input:
+
+    - Warn when ``data`` is missing, not a string, or blank: there is nothing to
+      evaluate, and the closest analogue (a ``triggerOnTrackedItem`` with an empty
+      ``textComparison``) is deleted outright on import.
+    - Warn on a ``$root`` that is neither a tracked-item ``variableName`` nor a native
+      (``$player`` / ``$game``) — a typo here silently never fires. Same heuristic and
+      the same string-literal caveat as ``_check_pawscript_scripts``.
+
+    Walks nested ``category: "logic"`` trees so a scripted test inside an and/or
+    combinator is checked too.
+    """
+    variable_names = set(_collect_variable_names(world))
+    legal = variable_names | _SCRIPT_NATIVES
+
+    def _walk(conditions: Any, tname: str, depth: int = 0) -> None:
+        if depth > _MAX_CONDITION_DEPTH or not isinstance(conditions, list):
+            return
+        for cond in conditions:
+            if not isinstance(cond, dict):
+                continue
+            if cond.get("category") == "logic":
+                _walk(cond.get("data"), tname, depth + 1)
+                continue
+            if cond.get("type") != "triggerOnPawScript":
+                continue
+            cid = cond.get("id", "?")
+            expr = cond.get("data")
+            if not isinstance(expr, str) or not expr.strip():
+                shown = "missing" if "data" not in cond else repr(expr)
+                warnings.append(
+                    f"Trigger '{tname}' condition '{cid}': triggerOnPawScript data is {shown} — "
+                    "expected a non-empty PawScript boolean expression string "
+                    "(e.g. '$favorite_flavor = \"Lemon\"'); the platform has nothing to "
+                    "evaluate and may drop the condition on import"
+                )
+                continue
+            seen_unknown: set[str] = set()
+            for root in _SCRIPT_IDENT_RE.findall(expr):
+                if root not in legal and root not in seen_unknown:
+                    seen_unknown.add(root)
+                    warnings.append(
+                        f"Trigger '{tname}' condition '{cid}': triggerOnPawScript references "
+                        f"${root} which is not a tracked-item variableName or a native "
+                        "($player/$game) — the condition will never evaluate true"
+                    )
+
+    for trigger in world.get("triggerEvents", []):
+        tname = trigger.get("name", trigger.get("id", "?"))
+        _walk(trigger.get("triggerConditions", []), tname)
+
+
 def _check_enforce_format(world: dict, errors: list[str], warnings: list[str]) -> None:
     """schema v2.2: warn when enforceFormat is true but formatSchema is empty/missing."""
     for ti in world.get("trackedItems", []):
@@ -1303,6 +1361,7 @@ def validate_world(world_path: str) -> str:
         # schema v2.2: PawScript + YAML tracked items
         _check_tracked_item_variable_names(world, errors, warnings)
         _check_pawscript_scripts(world, errors, warnings)
+        _check_pawscript_conditions(world, errors, warnings)
         _check_enforce_format(world, errors, warnings)
         _check_yaml_tracked_items(world, errors, warnings)
         _check_xml_deprecation(world, errors, warnings)

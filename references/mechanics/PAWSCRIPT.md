@@ -91,8 +91,35 @@ place. They never change state.
   `descriptionRequest`, EIB/KIB content, and so on.
 - Tracked-item `initialValue` and `description`.
 - Trigger conditions (the platform evaluates the expression to decide whether
-  the condition holds).
+  the condition holds). The dedicated condition type is **`triggerOnPawScript`**
+  — see below.
 - AI prompt fields.
+
+**`triggerOnPawScript` — an expression as a trigger gate.** Fixture 1.09
+(2026-08) added a condition type whose `data` is a bare PawScript boolean
+expression, written in the `$variableName` form with *no* `<<…>>` brackets:
+
+```jsonc
+{
+  "category": "condition",
+  "type": "triggerOnPawScript",
+  "data": "$favorite_flavor = \"Lemon\"",
+  "id": "e95ded8d-1a55-d946-f9a9-22b65f99886d"
+}
+```
+
+The platform evaluates it each turn against live tracked-item values and fires
+the trigger when it is truthy. It is deterministic — no AI judgment, so it is
+presumed not to count toward the ten-event `triggerOnEvent` cap (unverified).
+Compound tests go inside the one expression (`$gold >= 50 and $puppies.count > 2`)
+rather than across several conditions under a `logic` node, and it can reach into
+YAML sub-fields with the same dot paths scripts use (§5). Every `$name` in it must
+be a tracked item's `variableName` or a native; `validate_world` warns on anything
+else, and on a `data` that is not a non-empty string. Whether a malformed or
+non-boolean expression is treated as false or costs the condition its existence on
+import (the way an empty `textComparison` does) is an open question — see
+[`probes/README.md`](../../probes/README.md). Authoring guidance:
+[`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash

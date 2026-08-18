@@ -2159,3 +2159,95 @@ def test_effect_run_script_no_unknown_effect_warning():
     assert not any("effectRunScript" in w and "unknown" in w for w in result["warnings"]), result[
         "warnings"
     ]
+
+
+# ── triggerOnPawScript conditions (fixture 1.09) ─────────────────────────────
+
+_MISSING = object()
+
+
+def _pawscript_condition_world(data, tracked_items: list[dict], *, nested: bool = False) -> dict:
+    """A world with one trigger gated by a triggerOnPawScript condition.
+
+    ``nested=True`` wraps the condition inside an ``and`` logic node so the walker's
+    recursion into ``category: "logic"`` trees is exercised.
+    """
+    world = _base_world()
+    world["trackedItems"] = tracked_items
+    cond = {
+        "id": "e95ded8d-1a55-d946-f9a9-22b65f99886d",
+        "category": "condition",
+        "type": "triggerOnPawScript",
+    }
+    if data is not _MISSING:
+        cond["data"] = data
+    conditions = (
+        [{"id": "logic-1", "category": "logic", "operator": "and", "data": [cond]}]
+        if nested
+        else [cond]
+    )
+    world["triggerEvents"] = [
+        {
+            "id": "TRIG0001",
+            "name": "PawScript Gate",
+            "advancedLogic": nested,
+            "triggerConditions": conditions,
+            "triggerEffects": [
+                {
+                    "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                    "type": "effectShowMessage",
+                    "data": "Lemon it is.",
+                }
+            ],
+        }
+    ]
+    return world
+
+
+def test_pawscript_condition_is_a_known_type():
+    # Registered condition type — must NOT trip the "unknown condition type" warning,
+    # and a well-formed expression over a real variableName produces no
+    # triggerOnPawScript warning at all.
+    world = _pawscript_condition_world(
+        '$favorite_flavor = "Lemon"', [_yaml_item(variable_name="favorite_flavor")]
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("unknown condition type" in w for w in result["warnings"]), result["warnings"]
+    assert not any("triggerOnPawScript" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_pawscript_condition_undeclared_variable_warns():
+    # A $root that is not a variableName / native → WARNING; the real one and the
+    # $player native are not flagged.
+    world = _pawscript_condition_world(
+        '$favourite_flavor = "Lemon" and $player.name != ""',
+        [_yaml_item(variable_name="favorite_flavor")],
+    )
+    result = _validate(world)
+    assert result["valid"]
+    hits = [w for w in result["warnings"] if "triggerOnPawScript references" in w]
+    assert len(hits) == 1 and "$favourite_flavor" in hits[0], result["warnings"]
+    assert not any("references $player" in w for w in hits)
+
+
+def test_pawscript_condition_nested_in_logic_is_checked():
+    world = _pawscript_condition_world(
+        "$nope = 1", [_yaml_item(variable_name="favorite_flavor")], nested=True
+    )
+    result = _validate(world)
+    assert any("triggerOnPawScript references $nope" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+@pytest.mark.parametrize("data", [_MISSING, "", "   ", None, 5, {"expr": "$x = 1"}])
+def test_pawscript_condition_non_string_data_warns(data):
+    world = _pawscript_condition_world(data, [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
+    # Warn, never error — one fixture sample is not enough to know how the platform reacts.
+    assert result["valid"]
+    assert any(
+        "triggerOnPawScript data is" in w and "non-empty PawScript" in w for w in result["warnings"]
+    ), result["warnings"]
+    assert not any("triggerOnPawScript" in e for e in result["errors"])

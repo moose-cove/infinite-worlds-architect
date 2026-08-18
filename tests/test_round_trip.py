@@ -276,8 +276,14 @@ def test_make_draft_world_copies_bumps_and_fronts_version(tmp_path):
 
     world = json.loads(draft.read_text())
     assert next(iter(world)) == "version", "version must be the first key in the draft"
-    assert world["version"] == "1.09", "fixture version 1.08 must bump to 1.09"
-    assert result["version"] == {"from": "1.08", "to": "1.09"}
+    # Derive the expected bump from the fixture rather than hardcoding it: the fixture's
+    # `version` moves whenever the platform export is refreshed, and this test is about
+    # the bump-and-front behaviour, not the fixture's current number.
+    source_version = json.loads(FIXTURE_PATH.read_text())["version"]
+    major, minor = source_version.split(".")
+    expected = f"{major}.{int(minor) + 1:0{len(minor)}d}"
+    assert world["version"] == expected, f"fixture version {source_version} must bump to {expected}"
+    assert result["version"] == {"from": source_version, "to": expected}
 
     # The source is the protected baseline: byte-for-byte unchanged.
     assert source.read_bytes() == source_bytes_before

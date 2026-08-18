@@ -187,12 +187,20 @@ rather than the entry, and `test_check_reads_the_entry_not_the_item_in_an_untest
 is the assertion that has to flip. Worth pairing with a `recommendedAIModel` bogus-value
 control (does IW reject an unknown model string, or store anything?) since both are cheap.
 
+**P14 — `triggerOnPawScript` malformed-input handling.** Fixture 1.09 (2026-08) introduced
+this condition type with one well-formed sample; the plugin registers it and warns on
+non-string / blank `data` and on undeclared `$names`, but has no evidence for what the
+platform does with a bad expression. Import-side half is round-trip-answerable — see
+[Probe C · P14](#p14--triggeronpawscript-malformed-input) below.
+
 ### Still open — all runtime-only
 
 P2 semantics (does `firedThisTurn: true` narrow the gate?), P4's editor-UI read, P7
-enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, and P13
-(does a condition-less trigger fire every turn or stay dormant?). None of these can be read
-from a round trip; each needs a played session or a generated image.
+enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, P13
+(does a condition-less trigger fire every turn or stay dormant?), and the runtime half of P14
+(does a `triggerOnPawScript` gate count toward the ten-event cap, and is a non-boolean
+expression treated as false?). None of these can be read from a round trip; each needs a
+played session or a generated image.
 
 ---
 
@@ -377,6 +385,43 @@ true, something has drifted.
 The three canonical fixtures must continue to validate with **zero errors** (`CLAUDE.md`
 source-of-truth rule 1). That is why the legacy-gate rule is version-conditional rather than
 flat — see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md).
+
+---
+
+## Probe C *(designed, not yet built)*
+
+Carries the P10-followup cells above plus P14. Build it as `probes/probe-c-pawscript.json`
+when there is a round trip to spend; keep it minimal like the others.
+
+### P14 — `triggerOnPawScript` malformed input
+
+The v2.4 fixture (world version 1.09) is itself an IW export, so a well-formed
+`triggerOnPawScript` — `data: "$favorite_flavor = \"Lemon\""` — is already known to survive a
+round trip. What is unknown is the failure mode, and Probe A's lesson is that IW's failure
+mode is *silent deletion*, not rejection. Six triggers, one condition each, one shared text
+tracked item `probe_flavor` holding `"Lemon"`, each trigger's `effectShowMessage` naming
+its own cell:
+
+| Cell | `data` | Import-side question |
+|---|---|---|
+| P14a (control) | `"$probe_flavor = \"Lemon\""` | Survives byte-identical (expected — the fixture proves it). |
+| P14b | `""` | Blank string: kept, or deleted like an empty `textComparison`? |
+| P14c | *(key absent)* | Missing `data`: kept, or deleted? |
+| P14d | `"$no_such_item = 1"` | Undeclared `$name`: kept verbatim (author error is a runtime concern), or rejected/deleted at import? |
+| P14e | `"$probe_flavor"` | Non-boolean expression (a bare string value): kept? |
+| P14f | `"<<probe_flavor>> = \"Lemon\""` | Legacy `<<…>>` interpolation inside a condition: kept, rewritten, or deleted? |
+
+Import outcomes drive the validator: a deleted P14b/P14c promotes the current warning to a
+version-conditional error (same shape as the legacy-gate rule); a deleted P14d promotes the
+undeclared-`$name` warning likewise; a *kept* P14f means the plugin should warn that
+`<<…>>` is the wrong form rather than stay silent.
+
+**Runtime half (played session):** with all surviving cells present, does P14a fire and do
+P14d/P14e stay dormant (expression treated as false) or misfire? And with ten
+`triggerOnEvent` conditions already declared, does adding a `triggerOnPawScript` gate push
+the world past the cap — i.e. does the platform count it as an AI-evaluated event? The
+plugin presumes not (`_MAX_AI_EVENT_CONDITIONS` counts `triggerOnEvent` only); a contrary
+result changes that count.
 
 ---
 
