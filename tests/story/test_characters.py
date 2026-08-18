@@ -192,3 +192,96 @@ class TestIndexCharacters:
         assert "indexed_character_count" not in data
         assert "totalMentions" in data
         assert "total_mentions" not in data
+
+
+class TestSkipsTrackedItemSections:
+    """Tracked Items / Hidden Tracked Items bodies must not produce mentions —
+    a name embedded in a tracked-item label or value would otherwise register
+    on every turn."""
+
+    _LINES = [
+        "-- Turn 2 --",  # 1
+        "Action",  # 2
+        "------",  # 3
+        "Ada waves at Bob.",  # 4
+        "Outcome",  # 5
+        "-------",  # 6
+        "Ada opens the door.",  # 7
+        "Secret Information",  # 8
+        "------------------",  # 9
+        "Ada is hiding a key.",  # 10
+        "Tracked Items",  # 11
+        "-------------",  # 12
+        "Ada's Mood: Anxious",  # 13
+        "Bob: Wide-eyed, follower",  # 14
+        "Hidden Tracked Items",  # 15
+        "--------------------",  # 16
+        "Ada's Hound Status:",  # 17
+        "  implanter: Bob",  # 18
+        "-- Turn 3 --",  # 19
+        "Ada waits.",  # 20
+        "Outcome",  # 21
+        "-------",  # 22
+        "Bob arrives.",  # 23
+        "Tracked Items",  # 24
+        "-------------",  # 25
+        "Ada's Mood: Calm",  # 26
+    ]
+
+    def _index(self, line_range=(1, 26), turns=None):
+        source = "/fake/export.txt"
+        turn_defs = turns or [(2, source, list(line_range), self._LINES)]
+        turns_models = _make_turns(turn_defs)
+        src_text = {source: "\n".join(self._LINES)}
+        char_index, _ = index_characters(
+            turns_models,
+            src_text,
+            [{"name": "Ada", "aliases": []}, {"name": "Bob", "aliases": []}],
+        )
+        return char_index
+
+    def test_tracked_item_lines_are_not_mentions(self):
+        char_index = self._index(line_range=(1, 18))
+        ada_lines = [m.line for m in char_index.characters["Ada"].mentions]
+        bob_lines = [m.line for m in char_index.characters["Bob"].mentions]
+        assert ada_lines == [4, 7, 10]
+        assert bob_lines == [4]
+
+    def test_action_outcome_secret_still_indexed(self):
+        char_index = self._index(line_range=(1, 18))
+        assert char_index.total_mentions == 4
+
+    def test_turn_marker_resets_section(self):
+        # Turn 3 starts inside what was Turn 2's Hidden Tracked Items section;
+        # the marker must reset so Turn 3's pre-header text and Outcome count.
+        source = "/fake/export.txt"
+        turns = [(2, source, [1, 18], self._LINES), (3, source, [19, 26], self._LINES)]
+        char_index = self._index(turns=turns)
+        ada = [(m.turn, m.line) for m in char_index.characters["Ada"].mentions]
+        bob = [(m.turn, m.line) for m in char_index.characters["Bob"].mentions]
+        assert (3, 20) in ada
+        assert (3, 23) in bob
+        assert (3, 26) not in ada  # Turn 3 Tracked Items still skipped
+
+    def test_header_and_rule_lines_never_yield_mentions(self):
+        source = "/fake/export.txt"
+        lines = ["-- Turn 1 --", "Ada", "-----", "Ada is here."]
+        entries = [(1, source, [1, 4], lines)]
+        char_index, _ = index_characters(
+            _make_turns(entries),
+            _make_source_text(entries),
+            [{"name": "Ada", "aliases": []}],
+        )
+        # Line 2 is a section header (followed by a dash rule) — not a mention.
+        assert [m.line for m in char_index.characters["Ada"].mentions] == [4]
+
+    def test_turn_without_headers_scanned_in_full(self):
+        source = "/fake/export.txt"
+        lines = ["-- Turn 1 --", "Ada opens the door.", "Bob follows."]
+        entries = [(1, source, [1, 3], lines)]
+        char_index, _ = index_characters(
+            _make_turns(entries),
+            _make_source_text(entries),
+            [{"name": "Ada", "aliases": []}, {"name": "Bob", "aliases": []}],
+        )
+        assert char_index.total_mentions == 2
