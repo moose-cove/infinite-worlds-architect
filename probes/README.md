@@ -193,14 +193,22 @@ non-string / blank `data` and on undeclared `$names`, but has no evidence for wh
 platform does with a bad expression. Import-side half is round-trip-answerable — see
 [Probe C · P14](#p14--triggeronpawscript-malformed-input) below.
 
+**P15 — `$variableName` inside a `triggerOnRandomChance` formula.** Fixture 1.1 (2026-08)
+carries `"$number_of_non_human_friends+round(turn_number%random)"`, which proves the `$` form
+survives an IW export but not that it *evaluates*: a formula that resolves to NaN/text may
+simply never fire, with no error. The dialect is also mixed (`turn_number` and `random` bare,
+the tracked item `$`-prefixed). Runtime-only — see
+[Probe C · P15](#p15--variablename-in-a-triggeronrandomchance-formula) below.
+
 ### Still open — all runtime-only
 
 P2 semantics (does `firedThisTurn: true` narrow the gate?), P4's editor-UI read, P7
 enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, P13
 (does a condition-less trigger fire every turn or stay dormant?), and the runtime half of P14
 (does a `triggerOnPawScript` gate count toward the ten-event cap, and is a non-boolean
-expression treated as false?). None of these can be read from a round trip; each needs a
-played session or a generated image.
+expression treated as false?), and P15 (does a `$variableName` in a random-chance formula
+evaluate, and does `$game.turn_number` work there too?). None of these can be read from a
+round trip; each needs a played session or a generated image.
 
 ---
 
@@ -422,6 +430,26 @@ P14d/P14e stay dormant (expression treated as false) or misfire? And with ten
 the world past the cap — i.e. does the platform count it as an AI-evaluated event? The
 plugin presumes not (`_MAX_AI_EVENT_CONDITIONS` counts `triggerOnEvent` only); a contrary
 result changes that count.
+
+### P15 — `$variableName` in a `triggerOnRandomChance` formula
+
+The v2.4 fixture (world version 1.1) exports `"$number_of_non_human_friends+round(turn_number%random)"`
+as a random-chance formula, so the `$` form is at least author-writable and export-stable.
+Everything else is a played-session question. One number tracked item `probe_odds`, four
+triggers with `canTriggerMoreThanOnce: true`, each `effectShowMessage` naming its cell:
+
+| Cell | `data` | `probe_odds` | Runtime question |
+|---|---|---|---|
+| P15a (control) | `"100"` | — | Fires every turn (sanity: the formula is a percentage). |
+| P15b | `"$probe_odds"` | `100` | Fires every turn → the `$` reference evaluates. Never fires → resolves to NaN/text and the condition is dead. |
+| P15c | `"$probe_odds"` | `0` | Never fires (pairs with P15b to rule out "always fires regardless"). |
+| P15d | `"$game.turn_number*100"` | — | Fires from turn 1 → `$game.*` natives resolve here too; never fires → only the bare `turn_number` token works in this field. |
+
+Outcomes drive the docs more than the validator: a dead P15b means the fixture's own formula
+is inert and `TRIGGER_EVENTS.md` / `PAWSCRIPT.md` must stop recommending the idiom; a live
+P15d means the "bare `turn_number` only" caveat can be dropped. Optional import-side cell: a
+`"$no_such_item"` formula, to learn whether an undeclared `$name` is deleted on import the way
+P14d asks for `triggerOnPawScript`.
 
 ---
 

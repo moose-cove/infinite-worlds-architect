@@ -450,7 +450,7 @@
             },
             {
               "id": "d833de3f-898b-856e-9558-47183e9846f1",
-              "data": "15+round(turn_number%random)",
+              "data": "$number_of_non_human_friends+round(turn_number%random)",
               "type": "triggerOnRandomChance",
               "category": "condition"
             }
@@ -521,10 +521,10 @@
           "category": "condition"
         },
         {
-          "category": "condition",
-          "type": "triggerOnPawScript",
+          "id": "e95ded8d-1a55-d946-f9a9-22b65f99886d",
           "data": "$favorite_flavor = \"Lemon\"",
-          "id": "e95ded8d-1a55-d946-f9a9-22b65f99886d"
+          "type": "triggerOnPawScript",
+          "category": "condition"
         }
       ],
       "canTriggerMoreThanOnce": true
@@ -720,7 +720,7 @@
     }
   ],
   "autoAdvanceVersion": true,
-  "version": "1.09",
+  "version": "1.1",
   "designNotes": "--- Original user world design prompt: ---\n\nThis adventure is meant to demonstrate a fully fleshed out world using all of the possible effects! It should have a cute, safe-for-work, easy to understand, and cohesive example story that's used as it's framework, but it should include all possible features Infinite Worlds can currently use: every type of trigger and trigger effect, every type of tracked item, every kind of custom instruction, etc. It should be a model for how these things work within Infinite Worlds.",
   "showPawScriptButtons": true
 }

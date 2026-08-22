@@ -262,7 +262,7 @@ def test_make_draft_world_copies_bumps_and_fronts_version(tmp_path):
     Exercises the real fixture (where `version` sits second-to-last, before
     `designNotes`, with a trailing comma) — the common modify/spinoff case.
     """
-    from iw_architect.tools.helpers import make_draft_world
+    from iw_architect.tools.helpers import _bump_version_component, make_draft_world
     from iw_architect.validator import validate_world
 
     source = tmp_path / "world.json"
@@ -278,10 +278,12 @@ def test_make_draft_world_copies_bumps_and_fronts_version(tmp_path):
     assert next(iter(world)) == "version", "version must be the first key in the draft"
     # Derive the expected bump from the fixture rather than hardcoding it: the fixture's
     # `version` moves whenever the platform export is refreshed, and this test is about
-    # the bump-and-front behaviour, not the fixture's current number.
+    # the bump-and-front behaviour, not the fixture's current number. The arithmetic goes
+    # through `_bump_version_component` (covered on its own in
+    # `test_bump_version_component`) so the two-decimal-place widening rule applies: the
+    # fixture exported at `1.1` is 1.10 and must bump to `1.11`, not `1.2`.
     source_version = json.loads(FIXTURE_PATH.read_text())["version"]
-    major, minor = source_version.split(".")
-    expected = f"{major}.{int(minor) + 1:0{len(minor)}d}"
+    expected = _bump_version_component(source_version)
     assert world["version"] == expected, f"fixture version {source_version} must bump to {expected}"
     assert result["version"] == {"from": source_version, "to": expected}
 
@@ -491,7 +493,8 @@ def test_bump_version_component():
     assert _bump_version_component("1.0-beta") is None  # non-numeric tail → left alone
     # IW versions are two-decimal-place numbers (1.09, 1.10, …). A single-digit minor is
     # how a trailing-zero version displays — "1.3" is 1.30 — so the bump must land on
-    # 1.31, not 1.4 (which would skip nine versions).
+    # 1.31, not 1.4 (which would skip nine versions). Platform-confirmed 2026-08: the
+    # canonical fixture's export went 1.09 → "1.1", i.e. IW itself writes 1.10 as "1.1".
     assert _bump_version_component("1.3") == "1.31"
     assert _bump_version_component("1.0") == "1.01"
     assert _bump_version_component("2.9") == "2.91"

@@ -737,12 +737,29 @@ def _check_pawscript_scripts(world: dict, errors: list[str], warnings: list[str]
                     )
 
 
-def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[str]) -> None:
-    """Fixture 1.09 (2026-08): validate ``triggerOnPawScript`` condition data.
+# Condition types whose `data` is a PawScript-flavoured expression string that may
+# reference tracked items as $<variableName>. Value: (example, consequence) used in
+# the warning text.
+_EXPRESSION_CONDITION_TYPES: dict[str, tuple[str, str]] = {
+    "triggerOnPawScript": (
+        "'$favorite_flavor = \"Lemon\"'",
+        "the condition will never evaluate true",
+    ),
+    "triggerOnRandomChance": (
+        "'30' or '$number_of_non_human_friends+round(turn_number%random)'",
+        "the chance formula cannot resolve",
+    ),
+}
 
-    The fixture carries exactly one sample — ``data`` is a bare PawScript boolean
-    expression string (``$favorite_flavor = "Lemon"``) — so this is warn-only until a
-    probe establishes how the platform treats malformed input:
+
+def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """Validate expression-bearing condition data (PawScript and random-chance).
+
+    Fixture 1.09 (2026-08) introduced ``triggerOnPawScript`` with one sample — ``data``
+    a bare PawScript boolean expression string (``$favorite_flavor = "Lemon"``). Fixture
+    1.1 (2026-08) then showed a ``triggerOnRandomChance`` formula reading a tracked item
+    the same way (``$number_of_non_human_friends+round(turn_number%random)``). Both are
+    warn-only until a probe establishes how the platform treats malformed input:
 
     - Warn when ``data`` is missing, not a string, or blank: there is nothing to
       evaluate, and the closest analogue (a ``triggerOnTrackedItem`` with an empty
@@ -751,8 +768,10 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
       (``$player`` / ``$game``) — a typo here silently never fires. Same heuristic and
       the same string-literal caveat as ``_check_pawscript_scripts``.
 
-    Walks nested ``category: "logic"`` trees so a scripted test inside an and/or
-    combinator is checked too.
+    The random-chance dialect is mixed: ``turn_number`` and ``random`` appear as bare
+    identifiers, so only ``$``-prefixed roots are checked and the bare tokens pass
+    untouched. Walks nested ``category: "logic"`` trees so a scripted test inside an
+    and/or combinator is checked too.
     """
     variable_names = set(_collect_variable_names(world))
     legal = variable_names | _SCRIPT_NATIVES
@@ -766,17 +785,18 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
             if cond.get("category") == "logic":
                 _walk(cond.get("data"), tname, depth + 1)
                 continue
-            if cond.get("type") != "triggerOnPawScript":
+            ctype = cond.get("type")
+            if ctype not in _EXPRESSION_CONDITION_TYPES:
                 continue
+            example, consequence = _EXPRESSION_CONDITION_TYPES[ctype]
             cid = cond.get("id", "?")
             expr = cond.get("data")
             if not isinstance(expr, str) or not expr.strip():
                 shown = "missing" if "data" not in cond else repr(expr)
                 warnings.append(
-                    f"Trigger '{tname}' condition '{cid}': triggerOnPawScript data is {shown} — "
-                    "expected a non-empty PawScript boolean expression string "
-                    "(e.g. '$favorite_flavor = \"Lemon\"'); the platform has nothing to "
-                    "evaluate and may drop the condition on import"
+                    f"Trigger '{tname}' condition '{cid}': {ctype} data is {shown} — "
+                    f"expected a non-empty PawScript expression string (e.g. {example}); "
+                    "the platform has nothing to evaluate and may drop the condition on import"
                 )
                 continue
             seen_unknown: set[str] = set()
@@ -784,9 +804,9 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
                 if root not in legal and root not in seen_unknown:
                     seen_unknown.add(root)
                     warnings.append(
-                        f"Trigger '{tname}' condition '{cid}': triggerOnPawScript references "
+                        f"Trigger '{tname}' condition '{cid}': {ctype} references "
                         f"${root} which is not a tracked-item variableName or a native "
-                        "($player/$game) — the condition will never evaluate true"
+                        f"($player/$game) — {consequence}"
                     )
 
     for trigger in world.get("triggerEvents", []):
