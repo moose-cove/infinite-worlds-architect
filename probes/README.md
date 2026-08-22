@@ -9,6 +9,7 @@ the wiki.
 |---|---|---|
 | `probes/probe-a-core.json` | Gate-condition shapes, `firedThisTurn`, the `conditions` registry, `hidden_boring`, `not_equal`, nested YAML, image-style precedence, menu-backed `initialPCValue` | **Round trip run** — see [Recorded results](#recorded-results) |
 | `probes/probe-b-cap.json` | The ten-event cap, `recommendedAIModel`, and the factor-isolating follow-ups Probe A's results demanded | **Round trip run** — see [Recorded results](#recorded-results) |
+| [`probes/probe-d-pawscript-runtime.md`](probe-d-pawscript-runtime.md) | Build spec: SoG-without-conditions, `or`/`and` in conditions, chance-formula dialect (`if(…)`, bare `$handle`, `turn_number` forms), same-turn state visibility, pass order, errored one-shots vs `triggerPrereqs`, multi-level / runtime-key record creation | **Not yet built** — spec only; closes the runtime questions left by the 2026-08-22 played rounds |
 
 Both have now been run, and their `-imported.json` counterparts are committed as evidence.
 Both source files **now fail validation** — see
