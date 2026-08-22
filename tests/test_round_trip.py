@@ -339,6 +339,19 @@ def test_make_draft_world_handles_version_as_last_property(tmp_path):
     assert draft == {"version": "1.10", "title": "T", "schemaVersion": 2.1}
 
 
+def test_make_draft_world_bumps_single_digit_minor_to_two_places(tmp_path):
+    """`"1.3"` means 1.30 on the platform, so the draft must be 1.31 — not 1.4."""
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "w.json"
+    source.write_text('{\n  "title": "T",\n  "version": "1.3"\n}\n')
+
+    result = json.loads(make_draft_world(str(source), str(tmp_path / "out.json")))
+    assert result["status"] == "drafted", result
+    assert result["version"] == {"from": "1.3", "to": "1.31"}
+    assert json.loads(Path(result["draft_path"]).read_text())["version"] == "1.31"
+
+
 def test_make_draft_world_handles_version_as_sole_property(tmp_path):
     """A degenerate world where `version` is the only key must still yield valid JSON.
 
@@ -384,6 +397,7 @@ def test_make_draft_world_derives_draft_path(tmp_path):
         "world_v1.21.json": "world_v1.22_draft.json",
         "world_v2.09.json": "world_v2.10_draft.json",
         "world_v1.99.json": "world_v1.100_draft.json",
+        "world_v1.3.json": "world_v1.31_draft.json",
     }
     for src_name, expected_draft in cases.items():
         source = tmp_path / src_name
@@ -475,6 +489,13 @@ def test_bump_version_component():
     assert _bump_version_component("1.99") == "1.100"
     assert _bump_version_component("5") == "6"
     assert _bump_version_component("1.0-beta") is None  # non-numeric tail → left alone
+    # IW versions are two-decimal-place numbers (1.09, 1.10, …). A single-digit minor is
+    # how a trailing-zero version displays — "1.3" is 1.30 — so the bump must land on
+    # 1.31, not 1.4 (which would skip nine versions).
+    assert _bump_version_component("1.3") == "1.31"
+    assert _bump_version_component("1.0") == "1.01"
+    assert _bump_version_component("2.9") == "2.91"
+    assert _bump_version_component("1.31") == "1.32"
 
 
 def test_schema_coverage():

@@ -173,17 +173,29 @@ def create_new_world_json(
     )
 
 
+# IW displays world versions to two decimal places (`1.09`, `1.10`); a shorter minor
+# component is a trailing-zero version with the zero dropped (`1.3` is 1.30).
+_MIN_MINOR_WIDTH = 2
+
+
 def _bump_version_component(version: str) -> str | None:
     """Increment the trailing dot-separated numeric component, preserving zero-pad width.
 
     ``"1.04"`` → ``"1.05"``, ``"2.09"`` → ``"2.10"``, ``"1.99"`` → ``"1.100"``,
     ``"5"`` → ``"6"``. Returns ``None`` if the trailing component is not purely numeric,
     so the caller can leave a non-standard version string untouched.
+
+    IW world versions are two-decimal-place numbers (``1.09``, ``1.10``, …), so a
+    single-digit component after a dot is a trailing-zero version shown without its
+    zero: ``"1.3"`` is 1.30. It is widened to two places before the increment —
+    ``"1.3"`` → ``"1.31"``, not ``"1.4"`` — so the bump is +0.01, never +0.10.
     """
     parts = version.split(".")
     last = parts[-1]
     if not last.isdigit():
         return None
+    if len(parts) > 1 and len(last) < _MIN_MINOR_WIDTH:
+        last = last.ljust(_MIN_MINOR_WIDTH, "0")
     parts[-1] = str(int(last) + 1).zfill(len(last))
     return ".".join(parts)
 
