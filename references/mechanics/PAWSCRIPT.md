@@ -92,7 +92,8 @@ place. They never change state.
 - Tracked-item `initialValue` and `description`.
 - Trigger conditions (the platform evaluates the expression to decide whether
   the condition holds). The dedicated condition type is **`triggerOnPawScript`**
-  — see below.
+  — see below. A `triggerOnRandomChance` formula can also read a tracked item as
+  `$variableName` — see below.
 - AI prompt fields.
 
 **`triggerOnPawScript` — an expression as a trigger gate.** Fixture 1.09
@@ -120,6 +121,27 @@ non-boolean expression is treated as false or costs the condition its existence 
 import (the way an empty `textComparison` does) is an open question — see
 [`probes/README.md`](../../probes/README.md). Authoring guidance:
 [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
+
+**`triggerOnRandomChance` — tracked items inside the chance formula.** Fixture
+1.1 (2026-08) shows the random-chance formula reading a tracked item in the same
+`$variableName` form:
+
+```jsonc
+{
+  "category": "condition",
+  "type": "triggerOnRandomChance",
+  "data": "$number_of_non_human_friends+round(turn_number%random)"
+}
+```
+
+The chance scales with state — more non-human friends, higher odds — without a
+separate `triggerOnPawScript` gate and roll. The dialect is mixed and only
+*observed*, not explained: `turn_number` and `random` are **bare** identifiers in
+this field (not `$game.turn_number` or `random(…)` as in §3 expressions), while the
+tracked item carries the `$`. Write both forms exactly as the fixture does; whether
+`$game.turn_number` also resolves there is untested (probe P15). `validate_world`
+warns on a non-string/blank formula and on a `$name` that is not a tracked item's
+`variableName` or a native.
 
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash

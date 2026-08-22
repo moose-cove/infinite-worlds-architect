@@ -2166,18 +2166,25 @@ def test_effect_run_script_no_unknown_effect_warning():
 _MISSING = object()
 
 
-def _pawscript_condition_world(data, tracked_items: list[dict], *, nested: bool = False) -> dict:
-    """A world with one trigger gated by a triggerOnPawScript condition.
+def _pawscript_condition_world(
+    data,
+    tracked_items: list[dict],
+    *,
+    nested: bool = False,
+    ctype: str = "triggerOnPawScript",
+) -> dict:
+    """A world with one trigger gated by a PawScript-expression condition.
 
-    ``nested=True`` wraps the condition inside an ``and`` logic node so the walker's
-    recursion into ``category: "logic"`` trees is exercised.
+    ``ctype`` selects the condition type (``triggerOnPawScript`` by default, or
+    ``triggerOnRandomChance``). ``nested=True`` wraps the condition inside an ``and``
+    logic node so the walker's recursion into ``category: "logic"`` trees is exercised.
     """
     world = _base_world()
     world["trackedItems"] = tracked_items
     cond = {
         "id": "e95ded8d-1a55-d946-f9a9-22b65f99886d",
         "category": "condition",
-        "type": "triggerOnPawScript",
+        "type": ctype,
     }
     if data is not _MISSING:
         cond["data"] = data
@@ -2251,3 +2258,70 @@ def test_pawscript_condition_non_string_data_warns(data):
         "triggerOnPawScript data is" in w and "non-empty PawScript" in w for w in result["warnings"]
     ), result["warnings"]
     assert not any("triggerOnPawScript" in e for e in result["errors"])
+
+
+# ── triggerOnRandomChance formulas referencing tracked items (fixture 1.1) ───────
+
+
+@pytest.mark.parametrize(
+    "formula",
+    [
+        "30",
+        "15+round(turn_number%random)",
+        # The fixture 1.1 sample: a tracked item read as $variableName, with the bare
+        # `turn_number` / `random` tokens of the random-chance dialect left unchecked.
+        "$number_of_non_human_friends+round(turn_number%random)",
+    ],
+)
+def test_random_chance_formula_well_formed_is_silent(formula):
+    world = _pawscript_condition_world(
+        formula,
+        [_yaml_item(variable_name="number_of_non_human_friends")],
+        ctype="triggerOnRandomChance",
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("triggerOnRandomChance" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_random_chance_formula_undeclared_variable_warns():
+    world = _pawscript_condition_world(
+        "$number_of_nonhuman_friends+round(turn_number%random)",
+        [_yaml_item(variable_name="number_of_non_human_friends")],
+        ctype="triggerOnRandomChance",
+    )
+    result = _validate(world)
+    assert result["valid"]
+    hits = [w for w in result["warnings"] if "triggerOnRandomChance references" in w]
+    assert len(hits) == 1 and "$number_of_nonhuman_friends" in hits[0], result["warnings"]
+
+
+def test_random_chance_formula_nested_in_logic_is_checked():
+    world = _pawscript_condition_world(
+        "$nope+5",
+        [_yaml_item(variable_name="number_of_non_human_friends")],
+        nested=True,
+        ctype="triggerOnRandomChance",
+    )
+    result = _validate(world)
+    assert any("triggerOnRandomChance references $nope" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+@pytest.mark.parametrize("data", [_MISSING, "", "   ", None, 30, {"chance": 30}])
+def test_random_chance_non_string_data_warns(data):
+    # The schema types the formula as a string; anything else is warn-only (never an
+    # error) until a probe shows how IW treats it.
+    world = _pawscript_condition_world(
+        data,
+        [_yaml_item(variable_name="number_of_non_human_friends")],
+        ctype="triggerOnRandomChance",
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert any(
+        "triggerOnRandomChance data is" in w and "non-empty PawScript" in w
+        for w in result["warnings"]
+    ), result["warnings"]
+    assert not any("triggerOnRandomChance" in e for e in result["errors"])

@@ -189,6 +189,9 @@ def _bump_version_component(version: str) -> str | None:
     single-digit component after a dot is a trailing-zero version shown without its
     zero: ``"1.3"`` is 1.30. It is widened to two places before the increment —
     ``"1.3"`` → ``"1.31"``, not ``"1.4"`` — so the bump is +0.01, never +0.10.
+    Platform-confirmed 2026-08: the canonical fixture's IW export went ``1.09`` →
+    ``"1.1"``, so the dropped trailing zero is how IW writes the version, not a
+    hand-edit.
     """
     parts = version.split(".")
     last = parts[-1]

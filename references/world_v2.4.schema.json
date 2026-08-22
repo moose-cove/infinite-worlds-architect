@@ -524,8 +524,9 @@
           "x-iw-note": "not_equal: UI label 'is not exactly'; maps to JSON value 'not_equal'. Import survival CONFIRMED 2026-08-06 — it round-tripped byte-identical, clearing the [PENDING TEST] the KB carried as of May 2026. The same probe found the real hazard is elsewhere: a triggerOnTrackedItem whose `textComparison` is ABSENT or an EMPTY STRING has its entire condition deleted on import, whatever the inequality (fixture-proven `at_least` died for lacking the key). Always set textComparison. Source: iw_knowledge_base_v2_8.md."
         },
         "triggerOnRandomChance": {
-          "data": "string (formula, e.g. '30' for 30%)",
-          "description": "Fires with a random probability each turn"
+          "data": "string (formula: a number or arithmetic expression, e.g. '30' for 30%, '15+round(turn_number%random)', or '$number_of_non_human_friends+round(turn_number%random)' — tracked items are referenced as $variableName)",
+          "description": "Fires with a random probability each turn — the formula is evaluated and compared against a random number",
+          "x-iw-note": "Fixture 1.1 (2026-08): the formula can read a tracked item as `$variableName` (PawScript form) — the fixture's 'Random Newcomer' trigger scales its chance off `$number_of_non_human_friends`. The dialect is mixed and only observed, not explained: `turn_number` and `random` appear as BARE identifiers (not `$game.turn_number` / `random(…)` as in ordinary PawScript) while the tracked item carries the `$`. Tier 2 warns when `data` is not a non-empty string and when a `$name` is not a tracked item's `variableName` or a native; the bare tokens are not checked. OPEN QUESTION (runtime-only, see probes/README.md P15): the fixture proves the `$` form survives export, not that it evaluates — whether `$game.turn_number` also works in this field is untested."
         },
         "triggerOnTurn": {
           "data": "integer (turn number)",
