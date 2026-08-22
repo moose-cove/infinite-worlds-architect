@@ -122,6 +122,14 @@ import (the way an empty `textComparison` does) is an open question — see
 [`probes/README.md`](../../probes/README.md). Authoring guidance:
 [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
+**Play-confirmed 2026-08-22.** `"$probe.n > 2"` fired on the turn it became true
+and `"$probe.z > 2"` never fired, against a `dataType: "yaml"` item — so numeric
+comparison, YAML dot-path reads and true/false gating all work, and the one-shot
+default is honoured (the true condition fired once and stayed fired without
+`canTriggerMoreThanOnce`). This is the reliable deterministic gate; prefer it over
+synthesizing a boolean inside a `triggerOnRandomChance` formula, which was
+observed not to fire (see below and `TRIGGER_EVENTS.md`).
+
 **`triggerOnRandomChance` — tracked items inside the chance formula.** Fixture
 1.1 (2026-08) shows the random-chance formula reading a tracked item in the same
 `$variableName` form:
@@ -142,6 +150,18 @@ tracked item carries the `$`. Write both forms exactly as the fixture does; whet
 `$game.turn_number` also resolves there is untested (probe P15). `validate_world`
 warns on a non-string/blank formula and on a `$name` that is not a tracked item's
 `variableName` or a native.
+
+At runtime (play-confirmed 2026-08-22) a literal `"100"` fires every turn, and
+`choose($probe.n, 3, 100, 0)` — a `$`-handle with a YAML dot path inside the
+formula — fires, so `$variableName` resolution in this field is play-confirmed,
+not just export-stable. The fixture's additive idiom
+(`"$x+round(turn_number%random)"`) is still unverified at runtime. One hedged
+warning: formulas containing comparison operators — `"($x > 2) * 100"`,
+`"((($a > 1) + ($b > 1)) > 0) * 100"` — were observed **never** to fire even with
+every operand true, while the `"100"` control fired the same turn. Whether they
+evaluate dead at runtime or were deleted at import is unconfirmed (no re-export
+diff was taken). Treat the field as a numeric expression; for state-driven odds
+`choose(…)` is verified, and for anything conditional use `triggerOnPawScript`.
 
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash
@@ -173,6 +193,12 @@ Their sole power is to **mutate tracked items**.
   script back, logs the problem to **World Debug**, and the game continues
   normally. A broken script never breaks a turn; it just does nothing and
   leaves a debug breadcrumb.
+  **Rollback is not a retry.** The trigger still counts as fired. On a one-shot
+  trigger (`canTriggerMoreThanOnce` absent/`false`) an errored script is a
+  permanent loss — the trigger is consumed on the turn it fires and never runs
+  again, so the writes never land (confirmed 2026-08-22). For any script that
+  could touch a path that might not exist, either guard every read with
+  `.exists()` or set `canTriggerMoreThanOnce: true` so a later turn can succeed.
 
 **Bounded loops only.** Scripts cannot loop unboundedly. You may only iterate
 over a finite collection — a list, a map, or `range(n)`. There is no
@@ -190,6 +216,13 @@ dedicated trigger effect for any of those (see
 > narrative. See
 > [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 > §3.
+>
+> That deferral applies to the *storyteller* only. Within the same turn's trigger
+> pass, a script's writes **are** visible to scripts on triggers that run later
+> (confirmed 2026-08-22: a script created a YAML record and a later trigger's
+> `for each` counted it that turn). List order is the likely ordering, but this was
+> only tested producer-before-consumer — so order producers before consumers.
+> Visibility to a later trigger's `triggerOnPawScript` *condition* is untested.
 
 ---
 
@@ -230,10 +263,23 @@ nesting is borne by the *AI* reproducing the shape each turn, not by the script 
 so let the data's real structure drive the depth, and use `enforceFormat: true`
 with a matching nested `formatSchema` to keep the paths reliably present.
 
-The one thing to watch: a path is only as valid as the structure beneath it. If the
-item's shape drifts and `stats` goes missing, the assignment fails — and because
-scripts are transactional, the *whole* script rolls back and the error lands in
-World Debug. That's the argument for `enforceFormat` on any item a script writes to.
+**Writes create; reads don't.** A plain assignment to a missing path **creates**
+it — `$subjects.newgirl.suspicion = 7` created the `newgirl` record under an
+existing `subjects` map (confirmed 2026-08-22), as did `.item("key") = value` for a
+new top-level key. A *read* of a missing path is a hard error:
+`set $x = $subjects.ghost.suspicion` rolled the whole script back and logged a
+PawScript problem to World Debug. `.exists()` on a missing record returns false
+safely.
+
+The distinction is what makes read-modify-write (`+=`, `-=`) the fragile case —
+`$party.leader.stats.hp -= 10` reads before it writes, so it fails if `stats` is
+missing. Guard reads with `.exists()` or `.item(key, fallback)`, and reserve the
+`enforceFormat` argument for items scripts *read* structurally, not merely write to.
+
+Scope of the evidence: verified once, one missing level under an existing map.
+Creating more than one missing level at a time (`$party.leader.stats.hp = 90` with
+both `leader` and `stats` absent) and creating a record under a *runtime* key
+(`.item($k).field = …`) are untested — do not assume either works.
 
 ### `if` / `else if` / `else` — branching
 
@@ -304,7 +350,7 @@ literally named `count`. This distinction is easy to get wrong.
 |---|---|
 | `.count()` | Number of entries in a list/map |
 | `.where(<cond>)` | Filters to entries matching a condition |
-| `.item(key)` / `.item(key, fallback)` | Looks up an entry by key; the optional `fallback` is the value returned when the key is missing (a **read** fallback). In scripts, `.item(key)` is also a valid **assignment target**. |
+| `.item(key)` / `.item(key, fallback)` | Looks up an entry by key; the optional `fallback` is the value returned when the key is missing (a **read** fallback). In scripts, `.item(key)` is also a valid **assignment target**, and assigning to a missing key **creates** it (confirmed 2026-08-22 with a literal key; a runtime `$k` key is untested). |
 | `.exists()` | Whether the thing exists |
 | `.keys()` | The collection's keys |
 | `.key()` | The current entry's key (e.g. inside `.format_each(…)`) |
@@ -316,6 +362,7 @@ literally named `count`. This distinction is easy to get wrong.
 | `.append(entry)` | Adds an entry to a list (mutation — scripts only) |
 | `.remove(entry)` | Removes a matching entry from a list/map (mutation — scripts only) |
 | `.constrain(min, max)` | Clamps a number into the `[min, max]` range |
+| `choose(value, case1, result1, case2, result2, …, default)` | Top-level switch: returns the `result` paired with the first `case` equal to `value`, else the trailing `default`. Variadic, as documented on the IW wiki PawScript page (`<<choose($value_to_switch_on, 1, "Instructions 1", 2, "Instructions 2", "Default instructions")>>`). The 4-arg form `choose($probe.n, 3, 100, 0)` is verified inside a `triggerOnRandomChance` formula (2026-08-22). |
 | `log(value)` | Writes a value to World Debug for diagnostics (scripts) |
 | `round(x)` | Top-level rounding (and similar top-level math) |
 | `range(n)` | Top-level: the sequence `0 … n-1` — the bounded source for `for each` |

@@ -363,6 +363,70 @@ def test_gate_condition_missing_fired_this_turn_warns(ctype):
     assert any("no boolean 'firedThisTurn'" in w for w in result["warnings"]), result["warnings"]
 
 
+# ── Conditionless triggers never fire (confirmed in play 2026-08-22) ───────────
+
+
+def _world_with_conditionless_trigger(**trigger_overrides) -> dict:
+    """A one-trigger world with `triggerConditions: []` unless overridden."""
+    world = _base_world()
+    trigger = {
+        "id": "TRIG0001",
+        "name": "Clock",
+        "canTriggerMoreThanOnce": True,
+        "triggerEffects": [
+            {
+                "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                "type": "effectShowMessage",
+                "data": "tick",
+            }
+        ],
+        "triggerConditions": [],
+    }
+    trigger.update(trigger_overrides)
+    world["triggerEvents"] = [trigger]
+    return world
+
+
+def test_empty_trigger_conditions_warns():
+    """`triggerConditions: []` is a dead trigger, not an unconditional one — warn, don't error."""
+    result = _validate(_world_with_conditionless_trigger())
+    assert result["valid"], result["errors"]
+    assert any("Clock" in w and "no triggerConditions" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_absent_trigger_conditions_warns():
+    """An absent key has nothing to evaluate either; same warning (the cell itself is untested)."""
+    world = _world_with_conditionless_trigger()
+    del world["triggerEvents"][0]["triggerConditions"]
+    result = _validate(world)
+    assert any("Clock" in w and "no triggerConditions" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_sog_trigger_with_empty_conditions_does_not_warn():
+    """`triggerOnStartOfGame: true` with no conditions is untested in play — stay silent."""
+    result = _validate(_world_with_conditionless_trigger(triggerOnStartOfGame=True))
+    assert not any("no triggerConditions" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_trigger_with_a_condition_does_not_warn():
+    world = _world_with_conditionless_trigger(
+        triggerConditions=[
+            {
+                "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                "category": "condition",
+                "type": "triggerOnPawScript",
+                "data": "$game.turn_number >= 0",
+            }
+        ]
+    )
+    result = _validate(world)
+    assert not any("no triggerConditions" in w for w in result["warnings"]), result["warnings"]
+
+
 # ── schema v2.4: triggerOnEvent ↔ top-level `conditions` registry ──────────────
 
 

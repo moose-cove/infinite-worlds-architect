@@ -83,12 +83,14 @@ effects fully intact. `P2a`/`P2b` are the controls — same anchor, same conditi
 object form — and both round-tripped byte-identical, so the bare array is definitively the
 cause.
 
-Consequence: importing a pre-v2.4 world under v2.4 converts every gated trigger into an
-ungated one. There is no error and no warning, in-game or in the export. Worse, **the
-exported world validates strictly more cleanly than the input** — `probe-a-core.json` reports
-4 errors / 4 warnings, `probe-a-imported.json` 0 errors / 4 warnings — because the messages
-have nothing left to fire on. Migration is not housekeeping; it is the only thing standing
-between a legacy world and losing its gates.
+Consequence: importing a pre-v2.4 world under v2.4 converts every gated trigger into a
+conditionless — and therefore **dead** — one (P13, below). There is no error and no warning,
+in-game or in the export. Worse, **the exported world validated strictly more cleanly than
+the input** at the time — `probe-a-core.json` reported 4 errors / 4 warnings,
+`probe-a-imported.json` 0 errors / 4 warnings — because the messages had nothing left to fire
+on. (Since v0.21.0 the conditionless-trigger warning catches the aftermath: the imported file
+now reports 0 errors / 7 warnings.) Migration is not housekeeping; it is the only thing
+standing between a legacy world and losing its gates.
 
 **P3 — the `conditions` registry is author-maintained, not platform-derived.** The array
 came back byte-identical: still missing the used-but-undeclared event, still holding the
@@ -200,15 +202,45 @@ simply never fire, with no error. The dialect is also mixed (`turn_number` and `
 the tracked item `$`-prefixed). Runtime-only — see
 [Probe C · P15](#p15--variablename-in-a-triggeronrandomchance-formula) below.
 
+### Answered in play (2026-08-22)
+
+Two played rounds, three `wait` turns each, World Debug → Trigger Event Status open. Test
+worlds `pawscript_capability_test_world_v0.1.json` / `v0.2.json` and the full protocol live
+in the `infinite_worlds_stories` repo under `locked-lesbians/spinoff/`. No round trip was
+taken for these worlds — trigger *presence* was confirmed by count, condition *survival* was
+not — so results about a condition that never fired are stated as behaviour, not mechanism.
+
+**P13 — a trigger with no conditions stays dormant.** Six triggers authored with
+`"triggerConditions": []` (two with `canTriggerMoreThanOnce: true`) showed "not yet fired" for
+three turns while conditioned triggers in the same world fired normally. Round 2 changed only
+one thing — one always-true `triggerOnPawScript` gate (`$probe.n > 0`) on each — and all six
+fired on turn 1, the two repeaters every turn. So the P1 aftermath is a **dead** trigger, not
+an every-turn one. `validate_world` now warns on any non-SoG trigger with empty/absent
+`triggerConditions` (v0.21.0). **Still open:** the `triggerOnStartOfGame: true` + no
+conditions variant — neither round contained an SoG trigger.
+
+**P14a (runtime control) — a well-formed `triggerOnPawScript` survives import and fires.**
+`"$probe.n > 2"` against a YAML item fired on turn 1 and, lacking `canTriggerMoreThanOnce`,
+fired once; `"$probe.z > 2"` (false) never fired. Firing is only possible with a surviving
+condition, so this is the P14a cell. P14b–P14f and the cap question stay open.
+
+**P15a, and the `$`-reference half of P15b — answered.** `"100"` fired every turn (P15a), and
+`"choose($probe.n, 3, 100, 0)"` fired, which proves a `$`-handle with a YAML dot path
+resolves inside a random-chance formula and drives the roll. Still open: P15c (odds `0`),
+P15d (`$game.turn_number*100`), and the bare `"$handle"` formula form — `choose(…)` only
+proves resolution *inside* a function call. Also observed: formulas containing comparison
+operators (`"($probe.n > 2) * 100"`) never fired while the literal control did; whether that
+is a runtime never-fire or an import-time deletion is unresolved (re-export and diff the
+imported v0.2 world to settle it).
+
 ### Still open — all runtime-only
 
 P2 semantics (does `firedThisTurn: true` narrow the gate?), P4's editor-UI read, P7
-enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, P13
-(does a condition-less trigger fire every turn or stay dormant?), and the runtime half of P14
-(does a `triggerOnPawScript` gate count toward the ten-event cap, and is a non-boolean
-expression treated as false?), and P15 (does a `$variableName` in a random-chance formula
-evaluate, and does `$game.turn_number` work there too?). None of these can be read from a
-round trip; each needs a played session or a generated image.
+enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, the
+P13 SoG variant, the runtime remainder of P14 (does a `triggerOnPawScript` gate count toward
+the ten-event cap, and is a non-boolean expression treated as false?), and the P15 remainder
+(P15c, P15d, bare `"$handle"`). None of these can be read from a round trip; each needs a
+played session or a generated image.
 
 ---
 
@@ -219,9 +251,9 @@ round trip; each needs a played session or a generated image.
 nothing downstream is interpretable.
 
 ### P1 — legacy gate conditions *(round trip answered — see above)*
-The remaining question is runtime: does a trigger left with `triggerConditions: []` fire
-every turn, or never? Both are wrong, but it changes how the fix should be worded. Probe B's
-P13 answers it directly.
+The runtime half — does a trigger left with `triggerConditions: []` fire every turn, or
+never? — was answered in play on 2026-08-22 (P13, above): **never**. The deleted gate leaves a
+dead trigger, and the fix wording follows from that.
 
 ### P2 — What is `firedThisTurn`? *(round trip partially answered)*
 `P2a` sets `true`, `P2b` is the `false` control, both gate on the anchor. The anchor fires
@@ -355,13 +387,14 @@ factor varies.
 | P10b dropped | `"player"` is the problem on its own, independent of shape. |
 | All four survive | Probe A's drop had a cause neither factor explains — re-examine that world. |
 
-### P13 — does a trigger with no conditions fire, or stay dormant?
+### P13 — does a trigger with no conditions fire, or stay dormant? *(answered in play 2026-08-22 — dormant)*
 
 `P13 Empty triggerConditions` is authored with `"triggerConditions": []` — exactly the state
-Probe A showed a legacy gate gets reduced to. This is the missing half of P1: if it fires
-every turn, then importing a legacy world turns its gated triggers into **unconditional
-every-turn triggers**, which is materially worse than them going dormant, and the validator
-wording should reflect that.
+Probe A showed a legacy gate gets reduced to. This was the missing half of P1: if it fired
+every turn, importing a legacy world would turn its gated triggers into **unconditional
+every-turn triggers**. It does not — the in-platform play rounds recorded above showed the
+empty-array case never fires, so a stripped gate leaves a dead trigger. The SoG variant
+(`triggerOnStartOfGame: true` with no conditions) remains open.
 
 ---
 
@@ -381,14 +414,17 @@ bare-array gates), P6 (missing `textComparison`) and P10 (`"player"`-scoped entr
 constructs the probes proved IW deletes. The warnings are the `conditions`-registry desyncs,
 which are genuinely warnings: P3 showed a desync costs editor selectability, not correctness.
 
-`probes/probe-b-cap.json` — 4 errors, 1 warning. Errors: P6b, P6d, P10b, P10c. Warning: the
+`probes/probe-b-cap.json` — 4 errors, 2 warnings. Errors: P6b, P6d, P10b, P10c. Warnings: the
 twelve-events-over-ten cap (P11), which stays a warning because import-time enforcement was
-ruled out and runtime enforcement is untested.
+ruled out and runtime enforcement is untested; and the P13 trigger's empty `triggerConditions`
+(v0.21.0 — a conditionless trigger never fires).
 
 The useful invariant is the inverse one, and it holds: **both `-imported.json` files validate
 with zero errors**, because IW already deleted everything the validator now objects to. The
 validator's errors and the platform's deletions line up exactly. If that ever stops being
-true, something has drifted.
+true, something has drifted. (They do carry warnings — `probe-a-imported.json` 7,
+`probe-b-imported.json` 4 — because every condition IW deleted left behind a conditionless,
+dead trigger, which the v0.21.0 warning now names.)
 
 The three canonical fixtures must continue to validate with **zero errors** (`CLAUDE.md`
 source-of-truth rule 1). That is why the legacy-gate rule is version-conditional rather than
@@ -424,8 +460,9 @@ version-conditional error (same shape as the legacy-gate rule); a deleted P14d p
 undeclared-`$name` warning likewise; a *kept* P14f means the plugin should warn that
 `<<…>>` is the wrong form rather than stay silent.
 
-**Runtime half (played session):** with all surviving cells present, does P14a fire and do
-P14d/P14e stay dormant (expression treated as false) or misfire? And with ten
+**Runtime half (played session):** P14a is answered — a well-formed condition survives import
+and fires (2026-08-22, see "Answered in play"). Still open: do P14d/P14e stay dormant
+(expression treated as false) or misfire? And with ten
 `triggerOnEvent` conditions already declared, does adding a `triggerOnPawScript` gate push
 the world past the cap — i.e. does the platform count it as an AI-evaluated event? The
 plugin presumes not (`_MAX_AI_EVENT_CONDITIONS` counts `triggerOnEvent` only); a contrary
@@ -440,8 +477,8 @@ triggers with `canTriggerMoreThanOnce: true`, each `effectShowMessage` naming it
 
 | Cell | `data` | `probe_odds` | Runtime question |
 |---|---|---|---|
-| P15a (control) | `"100"` | — | Fires every turn (sanity: the formula is a percentage). |
-| P15b | `"$probe_odds"` | `100` | Fires every turn → the `$` reference evaluates. Never fires → resolves to NaN/text and the condition is dead. |
+| P15a (control) | `"100"` | — | **Answered 2026-08-22:** fires every turn. |
+| P15b | `"$probe_odds"` | `100` | Fires every turn → the `$` reference evaluates. Never fires → resolves to NaN/text and the condition is dead. **Half answered 2026-08-22:** `$`-resolution is confirmed via `choose($probe.n, 3, 100, 0)`; the bare `"$handle"` form is still untested. |
 | P15c | `"$probe_odds"` | `0` | Never fires (pairs with P15b to rule out "always fires regardless"). |
 | P15d | `"$game.turn_number*100"` | — | Fires from turn 1 → `$game.*` natives resolve here too; never fires → only the bare `turn_number` token works in this field. |
 

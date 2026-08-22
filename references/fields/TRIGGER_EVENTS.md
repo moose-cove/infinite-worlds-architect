@@ -37,13 +37,33 @@ list order).
 Set `canTriggerMoreThanOnce: true` to allow it to fire on every eligible
 turn.
 
+**A trigger with no conditions never fires.** `"triggerConditions": []` is
+not "fires unconditionally" — it is inert, on every turn, including with
+`canTriggerMoreThanOnce: true` (confirmed in play 2026-08-22: six such
+triggers sat at "not yet fired" for three turns; the same six fired on turn 1
+once each was given a single always-true gate). Every trigger needs at least
+one condition. For an every-turn effect, gate it on an always-true
+`triggerOnPawScript` expression over a field guaranteed to exist, e.g.
+`"data": "$clock.day >= 0"`, plus `canTriggerMoreThanOnce: true`.
+`validate_world` warns on any non-SoG trigger with an empty or absent
+`triggerConditions`.
+
+**Untested:** `triggerOnStartOfGame: true` with no conditions. SoG triggers are
+commonly authored that way and neither play round contained one, so the
+validator exempts them — but do not read the exemption as confirmation that the
+flag acts as its own gate.
+
+This is also what makes the legacy bare-array gate deletion (see
+`triggerPrereqs` below) catastrophic rather than merely loose: the trigger is
+left not ungated but **dead**.
+
 ---
 
 ## Meta-fields
 
 ### `canTriggerMoreThanOnce`
 - `false` (default): fires exactly once, then never again — even if conditions are met again. Use for one-time plot beats.
-- `true`: fires every turn its conditions are met. Use for recurring mechanics, ambient effects, periodic state shifts.
+- `true`: fires every turn its conditions are met. Use for recurring mechanics, ambient effects, periodic state shifts. "Conditions are met" is not vacuously true for an empty condition list — a trigger with `triggerConditions: []` never fires, with or without this flag (see "How triggers work"). An every-turn trigger still needs one always-true condition.
 
 ### `triggerPrereqs` (condition type, not a top-level field)
 Listed under `triggerConditions` with `category: "condition"` and `type: "triggerPrereqs"`. The named triggers must have already fired before this one becomes eligible.
@@ -72,7 +92,7 @@ A round trip narrowed this without closing it: `firedThisTurn: true` **survived 
 
 The advice is unchanged: **emit `false`**, and don't set `true` unless the author has confirmed the behaviour in-game.
 
-**Migrate a legacy bare array BEFORE importing — the platform destroys it.** Confirmed 2026-08-06 by round trip: IW does not migrate the pre-v2.4 shape. It **deletes the condition outright**, leaving `"triggerConditions": []` with the trigger's ID, name and effects intact. The result is an ungated trigger, with no error in-game and none in the export. Two same-anchor gates in the v2.4 object form round-tripped byte-identical in the same import, so the bare array is definitively the cause.
+**Migrate a legacy bare array BEFORE importing — the platform destroys it.** Confirmed 2026-08-06 by round trip: IW does not migrate the pre-v2.4 shape. It **deletes the condition outright**, leaving `"triggerConditions": []` with the trigger's ID, name and effects intact. The result is a trigger with no conditions — and a trigger with no conditions never fires (confirmed in play 2026-08-22), so the trigger is dead, not ungated — with no error in-game and none in the export. Two same-anchor gates in the v2.4 object form round-tripped byte-identical in the same import, so the bare array is definitively the cause.
 
 The failure is unusually hard to notice, because the damage erases its own evidence: the re-exported world validates with *fewer* warnings than the input, since the legacy-shape message has nothing left to fire on. A world can look cleaner after losing its gates.
 
@@ -111,9 +131,11 @@ This also closes off the competing reading, under which the platform derived `co
 | Game-start setup | Top-level `triggerOnStartOfGame: true` on the trigger itself (not a `triggerConditions` entry). |
 | Restriction to specific player characters | `triggerOnCharacter` — array of `characterId` values from `possibleCharacters`. |
 | State-based gating (number/text/XML comparison) | `triggerOnTrackedItem` — supports `at_least`, `is_exactly`, `at_most` (numbers), `contains` (text/XML). Supports compound logic via `category: "logic"` with `and`/`or`. |
-| Scripted state test (compound, arithmetic, or YAML sub-field) | `triggerOnPawScript` — `data` is one PawScript boolean expression, e.g. `$favorite_flavor = "Lemon"` or `$gold >= 50 and $puppies.count > 2`. Evaluated deterministically each turn against live tracked-item values (`$variableName` form, not `<<…>>`). Reach for it instead of stacking `triggerOnTrackedItem` under a `logic` node once the test has more than one clause or needs a computed value. Not AI-evaluated, so presumed **not** to count toward the ten-event cap (unverified). Every `$name` must be a tracked item's `variableName` or a native — the validator warns on anything else. See [`PAWSCRIPT.md` §3](../mechanics/PAWSCRIPT.md#3-expressions-). |
-| Probabilistic firing | `triggerOnRandomChance` — formula string (e.g., `"30"` for 30%, or `"15+round(turn_number%random)"` for dynamic). The formula can read a tracked item as `$variableName` — fixture 1.1 uses `"$number_of_non_human_friends+round(turn_number%random)"` so the chance grows with state. That is the idiom for "chance scales with X"; it does not need a `triggerOnPawScript` plus a separate roll. `turn_number` and `random` stay bare (no `$`) in this field. The validator warns on a `$name` that is not a `variableName` or native. |
+| Scripted state test (compound, arithmetic, or YAML sub-field) | `triggerOnPawScript` — `data` is one PawScript boolean expression, e.g. `$favorite_flavor = "Lemon"` or `$gold >= 50 and $puppies.count > 2`. Evaluated deterministically each turn against live tracked-item values (`$variableName` form, not `<<…>>`). **Play-confirmed 2026-08-22** — numeric comparison against live values, dot-path reads into a `dataType: "yaml"` item, true/false gating and the one-shot default all behaved as documented. This is the deterministic gate to reach for: use it instead of stacking `triggerOnTrackedItem` under a `logic` node once the test has more than one clause or needs a computed value, and instead of synthesizing a boolean inside a `triggerOnRandomChance` formula (see the callout below). Not AI-evaluated, so presumed **not** to count toward the ten-event cap (unverified). Every `$name` must be a tracked item's `variableName` or a native — the validator warns on anything else. See [`PAWSCRIPT.md` §3](../mechanics/PAWSCRIPT.md#3-expressions-). |
+| Probabilistic firing | `triggerOnRandomChance` — formula string (e.g., `"30"` for 30%, or `"15+round(turn_number%random)"` for dynamic). The formula can read a tracked item as `$variableName` — fixture 1.1 uses `"$number_of_non_human_friends+round(turn_number%random)"` so the chance grows with state. That is the idiom for "chance scales with X"; it does not need a `triggerOnPawScript` plus a separate roll. `turn_number` and `random` stay bare (no `$`) in this field. `$`-handle resolution (including a YAML dot path) is play-confirmed inside `choose(…)` (2026-08-22); the fixture's additive idiom itself is export-stable but unverified at runtime. Treat the field as a **numeric** expression, never a boolean one — see the callout below. The validator warns on a `$name` that is not a `variableName` or native. |
 | Chained triggers | `triggerPrereqs` and `triggerBlockers` — v2.4 object shape `{prereqs\|blockers: [...], firedThisTurn: false}` (see meta-fields above). |
+
+> **Comparison operators inside a `triggerOnRandomChance` formula were observed never to fire.** In play on 2026-08-22, `"($x > 2) * 100"` and `"((($a > 1) + ($b > 1)) > 0) * 100"` both stayed at "not yet fired" across every turn even though every operand was true, while a literal `"100"` control and `"choose($probe.n, 3, 100, 0)"` fired the same turn. **The mechanism is unconfirmed** — the condition may evaluate to never-fire at runtime, or IW may have deleted it as unparseable at import (no re-export diff was taken, and a deleted condition leaves a dead trigger that looks identical from play). The guidance is the same either way: treat the formula field as a numeric expression. For state-driven odds, `choose(…)` over a `$`-handle is verified; for anything genuinely conditional, gate with `triggerOnPawScript`, which handles comparisons correctly.
 
 `triggerOnEvent` is the most flexible but also the noisiest. The AI's evaluation can produce false positives (firing when the situation didn't really occur) and false negatives (failing to fire when it did). Use very explicit language and prefer concrete cues over abstract ones. "The player has explicitly handed the dagger to Mira" is more reliable than "The player has surrendered."
 
@@ -178,7 +200,7 @@ permanently in the new state for the rest of the playthrough.
 |---|---|
 | `effectSetTrackedItemValue` | Single-item update. Data shape varies by `action`: `set` / `add` / `subtract` for numbers; `set` / `add` (append) / `subtract` (remove if present) / `replace` (find-and-replace via `replaceWith`) for text/XML. Supports `<<item_name>>` interpolation in values. **`replaceWith` must be present in `data` for every action** (use `""` when unused) — omitting it may break import. It is only *consumed* by the `replace` action, but the field itself is required regardless of action type. |
 | `effectModifyTrackedItemDetails` | Modify the item's *definition* (name, description, visibility, updateInstructions, autoUpdate) — not its value. Override flags control which fields are changed. |
-| `effectRunScript` (v2.2) | Bulk or structured mutation across one or more tracked items. `data` is a PawScript string that runs when the trigger fires. **Can only mutate tracked items** — no narrative output, no world-field changes, no calling other effects. Transactional: if the script errors partway through, the whole run is rolled back (no partial mutation), the error is logged to World Debug, and the game continues normally. No unbounded loops — iterate over list/map contents (`for each $x in $list`) or a bounded `range(n)`, never an open-ended condition. |
+| `effectRunScript` (v2.2) | Bulk or structured mutation across one or more tracked items. `data` is a PawScript string that runs when the trigger fires. **Can only mutate tracked items** — no narrative output, no world-field changes, no calling other effects. Transactional: if the script errors partway through, the whole run is rolled back (no partial mutation), the error is logged to World Debug, and the game continues normally. Rollback is not a retry: the trigger still counts as fired, so on a one-shot trigger an errored script is a permanent loss — the writes never land (confirmed 2026-08-22); guard reads with `.exists()` or set `canTriggerMoreThanOnce: true` if a later turn could succeed. No unbounded loops — iterate over list/map contents (`for each $x in $list`) or a bounded `range(n)`, never an open-ended condition. |
 
 **Choosing between `effectSetTrackedItemValue` and `effectRunScript`:** use `effectSetTrackedItemValue` for a single scalar set/add/subtract on one tracked item — it's simpler to author and read in the trigger list. Reach for `effectRunScript` once the update is deterministic bookkeeping across *multiple* values or *structured* (YAML) data — incrementing several stats in one pass, updating every entry in a list, or mutating nested fields on a YAML tracked item. Anywhere the update logic would otherwise require several `effectSetTrackedItemValue` effects chained together, or would require the AI to compute the new value itself via `updateInstructions`, `effectRunScript` gets the same result deterministically and in one effect. See [`SURVIVAL_STATS.md`](../patterns/SURVIVAL_STATS.md) for a worked example of migrating AI-computed bookkeeping to a scripted, deterministic pattern.
 
@@ -214,7 +236,7 @@ comparison.
 ## Key constraints
 
 1. **AND logic only.** All conditions on one trigger must be met simultaneously. For OR logic, create multiple triggers (or use `category: "logic"` with `operator: "or"` when `advancedLogic: true`).
-2. **Evaluation order matters.** `triggerPrereqs` and `triggerBlockers` only recognize triggers that fired earlier in the same evaluation pass (same turn, earlier in the list). Trigger ordering is therefore semantically significant.
+2. **Evaluation order matters.** `triggerPrereqs` and `triggerBlockers` only recognize triggers that fired earlier in the same evaluation pass (same turn, earlier in the list). Trigger ordering is therefore semantically significant. Tracked-item state moves within the pass too: a script's writes are visible to scripts on triggers that run later in the same turn's pass (confirmed 2026-08-22 — a script created a YAML record and a later trigger's `for each` counted it that turn). Only the *storyteller* is deferred to the next turn, not other triggers. List order is the *likely* ordering, but this was only tested producer-before-consumer — so order producers before consumers. Whether a same-turn write is visible to a later trigger's `triggerOnPawScript` *condition* (as opposed to its script) is untested.
 3. **`triggerOnEvent` limit.** Maximum 10 AI-evaluated event conditions per world — documented, but **not enforced at import** (twelve round-tripped untruncated; see the cap discussion above). Treat it as a cost ceiling rather than a hard limit: each one is paid for in additional AI evaluation tokens every turn.
 4. **Pre-game triggers (`triggerOnStartOfGame: true`).** Fire before turn 0, before the player acts. Some effects (notably `effectTellAIWhatToDo`) behave differently or are no-ops in this context — the "next turn" they target is turn 1, not turn 0.
 

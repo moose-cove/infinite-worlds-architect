@@ -576,6 +576,40 @@ def _check_sog_effect_context(world: dict, errors: list[str], warnings: list[str
                 )
 
 
+def _check_conditionless_triggers(world: dict, errors: list[str], warnings: list[str]) -> None:
+    """Warn on a trigger with no `triggerConditions` that is not Start-of-Game.
+
+    CONFIRMED in play 2026-08-22 (two rounds, `pawscript_capability_test_world_v0.1/v0.2.json`
+    in the `infinite_worlds_stories` repo, `locked-lesbians/spinoff/`): a trigger whose
+    `triggerConditions` is `[]` never fires — on any turn, with or without
+    `canTriggerMoreThanOnce: true`. Adding one always-true `triggerOnPawScript` gate to the
+    same triggers made every one of them fire. An empty condition list is therefore never
+    intentional: it is a dead trigger, not an unconditional one.
+
+    Warning, not error: the world still imports and plays, and the author may be mid-edit.
+    Scope, stated honestly: only the empty-array case was played. An ABSENT key is treated
+    the same because the platform has nothing to evaluate either way, but that cell is
+    untested. `triggerOnStartOfGame: true` with no conditions is EXEMPT — that combination
+    is commonly authored and was never probed, so warning on it would be a guess.
+    """
+    for trigger in world.get("triggerEvents", []):
+        if trigger.get("triggerOnStartOfGame", False) is True:
+            continue
+        conditions = trigger.get("triggerConditions")
+        if isinstance(conditions, list) and conditions:
+            continue
+        if conditions is not None and not isinstance(conditions, list):
+            continue  # wrong type is a Tier 1 error; don't double-report
+        tname = trigger.get("name", trigger.get("id", "?"))
+        warnings.append(
+            f"Trigger '{tname}' has no triggerConditions — a trigger with no conditions never "
+            "fires, on any turn, even with canTriggerMoreThanOnce: true (confirmed in play "
+            "2026-08-22). Add at least one condition; for an every-turn effect use an "
+            "always-true triggerOnPawScript over a field guaranteed to exist, "
+            'e.g. "$clock.day >= 0"'
+        )
+
+
 def _check_skills_not_empty(world: dict, errors: list[str], warnings: list[str]) -> None:
     """rec 6: warn when the top-level skills array is empty.
 
@@ -1020,10 +1054,13 @@ def _check_initial_tracked_item_value_scope(
 #
 # CONFIRMED 2026-08-06 by the probes/probe-a-core.json round trip: IW does NOT migrate the
 # legacy bare array on import. It DELETES the condition, leaving `triggerConditions: []` with
-# the trigger's id, name and effects intact — an ungated trigger, with no error in-game or in
-# the export. The re-exported world then validates STRICTLY MORE CLEANLY than the input,
-# because the message below has nothing left to fire on: probe-a-core.json reports 4 errors /
-# 4 warnings, probe-a-imported.json 0 errors / 4 warnings. (Under the pre-2026-08-07 validator
+# the trigger's id, name and effects intact — a DEAD trigger (a trigger with no conditions
+# never fires; confirmed in play 2026-08-22, see _check_conditionless_triggers), with no error
+# in-game or in the export. The re-exported world then validates STRICTLY MORE CLEANLY than the
+# input, because the message below has nothing left to fire on: probe-a-core.json reports
+# 4 errors / 4 warnings, probe-a-imported.json 0 errors / 4 warnings at the time (7 warnings
+# since _check_conditionless_triggers started naming the dead triggers). (Under the
+# pre-2026-08-07 validator
 # the same effect showed up in the warning column; promoting this to an error moved it. The
 # point is unchanged — the damage erases its own evidence.) Controls: two same-anchor gates in
 # the v2.4 object form round-tripped byte-identical in the same import.
@@ -1075,7 +1112,8 @@ def _gate_condition_trigger_ids(
             f"Trigger '{tname}': {ctype} data uses the pre-v2.4 bare-array form. "
             f'schema v2.4 expects {{"{key}": [...], "firedThisTurn": false}}. IW does not '
             "migrate the legacy form on import — it deletes the condition outright, leaving "
-            "the trigger ungated and firing when it should not, with no error anywhere. "
+            "the trigger with no conditions — and a trigger with no conditions never fires "
+            "(confirmed in play 2026-08-22) — with no error anywhere. "
             "Migrate before importing this world."
         )
         if schema_version >= _GATE_SHAPE_ERROR_FROM_SCHEMA_VERSION:
@@ -1377,6 +1415,7 @@ def validate_world(world_path: str) -> str:
         _check_player_interaction_effect_shapes(world, errors, warnings)
         _check_set_tracked_item_value_shapes(world, errors, warnings)
         _check_sog_effect_context(world, errors, warnings)
+        _check_conditionless_triggers(world, errors, warnings)
         _check_skills_not_empty(world, errors, warnings)
         # schema v2.2: PawScript + YAML tracked items
         _check_tracked_item_variable_names(world, errors, warnings)

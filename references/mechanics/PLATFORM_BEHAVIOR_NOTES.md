@@ -97,7 +97,7 @@ error message in-game, in the editor, or in the export:
 
 | Construct | What survived | What was deleted |
 |---|---|---|
-| Pre-v2.4 bare-array `triggerPrereqs`/`triggerBlockers` | trigger id, name, effects | the gate condition — trigger left ungated |
+| Pre-v2.4 bare-array `triggerPrereqs`/`triggerBlockers` | trigger id, name, effects | the gate condition — trigger left with no conditions — and a trigger with no conditions never fires (confirmed in play 2026-08-22) |
 | `triggerOnTrackedItem` with absent or empty `textComparison` | trigger id, name, effects | the entire condition |
 | `initialTrackedItemValues` entry with `initialValueBasedOnPC: "player"` | the character, the tracked item | the per-character entry |
 | *(control)* each of those shapes done correctly | the construct under test, byte-identical | nothing |
@@ -119,8 +119,9 @@ Two consequences worth internalising:
 2. **The damage erases its own evidence.** Because the offending construct is gone, a
    re-exported world validates *strictly more cleanly* than the file that went in:
    `probe-a-core.json` reports 4 errors / 4 warnings, `probe-a-imported.json` 0 errors /
-   4 warnings — while being semantically broken. Never treat a clean post-import validation
-   as confirmation.
+   4 warnings at the time (7 since v0.21.0 began warning on the dead, conditionless triggers
+   the deletion leaves behind) — while being semantically broken. Never treat a clean
+   post-import validation as confirmation.
 
 The practical rule: **validate before importing, not after.** `validate_world` is the only
 place these constructs are still visible.
