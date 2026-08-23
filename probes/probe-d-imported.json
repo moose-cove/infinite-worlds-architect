@@ -1,0 +1,565 @@
+{
+    "favorite": false,
+    "title": "Probe D - PawScript runtime",
+    "description": "Plugin probe world: trigger firing and PawScript runtime cells. Not a story.",
+    "background": "An empty white test room.",
+    "instructions": "THIS IS A MECHANICS TEST WORLD. There is no plot and no characters besides the tester. Each turn, narrate exactly one short sentence of the tester standing in an empty white room. Do not invent events, people, or drama. Never modify any tracked item. Keep every turn as short as possible.",
+    "authorStyle": "Terse. One sentence per turn.",
+    "recommendedAIModel": null,
+    "firstInput": "I stand in the test room and wait.",
+    "objective": "",
+    "imageModel": "manticore",
+    "imageStyle": "photo_1",
+    "illustrationStyleNonCharacterLowPriority": "contemporary urban, intimate domestic settings, psychological tension",
+    "illustrationStyleNonCharacterHighPriority": "",
+    "illustrationStyleCharacterLowPriority": "contemporary realistic, detailed facial expressions, diverse lesbian presentation styles from androgynous to butch",
+    "illustrationStyleCharacterHighPriority": "",
+    "imageStyleCharacterPre": "A beautiful medium shot photographic portrait of",
+    "imageStyleCharacterPost": "The focus is razor-sharp on the texture of the face, showing every pore. IWBeautiful IWUpscaleFace",
+    "imageStyleNonCharacterPre": "A beautiful photograph of",
+    "imageStyleNonCharacterPost": "",
+    "mature": false,
+    "nsfw": false,
+    "contentWarnings": "",
+    "enableAISpecificInstructionBlocks": false,
+    "previewImage": "",
+    "fullSizePreviewImage": "",
+    "previewImageOptions": [],
+    "fullSizePreviewImageOptions": [],
+    "currentPreviewImageIndex": 26,
+    "imagePromptDetails": {
+        "illustrClothes": "black blazer, white blouse, fitted dark jeans",
+        "illustrSetting": "in a modern bedroom with soft evening lighting, psychological thriller, contemporary, kinky and erotic",
+        "illustrSubject": "Amanda",
+        "illustrAppearance": "Two women in their late twenties to early thirties — Amanda, a white woman with shoulder-length auburn hair and feminine curves, and Sam, a white woman with a dark mohawk shaved at the sides and colorful full-sleeve tattoos — wearing lace bras and metal female chastity belts, aroused and squirming, kneeling on a bed.",
+        "illustrIsCharacter": false,
+        "illustrExpressionPosition": "smiling, confident"
+    },
+    "permissionsOnceShared": {
+        "sharing": true,
+        "editing": true
+    },
+    "allowChangeCharacterName": true,
+    "allowChangeCharacterDescription": false,
+    "allowChangeCharacterSkills": true,
+    "allowChangeCharacterItemValues": false,
+    "allowChangeCharacterPortrait": false,
+    "allowChangeCharacterNewPortrait": true,
+    "conditions": [],
+    "schemaVersion": 2.4,
+    "skills": [
+        "Resources",
+        "Technology",
+        "Manipulation",
+        "Network",
+        "Discretion"
+    ],
+    "possibleCharacters": [
+        {
+            "name": "Test Runner",
+            "description": "A tester standing in an empty white room. Nothing ever happens here.",
+            "portrait": "",
+            "portraitPromptDetails": {
+                "illustrGenre": "contemporary, realistic, cinematic, psychological thriller",
+                "illustrClothes": "a wrinkled grey hoodie (or a rumpled office button-down with a company lanyard)",
+                "illustrSetting": "in a cramped, cluttered apartment bedroom lit only by the glow of multiple monitors, energy-drink cans on the desk, contemporary, seedy, psychological thriller",
+                "illustrSubject": "Test Runner",
+                "illustrAppearance": "a twenty-nine year old white man of European descent, a little unkempt and soft, with messy brown hair, patchy stubble, and tired eyes with a resentful glint",
+                "illustrIsCharacter": true,
+                "illustrExpressionPosition": "a sardonic, bitter half-smirk"
+            },
+            "fullSizePortrait": "",
+            "portraitOptions": [],
+            "fullSizePortraitOptions": [],
+            "currentPortraitIndex": 0,
+            "characterId": "RMvL5vmA",
+            "skills": {
+                "Network": 4,
+                "Resources": 2,
+                "Discretion": 3,
+                "Technology": 4,
+                "Manipulation": 3
+            },
+            "initialTrackedItemValues": []
+        }
+    ],
+    "triggerEvents": [
+        {
+            "id": "PrDSOG01a",
+            "name": "Q2 SoG no conditions",
+            "triggerEffects": [
+                {
+                    "id": "0d05f660-0d2d-41cc-9a70-7a44cece4cab",
+                    "data": "$results.sog_empty = \"FIRED\"",
+                    "type": "effectRunScript"
+                },
+                {
+                    "id": "cead5e59-f664-4ee8-bb95-159ed4394918",
+                    "data": "PROBE SOG-EMPTY",
+                    "type": "effectShowMessage"
+                }
+            ],
+            "triggerConditions": [],
+            "triggerOnStartOfGame": true
+        },
+        {
+            "id": "PrDSOG02a",
+            "name": "Q2 SoG gated control",
+            "triggerEffects": [
+                {
+                    "id": "74c8cdee-0341-4271-8990-ce28c7b3b0c2",
+                    "data": "$results.sog_gated = \"FIRED\"",
+                    "type": "effectRunScript"
+                },
+                {
+                    "id": "173fc25c-811c-4120-8419-8b1e432bd6aa",
+                    "data": "PROBE SOG-GATED",
+                    "type": "effectShowMessage"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "7606df29-2234-4247-b470-61c7a2f3ac19",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ],
+            "triggerOnStartOfGame": true
+        },
+        {
+            "id": "PrDABS03a",
+            "name": "Q10 triggerConditions empty array (absent key breaks the editor)",
+            "triggerEffects": [
+                {
+                    "id": "372f956b-8b1a-476f-9a62-d3af8d6c15f0",
+                    "data": "$results.abs_key = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": []
+        },
+        {
+            "id": "PrDOR04a",
+            "name": "Q3 or two valid branches",
+            "triggerEffects": [
+                {
+                    "id": "e85df14f-41a8-431b-b670-5a1da0edb663",
+                    "data": "$results.or_valid = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "2219ef1b-9912-4257-8f05-9c60746fc2b3",
+                    "data": "$probe.z > 2 or $probe.n > 2",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDOR05a",
+            "name": "Q3b or missing path on right",
+            "triggerEffects": [
+                {
+                    "id": "c12c8cce-4c4b-45ed-ba89-ee26396c9147",
+                    "data": "$results.or_missing_right = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "cc72ee8c-8589-4dee-a8d0-2fd78a5bc1eb",
+                    "data": "$probe.n > 2 or $subjects.ghost.suspicion > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDAND06a",
+            "name": "Q3c and",
+            "triggerEffects": [
+                {
+                    "id": "a4ae0763-0de3-47ba-bf45-b1cbdefd16c5",
+                    "data": "$results.and_valid = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "9ca5f4c2-04b6-409a-b77c-b2edaaa4c811",
+                    "data": "$probe.n > 2 and $probe.z < 1",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDIF07a",
+            "name": "Q4 chance if()",
+            "triggerEffects": [
+                {
+                    "id": "38487e4f-3614-4b6c-ab36-de282e7189cc",
+                    "data": "$results.chance_if = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "aa105f46-d5cb-4087-a2f8-823878972014",
+                    "data": "if($probe.n > 2, 100, 0)",
+                    "type": "triggerOnRandomChance",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDBAR08a",
+            "name": "P15b chance bare handle 100",
+            "triggerEffects": [
+                {
+                    "id": "4530b6e2-b383-4377-a8e2-02bd7354d4e1",
+                    "data": "$results.chance_bare_100 = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "2279ceeb-6dc8-4a51-bf0f-db32cac5699e",
+                    "data": "$probe.hundred",
+                    "type": "triggerOnRandomChance",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDBAR09a",
+            "name": "P15c chance bare handle 0 (expect PENDING)",
+            "triggerEffects": [
+                {
+                    "id": "7fce880b-0c38-4f37-9e7f-b59458a67105",
+                    "data": "$results.chance_bare_0 = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "7827bb7d-2e9e-438a-8357-8871c11dab2e",
+                    "data": "$probe.z",
+                    "type": "triggerOnRandomChance",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDADD10a",
+            "name": "chance additive",
+            "triggerEffects": [
+                {
+                    "id": "4cd07fbb-69e3-42b4-99b4-042b7ba1c132",
+                    "data": "$results.chance_additive = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "0ea4558d-facf-4504-b61a-ca4e694d80e7",
+                    "data": "$probe.n + 97",
+                    "type": "triggerOnRandomChance",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDTRN11a",
+            "name": "P15d chance $game.turn_number*100",
+            "triggerEffects": [
+                {
+                    "id": "b87bfc62-5e26-423c-95fd-ba2de8af824f",
+                    "data": "$results.chance_game_turn = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "486bcf24-2c94-4839-89f4-d4aa5c4a5e2e",
+                    "data": "$game.turn_number * 100",
+                    "type": "triggerOnRandomChance",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDTRN12a",
+            "name": "chance bare turn_number*100",
+            "triggerEffects": [
+                {
+                    "id": "8910d94f-9937-4aa0-804f-f68af6d1dde8",
+                    "data": "$results.chance_bare_turn = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "bc514327-15a7-48e2-9d20-1be60a065ef5",
+                    "data": "turn_number * 100",
+                    "type": "triggerOnRandomChance",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDPRD13a",
+            "name": "Q5 producer sets flag",
+            "triggerEffects": [
+                {
+                    "id": "79e720b9-bb65-4c8c-a516-b2ea200e146f",
+                    "data": "$probe.flag = 1",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "c1370d5a-c1ad-41bc-835e-1765fc406cfa",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDCND14a",
+            "name": "Q5 consumer condition reads flag",
+            "triggerEffects": [
+                {
+                    "id": "be9c4c4a-b48a-49c1-a513-d57cac663604",
+                    "data": "$results.cond_same_turn = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "ecf1f3e6-20d3-4802-8982-c93a7c147519",
+                    "data": "$probe.flag > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDCNS15a",
+            "name": "Q6 consumer before producer",
+            "triggerEffects": [
+                {
+                    "id": "d4e13ecb-98f7-4d08-bbf7-0923996771ad",
+                    "data": "$results.order_keys = $subjects.keys().join(\",\")",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "10fe694c-2655-49f6-bedd-7096f9b9183a",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ],
+            "canTriggerMoreThanOnce": true
+        },
+        {
+            "id": "PrDPRD16a",
+            "name": "Q6 producer creates late",
+            "triggerEffects": [
+                {
+                    "id": "7923dc81-04b1-4c60-910f-02c883b40efe",
+                    "data": "$subjects.late.suspicion = 1\n$results.late_created = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "869103ec-2701-4ae7-ad7c-3be778e671fa",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDERR17a",
+            "name": "Q7 errored one-shot",
+            "triggerEffects": [
+                {
+                    "id": "7bf141ac-3534-4e9c-8529-b233378e950a",
+                    "data": "set $x = $subjects.ghost.suspicion\n$results.err_ran = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "dec7e242-df8d-4deb-a88c-726c80280c06",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDPRQ18a",
+            "name": "Q7 prereq on errored trigger",
+            "triggerEffects": [
+                {
+                    "id": "e22a7e30-517f-4bc5-950f-f9f743f3e6e3",
+                    "data": "$results.prereq_after_error = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "01c23678-c7fd-4f45-837d-9a00184ccb34",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                },
+                {
+                    "id": "b436224b-6a97-4d57-b17a-186253277dca",
+                    "data": {
+                        "prereqs": [
+                            "PrDERR17a"
+                        ],
+                        "firedThisTurn": false
+                    },
+                    "type": "triggerPrereqs",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDPRQ19a",
+            "name": "Q7 prereq on succeeding trigger",
+            "triggerEffects": [
+                {
+                    "id": "3bde2a47-46dd-4add-be2b-bb51386218cc",
+                    "data": "$results.prereq_after_ok = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "ed78e359-5b6f-47ed-b63d-7c2d6c9f3551",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                },
+                {
+                    "id": "526ec54b-744d-4989-97b6-66fe5eafc84b",
+                    "data": {
+                        "prereqs": [
+                            "PrDPRD16a"
+                        ],
+                        "firedThisTurn": false
+                    },
+                    "type": "triggerPrereqs",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDDEP20a",
+            "name": "Q8a two missing levels",
+            "triggerEffects": [
+                {
+                    "id": "ff01eacf-49a9-44ec-8a21-9876a8ba50ea",
+                    "data": "$subjects.deep.stats.trust = 1\n$results.deep_create = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "7d5098ee-bd8f-4032-ac8e-09e376960363",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        },
+        {
+            "id": "PrDDYN21a",
+            "name": "Q8b runtime key",
+            "triggerEffects": [
+                {
+                    "id": "fd1e2474-83c2-4707-b674-fd154e56d279",
+                    "data": "set $k = \"dyn\"\n$subjects.item($k).suspicion = 1\n$results.dyn_create = \"FIRED\"",
+                    "type": "effectRunScript"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "77a7a855-b134-4808-879e-8d82ea1daa96",
+                    "data": "$probe.n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ]
+        }
+    ],
+    "victoryCondition": null,
+    "defeatCondition": null,
+    "trackedItems": [
+        {
+            "id": "PrDProbe0",
+            "name": "Probe",
+            "positionInList": 0,
+            "dataType": "yaml",
+            "visibility": "everyone",
+            "description": "Fixed test values (n=3, z=0, hundred=100, flag=0).",
+            "updateInstructions": "Never modify this item. It is a fixed test fixture.",
+            "formatExample": "n: 3\nz: 0\nhundred: 100\nflag: 0",
+            "enforceFormat": true,
+            "formatSchema": "n: number\nz: number\nhundred: number\nflag: number",
+            "initialValue": "n: 3\nz: 0\nhundred: 100\nflag: 0",
+            "initialValueBasedOnPC": "same",
+            "autoUpdate": false,
+            "variableName": "probe",
+            "driftAcknowledgedForName": null
+        },
+        {
+            "id": "PrDSubj00",
+            "name": "Subjects",
+            "positionInList": 1,
+            "dataType": "yaml",
+            "visibility": "everyone",
+            "description": "Map of records that scripts create and read.",
+            "updateInstructions": "Never modify this item. Only scripts change it.",
+            "formatExample": "amanda:\n  suspicion: 1",
+            "enforceFormat": false,
+            "formatSchema": "",
+            "initialValue": "amanda:\n  suspicion: 1",
+            "initialValueBasedOnPC": "same",
+            "autoUpdate": false,
+            "variableName": "subjects",
+            "driftAcknowledgedForName": null
+        },
+        {
+            "id": "PrDRes000",
+            "name": "Results",
+            "positionInList": 2,
+            "dataType": "yaml",
+            "visibility": "everyone",
+            "description": "One marker per probe cell; PENDING until a script writes it.",
+            "updateInstructions": "Never modify this item. Only scripts change it.",
+            "formatExample": "",
+            "enforceFormat": false,
+            "formatSchema": "",
+            "initialValue": "sog_empty: \"PENDING\"\nsog_gated: \"PENDING\"\nabs_key: \"PENDING\"\nor_valid: \"PENDING\"\nor_missing_right: \"PENDING\"\nand_valid: \"PENDING\"\nchance_if: \"PENDING\"\nchance_bare_100: \"PENDING\"\nchance_bare_0: \"PENDING\"\nchance_additive: \"PENDING\"\nchance_game_turn: \"PENDING\"\nchance_bare_turn: \"PENDING\"\ncond_same_turn: \"PENDING\"\norder_keys: \"PENDING\"\nlate_created: \"PENDING\"\nerr_ran: \"PENDING\"\nprereq_after_error: \"PENDING\"\nprereq_after_ok: \"PENDING\"\ndeep_create: \"PENDING\"\ndyn_create: \"PENDING\"",
+            "initialValueBasedOnPC": "same",
+            "autoUpdate": false,
+            "variableName": "results",
+            "driftAcknowledgedForName": null
+        }
+    ],
+    "autoAdvanceVersion": true,
+    "version": "1.01"
+}

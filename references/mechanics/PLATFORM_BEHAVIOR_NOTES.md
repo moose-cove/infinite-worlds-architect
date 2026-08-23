@@ -159,6 +159,22 @@ make — that IW strips any optional boolean set to its default — is **too bro
 `nsfw: false`, `favorite: false` and `autoAdvanceVersion: false` all survived untouched. The
 stripping applies to a specific set of fields, not to a general "empty means absent" rule.
 
+**A tracked item without a `description` key imports and plays but bricks the editor.**
+Confirmed by bisection 2026-08-22 (Probe D build): a world whose tracked items had every
+required field but no `description` imported with the normal "World imported from raw JSON"
+message and could be played, yet clicking **Edit** on it did nothing — no dialog, no error,
+the world list just stayed put. Adding `"description"` (even an empty string) to each item
+fixed it; removing it reproduced it. The editor is the only route to the raw-JSON import box,
+so such a world cannot be repaired in the app — fix the file first. `validate_world` errors on
+the missing key (v0.21.0). The JSON Schema still lists `description` as optional because the
+platform's own exports always write it.
+
+**Raw-JSON import persists immediately.** In the editor, **Import JSON to world** asks "Are you
+sure you wish to overwrite…", then reports "World imported from raw JSON." — and the world is
+already saved at that point: **Save changes and exit** afterwards says "No changes to save."
+**Discard changes** does not undo an import. On a large world the import alert can arrive
+10–20 s after the click. (Observed via the Playwright harness in `probes/harness/`.)
+
 **`autoAdvanceVersion: false` holds `version` still across a round trip.** Useful when
 diffing an import: it removes the version-drift noise described below.
 
@@ -211,7 +227,13 @@ Only KIBs can be inactive. EIBs and MI are always active and never appear here.
 
 ### Trigger Event Status
 
-Shows which triggers fired or were evaluated each turn. Useful for confirming trigger chains, prereqs, and blockers behaved as expected.
+Shows which triggers fired or were evaluated each turn. Useful for confirming trigger chains, prereqs, and blockers behaved as expected. In the in-game **World debug tools** modal (bug icon on the play toolbar) it appears as a collapsible **Triggers (N)** section — "Triggers fired this turn" plus "All triggers" with per-trigger status ("fired turn 1", "first fired turn 1, last turn 4, fired 4 times", "not yet fired"). A trigger whose condition or script errored is flagged inline ("1 problem, see PawScript below").
+
+### PawScript panel and Expression Sandbox
+
+The same modal has a **PawScript (N)** section (enable "PawScript (scripts…)" in the World debug tools checkboxes) listing, per trigger, whether its condition fired and whether its script ran, with the exact failure text when something broke — `Field 'ghost' not found`, `Cannot apply '*' to text and a number`, "A script stopped early, on line 1", "Its condition couldn't be worked out, so the trigger didn't run". These messages are how the 2026-08-22 runtime findings were read; when a trigger "should have fired", look here before changing anything.
+
+Every entry has an **Open in Sandbox** link to the **PawScript Expression Sandbox**: a CodeMirror editor with an **Evaluate** button that runs any expression against the *real* data of that turn and reports the result — 🟢 "TRUE — the trigger would fire", 🔴 FALSE, ⚠️ "This works out to '100', not true or false — so the trigger never fires", or the error text. It costs no credits, so it is the cheapest way to test a condition before spending a turn on it.
 
 ### AI Thinking and Evaluation
 

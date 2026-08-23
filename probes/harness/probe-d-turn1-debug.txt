@@ -1,0 +1,186 @@
+World debug tools
+Triggers (17)
+Triggers fired this turn
+Q3 or two valid branches
+Q3b or missing path on right
+Q3c and
+Q4 chance if()
+P15b chance bare handle 100
+chance additive
+P15d chance $game.turn_number*100
+chance bare turn_number*100
+Q5 producer sets flag
+Q5 consumer condition reads flag
+Q6 consumer before producer
+Q6 producer creates late
+Q7 errored one-shot - 1 problem, see PawScript below
+Q7 prereq on errored trigger
+Q7 prereq on succeeding trigger
+Q8a two missing levels
+Q8b runtime key
+All triggers
+Q2 SoG no conditions - fired turn 0
+Q2 SoG gated control - fired turn 0
+Q10 triggerConditions empty array (absent key breaks the editor) - not yet fired
+Q3 or two valid branches - fired turn 1
+Q3b or missing path on right - fired turn 1
+Q3c and - fired turn 1
+Q4 chance if() - fired turn 1
+P15b chance bare handle 100 - fired turn 1
+P15c chance bare handle 0 (expect PENDING) - not yet fired
+chance additive - fired turn 1
+P15d chance $game.turn_number*100 - fired turn 1
+chance bare turn_number*100 - fired turn 1
+Q5 producer sets flag - fired turn 1
+Q5 consumer condition reads flag - fired turn 1
+Q6 consumer before producer - fired turn 1
+Q6 producer creates late - fired turn 1
+Q7 errored one-shot - fired turn 1
+Q7 prereq on errored trigger - fired turn 1
+Q7 prereq on succeeding trigger - fired turn 1
+Q8a two missing levels - fired turn 1
+Q8b runtime key - fired turn 1
+PawScript (29)
+
+What your PawScript did this turn. None of it stopped your game - this is here so you can see what happened and fix anything that needs a look.
+
+Trigger:
+Q3 or two valid branches
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q3b or missing path on right
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q3c and
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q4 chance if()
+•
+Ran a script
+Open in Sandbox
+Trigger:
+P15b chance bare handle 100
+•
+Ran a script
+Open in Sandbox
+Trigger:
+chance additive
+•
+Ran a script
+Open in Sandbox
+Trigger:
+P15d chance $game.turn_number*100
+•
+Ran a script
+Open in Sandbox
+Trigger:
+chance bare turn_number*100
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q5 producer sets flag
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q5 consumer condition reads flag
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q6 consumer before producer
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q6 producer creates late
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q7 errored one-shot
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+🔧
+A script stopped early, on line 1
+Open in Sandbox
+Run script
+
+set $x = $subjects.ghost.suspicion
+
+Field 'ghost' not found
+Trigger:
+Q7 prereq on errored trigger
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q7 prereq on succeeding trigger
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q8a two missing levels
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Trigger:
+Q8b runtime key
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+•
+Ran a script
+Open in Sandbox
+Replay this turn
+OK

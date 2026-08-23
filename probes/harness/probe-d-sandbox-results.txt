@@ -1,0 +1,49 @@
+'$probe.n > 2'                                     => 🟢 TRUE — the trigger would fire.
+'$probe.z > 2'                                     => 🔴 FALSE — the trigger wouldn't fire.
+'$probe.z > 2 or $probe.n > 2'                     => 🟢 TRUE — the trigger would fire.
+'$probe.n > 2 or $probe.z > 2'                     => 🟢 TRUE — the trigger would fire.
+'$subjects.ghost.suspicion > 0 or $probe.n > 2'    => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+'$probe.n > 2 or $subjects.ghost.suspicion > 0'    => 🟢 TRUE — the trigger would fire.
+'$probe.n > 2 and $probe.z < 1'                    => 🟢 TRUE — the trigger would fire.
+'$probe.n > 2 and $probe.z > 1'                    => 🔴 FALSE — the trigger wouldn't fire.
+'($probe.n > 2) * 100'                             => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+'($probe.n > 2)'                                   => 🟢 TRUE — the trigger would fire.
+'if($probe.n > 2, 100, 0)'                         => ⚠️ This works out to '100', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'if($probe.z > 2, 100, 0)'                         => ⚠️ This works out to '0', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'choose($probe.n, 1, 10, 3, 100, 0)'               => ⚠️ This works out to '100', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'choose($probe.n, 3, 100, 0)'                      => ⚠️ This works out to '100', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'choose($probe.z, 3, 100, 0)'                      => ⚠️ This works out to '0', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$probe.n + 97'                                    => ⚠️ This works out to '100', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$game.turn_number * 100'                          => ⚠️ This works out to '200', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'turn_number * 100'                                => ⚠️ This works out to '200', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$game.turn_number'                                => ⚠️ This works out to '2', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+"$subjects.keys().join(',')"                       => ⚠️ This works out to 'amanda,newgirl', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$subjects.ghost.exists()'                         => 🔴 FALSE — the trigger wouldn't fire.
+'$subjects.amanda.exists()'                        => 🟢 TRUE — the trigger would fire.
+'$subjects.item("ghost", 0)'                       => ⚠️ This works out to '0', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$subjects.item("ghost").suspicion'                => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+'$subjects.item("amanda").suspicion'               => ⚠️ This works out to '1', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'random(1,100)'                                    => ⚠️ This works out to '0.419', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'random'                                           => ⚠️ This works out to '0.29', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$results.s1_runs'                                 => ⚠️ This works out to '1', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+'$results.s1_runs = 2'                             => 🔴 FALSE — the trigger wouldn't fire.
+'$results.s1_runs == 2'                            => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+'not $probe.z > 2'                                 => 🟢 TRUE — the trigger would fire.
+'$probe.flag > 0'                                  => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+'$nosuch > 0'                                      => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+''                                                 => PawScript Expression Sandbox PawScript Capability Test v0.2 · turn 2 · "TP2: pawscript false control (expect PENDING)" condition When this ran in your game it came out as 'false' - not true, so the tr
+'$subjects.ghost.suspicion > 0 or $probe.n > 2'  => Field 'ghost' not found
+'($probe.n > 2) * 100'                           => Cannot apply '*' to text and a number
+'$subjects.item("ghost").suspicion'              => There's no 'ghost' entry in this record - add a fallback to cover it: .item("ghost", fallback)
+'$results.s1_runs == 2'                          => PawScript compares with a single '=' - write $hp = 10, not $hp == 10
+'$probe.flag > 0'                                => Field 'flag' not found
+'$nosuch > 0'                                    => No tracked item or variable called 'nosuch'.
+''                                               => Empty expression - nothing to evaluate
+'$probe.n > 2 & "x"'                             => 🟢 TRUE — the trigger would fire.
+'"true"'                                         => 🟢 TRUE — the trigger would fire.
+'true'                                           => 🟢 TRUE — the trigger would fire.
+'1'                                              => ⚠️ This works out to '1', not true or false — so the trigger never fires. A condition should compare things so it comes out true or false, e.g. $hp < 10.
+modals: []
+after model: AI model changed to Lynx. / OK
+after illus: 
+menu shows:  | modals: []

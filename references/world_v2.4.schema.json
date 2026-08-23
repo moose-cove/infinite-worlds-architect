@@ -435,7 +435,11 @@
           "description": "Who can see this value.",
           "x-iw-note": "hidden_boring: AI cannot read the item (same readability as 'hidden'). Developer-confirmed, and import survival CONFIRMED 2026-08-06 by round trip — the value came back unchanged, clearing the [PENDING TEST] the KB carried as of May 2026. Source: iw_knowledge_base_v2_8.md."
         },
-        "description": { "type": "string", "description": "Authoring description of what this variable represents." },
+        "description": {
+          "type": "string",
+          "description": "Authoring description of what this variable represents.",
+          "x-iw-note": "Not required by the platform, but a tracked item WITHOUT this key imports and plays while the IW editor silently refuses to open the world (bisected 2026-08-22). validate_world errors on a missing/null description; an empty string is fine."
+        },
         "updateInstructions": { "type": "string", "description": "Instructions for how the AI should update this value." },
         "initialValue": { "type": "string", "description": "Starting value." },
         "initialValueBasedOnPC": {

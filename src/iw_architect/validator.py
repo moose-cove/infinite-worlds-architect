@@ -318,6 +318,38 @@ def _check_tracked_item_id_charset(world: dict, errors: list[str], warnings: lis
             )
 
 
+def _check_tracked_item_description_present(
+    world: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """Error on a tracked item with no `description` key — it bricks the IW editor.
+
+    CONFIRMED 2026-08-22 by bisection against the live app (Probe D build): a world whose
+    tracked items lacked the `description` key imported without complaint and PLAYED, but the
+    editor silently refused to open it — clicking Edit did nothing, no dialog, no console
+    error. Adding `"description"` to every tracked item (and nothing else) fixed it; removing
+    it again reproduced it. The JSON Schema lists `description` as optional because the
+    platform's own export always writes it, so the schema never had a reason to require it.
+
+    Error, not warning: the world is unrepairable in the app once imported (the editor is
+    the only UI path to the raw-JSON import box), so the author must fix the file first.
+    Scope: only the ABSENT key was bisected. An empty string is what the editor itself
+    writes for a blank field and is treated as fine; `null` is untested and reported too,
+    since the platform's own exports never write it.
+    """
+    for ti in world.get("trackedItems", []):
+        if not isinstance(ti, dict):
+            continue
+        if isinstance(ti.get("description"), str):
+            continue
+        name = ti.get("name", ti.get("id", "?"))
+        how = "is null" if "description" in ti else "has no 'description' key"
+        errors.append(
+            f"trackedItems[name={name!r}]: {how}. A tracked item without a string "
+            "description imports and plays, but the IW editor silently refuses to open the "
+            'world (confirmed by bisection 2026-08-22). Add "description": "" at minimum.'
+        )
+
+
 def _check_null_image_fields(world: dict, errors: list[str], warnings: list[str]) -> None:
     """Warn when imageStyle is explicitly null.
 
@@ -587,10 +619,13 @@ def _check_conditionless_triggers(world: dict, errors: list[str], warnings: list
     intentional: it is a dead trigger, not an unconditional one.
 
     Warning, not error: the world still imports and plays, and the author may be mid-edit.
-    Scope, stated honestly: only the empty-array case was played. An ABSENT key is treated
-    the same because the platform has nothing to evaluate either way, but that cell is
-    untested. `triggerOnStartOfGame: true` with no conditions is EXEMPT — that combination
-    is commonly authored and was never probed, so warning on it would be a guess.
+    Scope, stated honestly: only the empty-array case was played (re-confirmed by Probe D,
+    2026-08-22: `[]` survived import byte-identical and sat at "not yet fired" for four
+    turns, so the shape is runtime-dead, not deleted). An ABSENT key is treated the same
+    because the platform has nothing to evaluate either way, but that cell is untested.
+    `triggerOnStartOfGame: true` with no conditions is EXEMPT, and rightly so: Probe D's
+    SoG trigger with `[]` fired at turn 0 alongside its gated control — the flag is its own
+    gate.
     """
     for trigger in world.get("triggerEvents", []):
         if trigger.get("triggerOnStartOfGame", False) is True:
@@ -1404,6 +1439,7 @@ def validate_world(world_path: str) -> str:
         _check_duplicate_ids(world, errors, warnings)
         _check_position_in_list(world, errors, warnings)
         _check_tracked_item_id_charset(world, errors, warnings)
+        _check_tracked_item_description_present(world, errors, warnings)
         _check_null_image_fields(world, errors, warnings)
         _check_cross_field_invariants(world, errors, warnings)
         _check_logic_conditions(world, errors, warnings)

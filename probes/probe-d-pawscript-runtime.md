@@ -1,5 +1,11 @@
 # Probe D — trigger firing and PawScript runtime (build spec)
 
+> **Run 2026-08-22.** Results are recorded in [`README.md` → Answered by Probe D](README.md#answered-by-probe-d-2026-08-22-played);
+> the built world is `probe-d-pawscript-runtime.json`, its post-import export
+> `probe-d-imported.json`, and the scripts that built and played it are in [`harness/`](harness/README.md).
+> One deviation from the spec below: trigger #3 was shipped with `triggerConditions: []`, not an
+> absent key, so **Q10 is still open** — see the README.
+
 Closes the questions left open by the 2026-08-22 played rounds recorded under
 [Answered in play](README.md#answered-in-play-2026-08-22) in the probes README: the
 `triggerOnStartOfGame` variant of P13, the P14/P15 runtime remainders, and the mechanism

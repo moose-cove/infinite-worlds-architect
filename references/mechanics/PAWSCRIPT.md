@@ -116,9 +116,15 @@ Compound tests go inside the one expression (`$gold >= 50 and $puppies.count > 2
 rather than across several conditions under a `logic` node, and it can reach into
 YAML sub-fields with the same dot paths scripts use (§5). Every `$name` in it must
 be a tracked item's `variableName` or a native; `validate_world` warns on anything
-else, and on a `data` that is not a non-empty string. Whether a malformed or
-non-boolean expression is treated as false or costs the condition its existence on
-import (the way an empty `textComparison` does) is an open question — see
+else, and on a `data` that is not a non-empty string. A malformed or non-boolean
+expression survives import unchanged and simply **never fires** (Probe D + Expression
+Sandbox, 2026-08-22): a numeric result is reported as "not true or false — so the
+trigger never fires", an unknown `$name` as `No tracked item or variable called 'x'`,
+and a missing YAML path as `Field 'x' not found`, with World Debug logging "Its
+condition couldn't be worked out, so the trigger didn't run". `and` / `or` / `not` all
+work; **`or` short-circuits left-to-right**, so a branch that may not exist goes on the
+right (`$probe.n > 2 or $subjects.ghost.suspicion > 0` fires; the reverse errors) or
+behind `.exists()`. Equality is a single `=` — `==` is a syntax error. See
 [`probes/README.md`](../../probes/README.md). Authoring guidance:
 [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
@@ -143,25 +149,30 @@ observed not to fire (see below and `TRIGGER_EVENTS.md`).
 ```
 
 The chance scales with state — more non-human friends, higher odds — without a
-separate `triggerOnPawScript` gate and roll. The dialect is mixed and only
-*observed*, not explained: `turn_number` and `random` are **bare** identifiers in
-this field (not `$game.turn_number` or `random(…)` as in §3 expressions), while the
-tracked item carries the `$`. Write both forms exactly as the fixture does; whether
-`$game.turn_number` also resolves there is untested (probe P15). `validate_world`
+separate `triggerOnPawScript` gate and roll. The dialect is mixed: the fixture
+writes `turn_number` and `random` **bare** while the tracked item carries the `$`.
+Both spellings of the turn counter resolve here — bare `turn_number` and
+`$game.turn_number` each fired a `* 100` formula from turn 1 (Probe D, 2026-08-22) —
+so the bare form is a convention, not a requirement. `random` is a 0–1 float (the
+Expression Sandbox returned 0.29 / 0.42 for it, and the same range for
+`random(1,100)`, so do not assume the argument form rescales it). `validate_world`
 warns on a non-string/blank formula and on a `$name` that is not a tracked item's
 `variableName` or a native.
 
-At runtime (play-confirmed 2026-08-22) a literal `"100"` fires every turn, and
-`choose($probe.n, 3, 100, 0)` — a `$`-handle with a YAML dot path inside the
-formula — fires, so `$variableName` resolution in this field is play-confirmed,
-not just export-stable. The fixture's additive idiom
-(`"$x+round(turn_number%random)"`) is still unverified at runtime. One hedged
-warning: formulas containing comparison operators — `"($x > 2) * 100"`,
-`"((($a > 1) + ($b > 1)) > 0) * 100"` — were observed **never** to fire even with
-every operand true, while the `"100"` control fired the same turn. Whether they
-evaluate dead at runtime or were deleted at import is unconfirmed (no re-export
-diff was taken). Treat the field as a numeric expression; for state-driven odds
-`choose(…)` is verified, and for anything conditional use `triggerOnPawScript`.
+At runtime (play-confirmed 2026-08-22, rounds 1–2 and Probe D) the field is a
+**numeric** expression and every numeric form tried fires when the value beats the
+roll: a literal `"100"`, a bare `"$probe.hundred"` holding 100 (while `"$probe.z"`
+holding 0 never fires, so the value really drives the roll), the fixture's additive
+idiom (`"$probe.n + 97"`), `"choose($probe.n, 3, 100, 0)"`,
+`"if($probe.n > 2, 100, 0)"`, and both `turn_number * 100` spellings. What does
+**not** work is a comparison used as a number: `"($x > 2) * 100"` fails with
+`Cannot apply '*' to text and a number` and `"((($a > 1) + ($b > 1)) > 0) * 100"`
+with `Cannot apply '+' to text values` — a comparison yields **text**, not 0/1, so
+the formula errors, World Debug reports "Its condition couldn't be worked out, so
+the trigger didn't run", and the trigger never fires. The condition survives import
+byte-identical (re-export diffed), so this is a runtime-dead shape, not a deletion.
+For conditional odds use `if(cond, a, b)` or `choose(…)`, which return numbers; for
+anything that is really a gate, use `triggerOnPawScript`.
 
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash
@@ -196,7 +207,10 @@ Their sole power is to **mutate tracked items**.
   **Rollback is not a retry.** The trigger still counts as fired. On a one-shot
   trigger (`canTriggerMoreThanOnce` absent/`false`) an errored script is a
   permanent loss — the trigger is consumed on the turn it fires and never runs
-  again, so the writes never land (confirmed 2026-08-22). For any script that
+  again, so the writes never land (confirmed 2026-08-22). The consumed trigger
+  still counts as fired for `triggerPrereqs` downstream (Probe D: a prereq on the
+  errored trigger fired the same turn), so a chain can advance past a step whose
+  state change never happened. For any script that
   could touch a path that might not exist, either guard every read with
   `.exists()` or set `canTriggerMoreThanOnce: true` so a later turn can succeed.
 
@@ -218,11 +232,12 @@ dedicated trigger effect for any of those (see
 > §3.
 >
 > That deferral applies to the *storyteller* only. Within the same turn's trigger
-> pass, a script's writes **are** visible to scripts on triggers that run later
-> (confirmed 2026-08-22: a script created a YAML record and a later trigger's
-> `for each` counted it that turn). List order is the likely ordering, but this was
-> only tested producer-before-consumer — so order producers before consumers.
-> Visibility to a later trigger's `triggerOnPawScript` *condition* is untested.
+> pass, a script's writes **are** visible to everything that runs later — both to
+> later scripts and to later triggers' `triggerOnPawScript` *conditions* (Probe D,
+> 2026-08-22: `$probe.flag = 1` in trigger 13 made trigger 14's `$probe.flag > 0`
+> fire the same turn). Triggers run in **list order**: a consumer placed before its
+> producer saw the pre-write state on turn 1 and the new records only from turn 2.
+> Order producers before consumers.
 
 ---
 
@@ -276,10 +291,10 @@ The distinction is what makes read-modify-write (`+=`, `-=`) the fragile case �
 missing. Guard reads with `.exists()` or `.item(key, fallback)`, and reserve the
 `enforceFormat` argument for items scripts *read* structurally, not merely write to.
 
-Scope of the evidence: verified once, one missing level under an existing map.
-Creating more than one missing level at a time (`$party.leader.stats.hp = 90` with
-both `leader` and `stats` absent) and creating a record under a *runtime* key
-(`.item($k).field = …`) are untested — do not assume either works.
+Creation is not limited to one level: `$subjects.deep.stats.trust = 1` with both
+`deep` and `stats` absent created the whole path, and `set $k = "dyn"` followed by
+`$subjects.item($k).suspicion = 1` created a record under a runtime key — both
+visible in the tracked-items panel the same turn (Probe D, 2026-08-22).
 
 ### `if` / `else if` / `else` — branching
 
@@ -350,7 +365,8 @@ literally named `count`. This distinction is easy to get wrong.
 |---|---|
 | `.count()` | Number of entries in a list/map |
 | `.where(<cond>)` | Filters to entries matching a condition |
-| `.item(key)` / `.item(key, fallback)` | Looks up an entry by key; the optional `fallback` is the value returned when the key is missing (a **read** fallback). In scripts, `.item(key)` is also a valid **assignment target**, and assigning to a missing key **creates** it (confirmed 2026-08-22 with a literal key; a runtime `$k` key is untested). |
+| `.item(key)` / `.item(key, fallback)` | Looks up an entry by key; the optional `fallback` is the value returned when the key is missing (a **read** fallback — without it a missing key errors: "add a fallback to cover it"). In scripts, `.item(key)` is also a valid **assignment target**, and assigning to a missing key **creates** it (confirmed 2026-08-22 with a literal key and with a runtime `$k`). |
+| `if(cond, then, else)` | Top-level conditional **value** (not the statement form in §5): `if($probe.n > 2, 100, 0)` → `100`. Verified inside a `triggerOnRandomChance` formula (Probe D, 2026-08-22). As a trigger *condition* it never fires — conditions must come out true/false. |
 | `.exists()` | Whether the thing exists |
 | `.keys()` | The collection's keys |
 | `.key()` | The current entry's key (e.g. inside `.format_each(…)`) |
@@ -366,10 +382,14 @@ literally named `count`. This distinction is easy to get wrong.
 | `log(value)` | Writes a value to World Debug for diagnostics (scripts) |
 | `round(x)` | Top-level rounding (and similar top-level math) |
 | `range(n)` | Top-level: the sequence `0 … n-1` — the bounded source for `for each` |
-| `random(…)` / `dice_roll(…)` | Top-level randomness helpers (e.g. dice rolls) |
+| `random(…)` / `dice_roll(…)` | Top-level randomness helpers (e.g. dice rolls). Bare `random` is a 0–1 float; `random(1,100)` also returned 0–1 values in the Expression Sandbox (two samples, 2026-08-22) — verify the argument form before relying on its range. |
 
-**Comparison operators:** `=`, `!=`, `<`, `>`, `<=`, `>=`.
-**Logical operators:** `and`, `or`.
+**Comparison operators:** `=`, `!=`, `<`, `>`, `<=`, `>=`. Equality is a **single** `=`; `==`
+is a syntax error ("PawScript compares with a single '='").
+**Logical operators:** `and`, `or`, `not`. `or` short-circuits left-to-right: an erroring
+right-hand branch is never reached when the left is true, but an erroring **left** branch
+kills the whole expression (Probe D, 2026-08-22). A comparison yields text, not a number —
+`($x > 2) * 100` errors — so use `if(…)` / `choose(…)` to turn a test into a number.
 
 > **This cheat-sheet is non-exhaustive.** PawScript's full function catalog —
 > exact signatures plus additional list/map/number/string helpers — lives in the
