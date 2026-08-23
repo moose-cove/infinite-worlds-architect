@@ -1,0 +1,65 @@
+▸
+Probe:
+n: 3
+z: 0
+hundred: 100
+flag: 1
+▸
+Subjects:
+amanda:
+  suspicion: 1
+late:
+  suspicion: 1
+deep:
+  stats:
+    trust: 1
+dyn:
+  suspicion: 1
+▸
+Results:
+sog_empty: "FIRED"
+sog_gated: "FIRED"
+abs_key: "PENDING"
+or_valid: "FIRED"
+or_missing_right: "FIRED"
+and_valid: "FIRED"
+chance_if: "FIRED"
+chance_bare_100: "FIRED"
+chance_bare_0: "PENDING"
+chance_additive: "FIRED"
+chance_game_turn: "FIRED"
+chance_bare_turn: "FIRED"
+cond_same_turn: "FIRED"
+order_keys: "amanda,late,deep,dyn"
+late_created: "FIRED"
+err_ran: "PENDING"
+prereq_after_error: "FIRED"
+prereq_after_ok: "FIRED"
+deep_create: "FIRED"
+dyn_create: "FIRED"
+Attempt to find a way out of the room by examining the walls closely.
+
+Sit down on the floor and rest.
+
+Shout or make noise to see if anyone responds.
+
+Or type any action you want below:
+and/or tell the AI what should happen next:
+
+Take action
+Previous turn
+Regenerate turn
+(Turn 2)
+Generate images for current turn
+© Friendly Fox Games, 2026
+About Infinite Worlds
+|
+FAQ
+|
+Wiki
+|
+fox@infiniteworlds.app
+Join the Infinite Worlds community!
+Privacy policy
+|
+Terms & Conditions

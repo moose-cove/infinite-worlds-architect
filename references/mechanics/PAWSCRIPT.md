@@ -116,11 +116,25 @@ Compound tests go inside the one expression (`$gold >= 50 and $puppies.count > 2
 rather than across several conditions under a `logic` node, and it can reach into
 YAML sub-fields with the same dot paths scripts use (§5). Every `$name` in it must
 be a tracked item's `variableName` or a native; `validate_world` warns on anything
-else, and on a `data` that is not a non-empty string. Whether a malformed or
-non-boolean expression is treated as false or costs the condition its existence on
-import (the way an empty `textComparison` does) is an open question — see
+else, and on a `data` that is not a non-empty string. A malformed or non-boolean
+expression survives import unchanged and simply **never fires** (Probe D + Expression
+Sandbox, 2026-08-22): a numeric result is reported as "not true or false — so the
+trigger never fires", an unknown `$name` as `No tracked item or variable called 'x'`,
+and a missing YAML path as `Field 'x' not found`, with World Debug logging "Its
+condition couldn't be worked out, so the trigger didn't run". `and` / `or` / `not` all
+work; **`or` short-circuits left-to-right**, so a branch that may not exist goes on the
+right (`$probe.n > 2 or $subjects.ghost.suspicion > 0` fires; the reverse errors) or
+behind `.exists()`. Equality is a single `=` — `==` is a syntax error. See
 [`probes/README.md`](../../probes/README.md). Authoring guidance:
 [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
+
+**Play-confirmed 2026-08-22.** `"$probe.n > 2"` fired on the turn it became true
+and `"$probe.z > 2"` never fired, against a `dataType: "yaml"` item — so numeric
+comparison, YAML dot-path reads and true/false gating all work, and the one-shot
+default is honoured (the true condition fired once and stayed fired without
+`canTriggerMoreThanOnce`). This is the reliable deterministic gate; prefer it over
+synthesizing a boolean inside a `triggerOnRandomChance` formula, which was
+observed not to fire (see below and `TRIGGER_EVENTS.md`).
 
 **`triggerOnRandomChance` — tracked items inside the chance formula.** Fixture
 1.1 (2026-08) shows the random-chance formula reading a tracked item in the same
@@ -135,13 +149,30 @@ import (the way an empty `textComparison` does) is an open question — see
 ```
 
 The chance scales with state — more non-human friends, higher odds — without a
-separate `triggerOnPawScript` gate and roll. The dialect is mixed and only
-*observed*, not explained: `turn_number` and `random` are **bare** identifiers in
-this field (not `$game.turn_number` or `random(…)` as in §3 expressions), while the
-tracked item carries the `$`. Write both forms exactly as the fixture does; whether
-`$game.turn_number` also resolves there is untested (probe P15). `validate_world`
+separate `triggerOnPawScript` gate and roll. The dialect is mixed: the fixture
+writes `turn_number` and `random` **bare** while the tracked item carries the `$`.
+Both spellings of the turn counter resolve here — bare `turn_number` and
+`$game.turn_number` each fired a `* 100` formula from turn 1 (Probe D, 2026-08-22) —
+so the bare form is a convention, not a requirement. `random` is a 0–1 float (the
+Expression Sandbox returned 0.29 / 0.42 for it, and the same range for
+`random(1,100)`, so do not assume the argument form rescales it). `validate_world`
 warns on a non-string/blank formula and on a `$name` that is not a tracked item's
 `variableName` or a native.
+
+At runtime (play-confirmed 2026-08-22, rounds 1–2 and Probe D) the field is a
+**numeric** expression and every numeric form tried fires when the value beats the
+roll: a literal `"100"`, a bare `"$probe.hundred"` holding 100 (while `"$probe.z"`
+holding 0 never fires, so the value really drives the roll), the fixture's additive
+idiom (`"$probe.n + 97"`), `"choose($probe.n, 3, 100, 0)"`,
+`"if($probe.n > 2, 100, 0)"`, and both `turn_number * 100` spellings. What does
+**not** work is a comparison used as a number: `"($x > 2) * 100"` fails with
+`Cannot apply '*' to text and a number` and `"((($a > 1) + ($b > 1)) > 0) * 100"`
+with `Cannot apply '+' to text values` — a comparison yields **text**, not 0/1, so
+the formula errors, World Debug reports "Its condition couldn't be worked out, so
+the trigger didn't run", and the trigger never fires. The condition survives import
+byte-identical (re-export diffed), so this is a runtime-dead shape, not a deletion.
+For conditional odds use `if(cond, a, b)` or `choose(…)`, which return numbers; for
+anything that is really a gate, use `triggerOnPawScript`.
 
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash
@@ -173,6 +204,15 @@ Their sole power is to **mutate tracked items**.
   script back, logs the problem to **World Debug**, and the game continues
   normally. A broken script never breaks a turn; it just does nothing and
   leaves a debug breadcrumb.
+  **Rollback is not a retry.** The trigger still counts as fired. On a one-shot
+  trigger (`canTriggerMoreThanOnce` absent/`false`) an errored script is a
+  permanent loss — the trigger is consumed on the turn it fires and never runs
+  again, so the writes never land (confirmed 2026-08-22). The consumed trigger
+  still counts as fired for `triggerPrereqs` downstream (Probe D: a prereq on the
+  errored trigger fired the same turn), so a chain can advance past a step whose
+  state change never happened. For any script that
+  could touch a path that might not exist, either guard every read with
+  `.exists()` or set `canTriggerMoreThanOnce: true` so a later turn can succeed.
 
 **Bounded loops only.** Scripts cannot loop unboundedly. You may only iterate
 over a finite collection — a list, a map, or `range(n)`. There is no
@@ -190,6 +230,14 @@ dedicated trigger effect for any of those (see
 > narrative. See
 > [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
 > §3.
+>
+> That deferral applies to the *storyteller* only. Within the same turn's trigger
+> pass, a script's writes **are** visible to everything that runs later — both to
+> later scripts and to later triggers' `triggerOnPawScript` *conditions* (Probe D,
+> 2026-08-22: `$probe.flag = 1` in trigger 13 made trigger 14's `$probe.flag > 0`
+> fire the same turn). Triggers run in **list order**: a consumer placed before its
+> producer saw the pre-write state on turn 1 and the new records only from turn 2.
+> Order producers before consumers.
 
 ---
 
@@ -230,10 +278,23 @@ nesting is borne by the *AI* reproducing the shape each turn, not by the script 
 so let the data's real structure drive the depth, and use `enforceFormat: true`
 with a matching nested `formatSchema` to keep the paths reliably present.
 
-The one thing to watch: a path is only as valid as the structure beneath it. If the
-item's shape drifts and `stats` goes missing, the assignment fails — and because
-scripts are transactional, the *whole* script rolls back and the error lands in
-World Debug. That's the argument for `enforceFormat` on any item a script writes to.
+**Writes create; reads don't.** A plain assignment to a missing path **creates**
+it — `$subjects.newgirl.suspicion = 7` created the `newgirl` record under an
+existing `subjects` map (confirmed 2026-08-22), as did `.item("key") = value` for a
+new top-level key. A *read* of a missing path is a hard error:
+`set $x = $subjects.ghost.suspicion` rolled the whole script back and logged a
+PawScript problem to World Debug. `.exists()` on a missing record returns false
+safely.
+
+The distinction is what makes read-modify-write (`+=`, `-=`) the fragile case —
+`$party.leader.stats.hp -= 10` reads before it writes, so it fails if `stats` is
+missing. Guard reads with `.exists()` or `.item(key, fallback)`, and reserve the
+`enforceFormat` argument for items scripts *read* structurally, not merely write to.
+
+Creation is not limited to one level: `$subjects.deep.stats.trust = 1` with both
+`deep` and `stats` absent created the whole path, and `set $k = "dyn"` followed by
+`$subjects.item($k).suspicion = 1` created a record under a runtime key — both
+visible in the tracked-items panel the same turn (Probe D, 2026-08-22).
 
 ### `if` / `else if` / `else` — branching
 
@@ -304,7 +365,8 @@ literally named `count`. This distinction is easy to get wrong.
 |---|---|
 | `.count()` | Number of entries in a list/map |
 | `.where(<cond>)` | Filters to entries matching a condition |
-| `.item(key)` / `.item(key, fallback)` | Looks up an entry by key; the optional `fallback` is the value returned when the key is missing (a **read** fallback). In scripts, `.item(key)` is also a valid **assignment target**. |
+| `.item(key)` / `.item(key, fallback)` | Looks up an entry by key; the optional `fallback` is the value returned when the key is missing (a **read** fallback — without it a missing key errors: "add a fallback to cover it"). In scripts, `.item(key)` is also a valid **assignment target**, and assigning to a missing key **creates** it (confirmed 2026-08-22 with a literal key and with a runtime `$k`). |
+| `if(cond, then, else)` | Top-level conditional **value** (not the statement form in §5): `if($probe.n > 2, 100, 0)` → `100`. Verified inside a `triggerOnRandomChance` formula (Probe D, 2026-08-22). As a trigger *condition* it never fires — conditions must come out true/false. |
 | `.exists()` | Whether the thing exists |
 | `.keys()` | The collection's keys |
 | `.key()` | The current entry's key (e.g. inside `.format_each(…)`) |
@@ -316,13 +378,18 @@ literally named `count`. This distinction is easy to get wrong.
 | `.append(entry)` | Adds an entry to a list (mutation — scripts only) |
 | `.remove(entry)` | Removes a matching entry from a list/map (mutation — scripts only) |
 | `.constrain(min, max)` | Clamps a number into the `[min, max]` range |
+| `choose(value, case1, result1, case2, result2, …, default)` | Top-level switch: returns the `result` paired with the first `case` equal to `value`, else the trailing `default`. Variadic, as documented on the IW wiki PawScript page (`<<choose($value_to_switch_on, 1, "Instructions 1", 2, "Instructions 2", "Default instructions")>>`). The 4-arg form `choose($probe.n, 3, 100, 0)` is verified inside a `triggerOnRandomChance` formula (2026-08-22). |
 | `log(value)` | Writes a value to World Debug for diagnostics (scripts) |
 | `round(x)` | Top-level rounding (and similar top-level math) |
 | `range(n)` | Top-level: the sequence `0 … n-1` — the bounded source for `for each` |
-| `random(…)` / `dice_roll(…)` | Top-level randomness helpers (e.g. dice rolls) |
+| `random(…)` / `dice_roll(…)` | Top-level randomness helpers (e.g. dice rolls). Bare `random` is a 0–1 float; `random(1,100)` also returned 0–1 values in the Expression Sandbox (two samples, 2026-08-22) — verify the argument form before relying on its range. |
 
-**Comparison operators:** `=`, `!=`, `<`, `>`, `<=`, `>=`.
-**Logical operators:** `and`, `or`.
+**Comparison operators:** `=`, `!=`, `<`, `>`, `<=`, `>=`. Equality is a **single** `=`; `==`
+is a syntax error ("PawScript compares with a single '='").
+**Logical operators:** `and`, `or`, `not`. `or` short-circuits left-to-right: an erroring
+right-hand branch is never reached when the left is true, but an erroring **left** branch
+kills the whole expression (Probe D, 2026-08-22). A comparison yields text, not a number —
+`($x > 2) * 100` errors — so use `if(…)` / `choose(…)` to turn a test into a number.
 
 > **This cheat-sheet is non-exhaustive.** PawScript's full function catalog —
 > exact signatures plus additional list/map/number/string helpers — lives in the

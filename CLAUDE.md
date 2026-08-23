@@ -78,7 +78,11 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── probe-a-core.json       # Gate shapes, firedThisTurn, conditions registry, YAML, image style
 ├── probe-a-imported.json   # Probe A after an IW import/export round trip — evidence, do not edit
 ├── probe-b-cap.json        # Ten-event cap, recommendedAIModel, Probe A factor-isolation follow-ups
-└── probe-b-imported.json   # Probe B after an IW import/export round trip — evidence, do not edit
+├── probe-b-imported.json   # Probe B after an IW import/export round trip — evidence, do not edit
+├── probe-d-pawscript-runtime.md    # Probe D build spec (trigger firing + PawScript runtime cells)
+├── probe-d-pawscript-runtime.json  # Probe D world as built
+├── probe-d-imported.json           # Probe D after import/export — evidence, do not edit
+└── harness/                # Playwright/CDP scripts that import, export and play probes against live IW
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)

@@ -123,6 +123,7 @@ def test_invalid_tracked_item_data_type():
             "name": "Health",
             "positionInList": 0,
             "dataType": "integer",  # invalid — must be text/number/xml
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         }
@@ -140,6 +141,7 @@ def test_invalid_tracked_item_visibility():
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "public",  # invalid
             "autoUpdate": False,
         }
@@ -361,6 +363,119 @@ def test_gate_condition_missing_fired_this_turn_warns(ctype):
     result = _validate(_world_with_gate_condition(ctype, {key: ["TRIG0001"]}))
     assert result["valid"], result["errors"]
     assert any("no boolean 'firedThisTurn'" in w for w in result["warnings"]), result["warnings"]
+
+
+# ── Tracked item without `description` bricks the IW editor (bisected 2026-08-22) ──
+
+
+def _world_with_tracked_item(**overrides) -> dict:
+    world = _base_world()
+    item = {
+        "id": "TIDESC001",
+        "name": "Clock",
+        "description": "Turns elapsed.",
+        "positionInList": 0,
+        "dataType": "number",
+        "variableName": "clock",
+        "visibility": "everyone",
+        "initialValue": "0",
+        "autoUpdate": False,
+    }
+    item.update(overrides)
+    world["trackedItems"] = [item]
+    return world
+
+
+def test_tracked_item_with_description_is_silent():
+    result = _validate(_world_with_tracked_item())
+    assert result["valid"], result["errors"]
+    assert not any("'description'" in e for e in result["errors"])
+
+
+def test_tracked_item_with_empty_description_is_silent():
+    """An empty string is what the editor writes for a blank field — fine."""
+    result = _validate(_world_with_tracked_item(description=""))
+    assert result["valid"], result["errors"]
+
+
+def test_tracked_item_without_description_errors():
+    world = _world_with_tracked_item()
+    del world["trackedItems"][0]["description"]
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("Clock" in e and "no 'description' key" in e for e in result["errors"]), result[
+        "errors"
+    ]
+
+
+def test_tracked_item_with_null_description_errors():
+    result = _validate(_world_with_tracked_item(description=None))
+    assert not result["valid"]
+    assert any("Clock" in e and "is null" in e for e in result["errors"]), result["errors"]
+
+
+# ── Conditionless triggers never fire (confirmed in play 2026-08-22) ───────────
+
+
+def _world_with_conditionless_trigger(**trigger_overrides) -> dict:
+    """A one-trigger world with `triggerConditions: []` unless overridden."""
+    world = _base_world()
+    trigger = {
+        "id": "TRIG0001",
+        "name": "Clock",
+        "canTriggerMoreThanOnce": True,
+        "triggerEffects": [
+            {
+                "id": "aaac5aa8-13cc-cc5a-f032-2016af92a391",
+                "type": "effectShowMessage",
+                "data": "tick",
+            }
+        ],
+        "triggerConditions": [],
+    }
+    trigger.update(trigger_overrides)
+    world["triggerEvents"] = [trigger]
+    return world
+
+
+def test_empty_trigger_conditions_warns():
+    """`triggerConditions: []` is a dead trigger, not an unconditional one — warn, don't error."""
+    result = _validate(_world_with_conditionless_trigger())
+    assert result["valid"], result["errors"]
+    assert any("Clock" in w and "no triggerConditions" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_absent_trigger_conditions_warns():
+    """An absent key has nothing to evaluate either; same warning (the cell itself is untested)."""
+    world = _world_with_conditionless_trigger()
+    del world["triggerEvents"][0]["triggerConditions"]
+    result = _validate(world)
+    assert any("Clock" in w and "no triggerConditions" in w for w in result["warnings"]), result[
+        "warnings"
+    ]
+
+
+def test_sog_trigger_with_empty_conditions_does_not_warn():
+    """`triggerOnStartOfGame: true` with `[]` fires at turn 0 (Probe D, 2026-08-22) — silent."""
+    result = _validate(_world_with_conditionless_trigger(triggerOnStartOfGame=True))
+    assert not any("no triggerConditions" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_trigger_with_a_condition_does_not_warn():
+    world = _world_with_conditionless_trigger(
+        triggerConditions=[
+            {
+                "id": "bbac5aa8-13cc-cc5a-f032-2016af92a391",
+                "category": "condition",
+                "type": "triggerOnPawScript",
+                "data": "$game.turn_number >= 0",
+            }
+        ]
+    )
+    result = _validate(world)
+    assert not any("no triggerConditions" in w for w in result["warnings"]), result["warnings"]
 
 
 # ── schema v2.4: triggerOnEvent ↔ top-level `conditions` registry ──────────────
@@ -779,6 +894,7 @@ def test_duplicate_tracked_item_ids():
         "name": "Health",
         "positionInList": 0,
         "dataType": "number",
+        "description": "",
         "visibility": "everyone",
         "autoUpdate": False,
     }
@@ -808,6 +924,7 @@ def test_non_unique_position_in_list():
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         },
@@ -816,6 +933,7 @@ def test_non_unique_position_in_list():
             "name": "Mana",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         },
@@ -834,6 +952,7 @@ def test_non_unique_position_in_list_mixed_types_does_not_crash():
         "name": "A",
         "positionInList": None,
         "dataType": "number",
+        "description": "",
         "visibility": "everyone",
         "autoUpdate": False,
     }
@@ -859,6 +978,7 @@ def test_non_unique_position_in_list_unhashable_does_not_crash():
         "name": "A",
         "positionInList": {"x": 1},
         "dataType": "number",
+        "description": "",
         "visibility": "everyone",
         "autoUpdate": False,
     }
@@ -1031,6 +1151,7 @@ def test_read_world_field_name_bracket():
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
             "initialValue": "100",
@@ -1202,6 +1323,7 @@ def _make_tracked_item(id_: str, name: str, position: int) -> dict:
         "name": name,
         "positionInList": position,
         "dataType": "number",
+        "description": "",
         "visibility": "everyone",
         "autoUpdate": False,
     }
@@ -1304,6 +1426,7 @@ def _trigger_world_with_condition(cond_data: dict) -> dict:
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         }
@@ -1426,6 +1549,7 @@ def _world_with_initial_tracked_item_value(based_on_pc: str, value) -> dict:
             "name": "Probe Item",
             "positionInList": 0,
             "dataType": "text",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
             "initialValueBasedOnPC": "player",
@@ -1775,6 +1899,7 @@ def test_hidden_boring_visibility_valid():
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "hidden_boring",
             "autoUpdate": False,
         }
@@ -1910,6 +2035,7 @@ def test_set_tracked_item_value_missing_replace_with_warns():
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         }
@@ -1931,6 +2057,7 @@ def test_set_tracked_item_value_with_replace_with_no_warning():
             "name": "Health",
             "positionInList": 0,
             "dataType": "number",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         }
@@ -1949,6 +2076,7 @@ def _yaml_item(variable_name: str = "puppies", **overrides) -> dict:
         "name": "Puppies",
         "positionInList": 0,
         "dataType": "yaml",
+        "description": "",
         "visibility": "everyone",
         "autoUpdate": False,
         "variableName": variable_name,
@@ -2141,6 +2269,7 @@ def test_xml_datatype_deprecation_warns():
             "name": "Grudges",
             "positionInList": 0,
             "dataType": "xml",
+            "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
         }

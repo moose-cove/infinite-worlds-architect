@@ -177,8 +177,13 @@ Compare to the matching `formatExample`, which is the same shape filled in:
   the platform *stores* a nested `formatSchema`; nothing proves it *enforces* one,
   or that enforcement descends past the top level. Treat a nested `formatSchema`
   as strong guidance to the AI rather than a hard guarantee — and don't rely on it
-  to make a nested script path unconditionally safe. This matters because scripts
-  are transactional: one drifted entry rolls back the entire run.
+  to make a nested script **read** path unconditionally safe. This matters because
+  scripts are transactional: one drifted entry rolls back the entire run. Pure
+  writes are the easier case — a plain assignment to a missing path creates it
+  (confirmed 2026-08-22, one level under an existing map), so `enforceFormat` earns
+  its keep on items a script *reads* structurally (`+=`, `for each` over a
+  sub-field), not on items it merely writes to. See
+  [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md#5-statement-set-scripts-only) §5.
 
 ---
 
@@ -261,6 +266,50 @@ variable `$puppy` is assignable and writes back to the real item — see
 [`mechanics/PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md#5-statement-set-scripts-only)
 §5. The whole script is transactional: if any entry were malformed, nothing
 would change and the error would land in World Debug.
+
+## Worked example — a map of records
+
+A list is not the only walkable shape. A **map of records** — keyed by name, one
+sub-map per key — is the shape that supports creating a record on the fly, and
+`for each` / `.keys()` walk it too (confirmed in play 2026-08-22).
+
+**Tracked item** (`variableName: "subjects"`, `dataType: "yaml"`,
+`enforceFormat: true`):
+
+- `formatSchema`:
+
+  ```
+  amanda:
+    suspicion: number
+  ...:
+    suspicion: number
+  ```
+
+- `initialValue`:
+
+  ```yaml
+  amanda:
+    suspicion: 1
+  ```
+
+**A script that adds a record, then walks the map:**
+
+```
+$subjects.newgirl.suspicion = 7
+set $c = 0
+for each $w in $subjects
+  set $c = $c + 1
+$results.s6_count = $c
+$results.s6_keys = $subjects.keys().join(",")
+```
+
+With the value `amanda:\n  suspicion: 1\nnewgirl:\n  suspicion: 7`, `for each`
+counted 2 and `.keys().join(",")` gave `amanda,newgirl`. The first line created
+`newgirl` under the existing map (see `PAWSCRIPT.md` §5, "Writes create; reads
+don't"); the record conformed to the `...:` continuation in `formatSchema` and
+survived subsequent turns. Reading a key that does not exist
+(`$subjects.ghost.suspicion`) is the case that rolls the script back — guard it
+with `$subjects.ghost.exists()`.
 
 ---
 
