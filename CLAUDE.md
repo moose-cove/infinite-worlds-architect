@@ -234,10 +234,9 @@ Markdown reference files in `references/` and its subdirectories (`fields/`, `me
 
 - `illustrationStyle*HighPriority` / `LowPriority` coexistence rules with older `imageStyle*` fields
 
-These are preserved verbatim and not validated beyond type-checking until a fixture clarifies them.
-(The other original §9 question — the `recommendedAIModel` enum — was closed by Probe E,
-2026-08-28: the platform does not validate the field at all, so there is no enforced enum;
-it stays type-checked as string-or-null. See `probes/README.md`.)
+Preserved verbatim and not validated beyond type-checking until a fixture clarifies it. (The
+`recommendedAIModel` enum question was closed by Probe E — no import-time enum; see
+`probes/README.md`.)
 
 ## Python version
 

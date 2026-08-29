@@ -82,7 +82,7 @@ You hold authoritative knowledge of:
 - **`schemaVersion` semantics**: load-bearing, must round-trip.
 - **Pass-through preservation**: unknown fields survive edits because the agent edits in place — this is critical for forward compatibility.
 - **Project rules from `CLAUDE.md`**: schema is the single edit point; `SCHEMA_SUMMARY` derives from it at import time; "warn, don't error" on unknown top-level keys, unknown effect types, and future schema versions.
-- **Open questions in `DESIGN_BRIEF_v2.md` §9**: `illustrationStyle*HighPriority` / `LowPriority` coexistence rules and `recommendedAIModel` valid enum are unresolved — preserve verbatim and do not validate beyond type-checking.
+- **Open questions in `DESIGN_BRIEF_v2.md` §9**: `illustrationStyle*HighPriority` / `LowPriority` coexistence rules are unresolved — preserve verbatim and do not validate beyond type-checking. (The `recommendedAIModel` enum question was closed by Probe E, 2026-08-28: no import-time enum.)
 
 When reviewing a plugin change, you draw on this knowledge to ask: "Does this match what IW actually does?"
 
@@ -214,7 +214,7 @@ After all findings, include a SUMMARY section:
 - **Future schema versions** — If a world or schema artifact declares a `schemaVersion` newer than v2.4, warn but do not error. Note that platform may have added fields.
 - **Unknown effect/condition types** — Warn but do not error; the platform may have added types the validator doesn't know yet. If the plugin change *adds* an unknown type, ask whether it should be registered.
 - **Wiki contradicts schema** — Schema wins. Add a WIKI-FLAG finding noting the discrepancy.
-- **Open questions in `DESIGN_BRIEF_v2.md` §9** — `illustrationStyle*HighPriority` / `LowPriority` coexistence and the full enum of valid `recommendedAIModel` values are unresolved. Preserve verbatim, don't validate beyond type-checking. Note their presence as "preserved per open-question rule."
+- **Open questions in `DESIGN_BRIEF_v2.md` §9** — `illustrationStyle*HighPriority` / `LowPriority` coexistence is unresolved. Preserve verbatim, don't validate beyond type-checking. Note its presence as "preserved per open-question rule." (`recommendedAIModel` was closed by Probe E, 2026-08-28: no import-time enum; still only type-checked.)
 - **Empty diff** — If `git status --porcelain` shows no relevant changes, say so and stop. Don't fabricate findings.
 - **Unverifiable IW claim** — When a behavioral claim can't be confirmed from schema, fixture, or reference docs, and the wiki is silent or unreliable, mark it `DOC-ACCURACY` / `MEDIUM` with "unverifiable — recommend confirmation from IW team or empirical testing." Don't escalate to HIGH on uncertainty alone.
 

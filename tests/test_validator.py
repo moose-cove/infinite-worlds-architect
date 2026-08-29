@@ -1594,6 +1594,9 @@ def test_player_scoped_initial_tracked_item_value_errors(value, shape):
     assert any(
         "initialValueBasedOnPC 'player'" in e and "deletes the entry" in e for e in result["errors"]
     ), result["errors"]
+    # The error and the doomed-entry warning are mutually exclusive branches: a
+    # player-scoped entry must never ALSO draw the backed-by-player-item warning.
+    assert not any("backed by a tracked item" in w for w in result["warnings"]), result["warnings"]
 
 
 @pytest.mark.parametrize(
@@ -1605,8 +1608,9 @@ def test_character_scoped_initial_tracked_item_value_is_accepted(value, shape):
     """Probe B's P10a/P10d controls: ``"character"`` survives at either value shape.
 
     The array cell matters most — it is the combination the canonical fixture demonstrates,
-    so flagging it would break real authoring. Item scoped ``"character"`` too — the only
-    pairing IW's own exports produce — so this must be silent in warnings as well.
+    so flagging it would break real authoring. Item scoped ``"character"`` too — the pairing
+    the canonical fixture and editor-authored worlds carry — so this must be silent in
+    warnings as well.
     """
     result = _validate(
         _world_with_initial_tracked_item_value("character", value, item_scope="character")
@@ -1651,6 +1655,28 @@ def test_entry_backed_by_player_scoped_item_warns_as_doomed():
         "backed by a tracked item" in w and "round trip silently deletes it" in w
         for w in result["warnings"]
     ), result["warnings"]
+
+
+@pytest.mark.parametrize(
+    ("item_scope", "entry_id_suffix"),
+    [("same", ""), ("character", ""), ("player", "MISSING")],
+    ids=["item-same", "item-character", "unresolvable-item-id"],
+)
+def test_doomed_entry_warning_only_fires_on_player_scoped_backing_items(
+    item_scope, entry_id_suffix
+):
+    """The warning is scoped to a resolvable, player-scoped backing item — nothing else.
+
+    Pins the silent cells: item ``"same"`` (never probed, no evidence of harm), item
+    ``"character"`` (the normal pairing), and an entry whose ``id`` resolves to no tracked
+    item at all (``item_scopes.get`` must miss quietly, not warn or crash).
+    """
+    world = _world_with_initial_tracked_item_value("character", "PLAIN", item_scope=item_scope)
+    if entry_id_suffix:
+        entry = world["possibleCharacters"][0]["initialTrackedItemValues"][0]
+        entry["id"] = entry["id"] + entry_id_suffix
+    result = _validate(world)
+    assert not any("backed by a tracked item" in w for w in result["warnings"]), result["warnings"]
 
 
 # ── textComparison: "unset" has more spellings than absent-or-empty ──────────

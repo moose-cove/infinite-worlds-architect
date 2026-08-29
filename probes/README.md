@@ -15,7 +15,7 @@ the wiki.
 All four have been run, and their `-imported.json` counterparts are committed as evidence.
 Probe D was driven end-to-end (import, export, play, World Debug) by the Playwright harness in
 [`harness/`](harness/README.md); use it for the next round rather than clicking.
-The A and B source files **now fail validation** — see
+The A, B and E source files **now fail validation** — see
 [Expected validator output](#expected-validator-output), which explains why that is the
 correct end state rather than a regression.
 
@@ -55,11 +55,14 @@ Probe A established the real noise floor, which is narrower than expected:
   `summaryRequest`, `instructionBlocks`, `loreBookEntries` and `NPCs` were dropped when
   empty — but `contentWarnings: ""`, `previewImage: ""`, `previewImageOptions: []` and
   `autoAdvanceVersion: false` all survived. Do not generalize this to "IW strips empties".
-- **Key order held — with one exception.** Top-level key order and every array's element order
+- **Key order held — with two exceptions.** Top-level key order and every array's element order
   came back as authored. But the **per-character `skills` map** was reordered in *both* probes:
   `{"Observation": 3, "Patience": 3}` → `{"Patience": 3, "Observation": 3}`. The world-level
   `skills` *array* held its order, so this is specific to the object — consistent with it being
-  deserialized into an unordered map server-side. Don't chase it as a finding.
+  deserialized into an unordered map server-side. Don't chase it as a finding. Probe E added a
+  second: a `triggerConditions` key *injected* by import (the absent-key normalization) sits
+  last in its trigger on that export and moves ahead of `canTriggerMoreThanOnce` on the next
+  round trip.
 - **IW injects a default in at least one place.** Probe B's character had no
   `portraitPromptDetails` key and came back with `portraitPromptDetails: {}`. Probe A's was
   populated and survived intact. So "lenient and lossy" is not only subtractive — diffing a
@@ -257,8 +260,8 @@ the mechanism instead of hedging.
 trigger was swapped for `[]` and the real cause turned out to be unrelated — the tracked
 items lacked `description` (see
 [`PLATFORM_BEHAVIOR_NOTES.md`](../references/mechanics/PLATFORM_BEHAVIOR_NOTES.md#other-import-findings);
-the trigger's name in the JSON still carries the wrong attribution). The absent-key cell is
-still open; the validator treats it like `[]`.
+the trigger's name in the JSON still carries the wrong attribution). The absent-key cell was
+answered by Probe E (2026-08-28), below: normalized to `[]` at import, equally dead.
 
 **Expression Sandbox (zero-credit) findings, round-2 world at turn 2** — transcript in
 `harness/probe-d-sandbox-results.txt`:
@@ -280,7 +283,7 @@ still open; the validator treats it like `[]`.
 
 Built by [`harness/build_probe_e.py`](harness/build_probe_e.py), driven end-to-end by the
 harness: import → export (`probe-e-imported.json`) → re-import of that export → export again
-(`probe-e-imported-2.json`) → new game, two `wait` turns with World Debug open
+(`probe-e-imported-2.json`) → new game, the opening turn plus two `wait` turns with World Debug open
 (`harness/probe-e-turn*-debug.txt`).
 
 **P10-followup — the ENTRY's own scope value drives the delete, and entry scope is a
@@ -289,25 +292,29 @@ projection of the item's.** The two covariance-breaking cells:
 | Cell | Item scope | Entry scope (authored) | Round trip 1 | Round trip 2 |
 |---|---|---|---|---|
 | PE1 | `"player"` | `"character"` | entry KEPT, but exported with scope rewritten to `"player"` | entry DELETED |
-| PE2 | `"character"` | `"player"` | entry DELETED | entry auto-recreated with `""` value, scope `"character"` |
+| PE2 | `"character"` | `"player"` | entry DELETED | fresh entry auto-created from the item (`""` value, scope `"character"`) |
 
 So the old reading (a) is confirmed for the delete decision — import deletes any incoming
 entry whose own `initialValueBasedOnPC` is `"player"`, whatever the item says — but the
 deeper model is that entry-level scope is not an independent field at all: IW stores/exports
-it as a copy of the item's, and a `"character"`-scoped item with no entry gets one
-auto-created (empty value) on import. Consequences: (1) the validator's entry-level error
+it as a copy of the item's, and a `"character"`-scoped item that *arrives with no entry*
+gets one auto-created on import (a deleted entry is not re-created in the same import —
+round trip 1's export has no PE2 entry). Consequences: (1) the validator's entry-level error
 stands, now unhedged; (2) NEW warning — an entry backed by a `"player"`-scoped item survives
 one import but the next export/import round trip silently deletes it (PE1's fate), so the
-state is non-round-trippable and unreachable from IW's own editor; (3) **IW's export is not
-always re-importable byte-stable** — PE1 is the first observed case of an IW export that
-IW's own import then mutates (see the invariant caveat under
-[Expected validator output](#expected-validator-output)).
+state is non-round-trippable (whether IW's own editor can even construct it is untested —
+P4 remains open); (3) **IW's export is not always re-importable byte-stable** — PE1 is the
+first observed case of an IW export that IW's own import then mutates (see the invariant
+caveat under [Expected validator output](#expected-validator-output)).
 
-**P12-followup — `recommendedAIModel` is not validated at all.** `"notarealmodel"` survived
-both round trips verbatim. Combined with Probe B's `"smilodon"` result: the field is stored
-as free text, IW neither rejects nor normalizes unknown values, and the `DESIGN_BRIEF_v2.md`
-§9 "full enum" question is CLOSED as unanswerable-by-construction — there is no enforced
-enum. The plugin correctly type-checks it as string-or-null and goes no further.
+**P12-followup — `recommendedAIModel` has no import-time validation.** `"notarealmodel"`
+survived both round trips verbatim: IW applies no enum check to unknown strings in this
+field, so the `DESIGN_BRIEF_v2.md` §9 "full enum" question is closed for import-time
+validation — there is no enforced enum to discover. Stated precisely, as P12 itself was:
+this is survival, not semantics. Untested: whether known-*retired* names are stripped from
+this field (AI_RUNTIME_MECHANICS.md confirms that only for `selectedAIProfiles`), and
+whether the runtime honors the value. The plugin correctly type-checks string-or-null and
+goes no further.
 
 **Q10 — an absent `triggerConditions` key is normalized to `[]` at import and is
 runtime-dead.** The exported trigger carries `"triggerConditions": []`; in play it sat at
@@ -481,7 +488,7 @@ empty-array case never fires, so a stripped gate leaves a dead trigger. The SoG 
 
 ## Expected validator output
 
-**The Probe A and B source files fail validation, and that is correct.** Do not "fix" them.
+**The Probe A, B and E source files fail validation, and that is correct.** Do not "fix" them.
 
 An earlier version of this file said that a validator change making these probes error "means
 the change needs rethinking". That guard was written when the probes were instruments waiting
@@ -527,8 +534,9 @@ flat — see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGE
 ## Probe C *(designed, not yet built)*
 
 Carries P14 (the P10-followup cells it originally also carried were run as Probe E,
-2026-08-28). Build it as `probes/probe-c-pawscript.json` when there is a round trip to
-spend; keep it minimal like the others.
+2026-08-28, and the P15 write-up below is retained as historical record — its cells are
+closed). Build it as `probes/probe-c-pawscript.json` when there is a round trip to spend;
+keep it minimal like the others.
 
 ### P14 — `triggerOnPawScript` malformed input
 
