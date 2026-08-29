@@ -619,10 +619,11 @@ def _check_conditionless_triggers(world: dict, errors: list[str], warnings: list
     intentional: it is a dead trigger, not an unconditional one.
 
     Warning, not error: the world still imports and plays, and the author may be mid-edit.
-    Scope, stated honestly: only the empty-array case was played (re-confirmed by Probe D,
-    2026-08-22: `[]` survived import byte-identical and sat at "not yet fired" for four
-    turns, so the shape is runtime-dead, not deleted). An ABSENT key is treated the same
-    because the platform has nothing to evaluate either way, but that cell is untested.
+    Both shapes are now confirmed: `[]` was played dead over two rounds and re-confirmed by
+    Probe D (2026-08-22: survived import byte-identical, "not yet fired" for four turns).
+    The ABSENT-key case was closed by Probe E (probe-e-scope-q10.json, 2026-08-28): import
+    normalizes a missing `triggerConditions` key to `[]`, and the normalized trigger sat at
+    "not yet fired" for three turns while an always-true control fired every turn.
     `triggerOnStartOfGame: true` with no conditions is EXEMPT, and rightly so: Probe D's
     SoG trigger with `[]` fired at turn 0 alongside its gated control — the flag is its own
     gate.
@@ -1021,39 +1022,38 @@ def _check_initial_tracked_item_value_scope(
 ) -> None:
     """A per-character tracked-item override may not be scoped to the player.
 
-    CONFIRMED 2026-08-06 by the probes/probe-b-cap.json round trip. An entry in
-    ``possibleCharacters[].initialTrackedItemValues`` whose ``initialValueBasedOnPC`` is
-    ``"player"`` is DELETED on import. The 2x2 varied the value shape against the scope:
+    CONFIRMED 2026-08-06 by the probes/probe-b-cap.json round trip, and RESOLVED at the
+    ENTRY level 2026-08-28 by probes/probe-e-scope-q10.json (two round trips). Probe B's
+    2x2 showed an entry in ``possibleCharacters[].initialTrackedItemValues`` whose
+    ``initialValueBasedOnPC`` is ``"player"`` is DELETED on import at any value shape —
+    but held entry and item scope equal in every cell, leaving open which level was fatal.
+    Probe E broke the covariance:
 
-        array  + "character" -> survived
-        string + "player"    -> DELETED
-        array  + "player"    -> DELETED
-        string + "character" -> survived
+        item "character" + entry "player"    -> entry DELETED (import keys the delete on
+                                                the INCOMING entry's own scope value)
+        item "player"    + entry "character" -> entry KEPT on this import, but exported
+                                                with its scope REWRITTEN to "player" (the
+                                                item's) — so the NEXT import deletes it
 
-    That cleanly clears the array form of ``initialPCValue`` — it is ``"player"`` that is
-    fatal, at any value shape. The pre-probe theory blamed the array; it was wrong.
+    So the old reading (a) — entry-level — is confirmed for the delete decision, with a
+    twist: the entry's stored scope is a PROJECTION of the item's on export. IW's own
+    exports only pair entries with "character"-scoped items (a character-scoped item with
+    no entry even gets one auto-created with an empty value on import). Hence two
+    severities:
 
-    KNOWN LIMIT OF THE EXPERIMENT — do not overstate this rule. In every cell of both probes,
-    the per-character ENTRY's ``initialValueBasedOnPC`` and its backing tracked ITEM's
-    ``initialValueBasedOnPC`` were held equal (deliberately, to vary one factor — but it means
-    the two levels covary perfectly and nothing separates them). So the evidence is equally
-    consistent with two readings:
+    - entry scope "player": ERROR — deleted by the very next import, whatever the item says.
+    - entry backed by a "player"-scoped ITEM: WARNING — survives one import, but the
+      export rewrites its scope to "player", so the following round trip silently deletes
+      it. The state is unreachable from IW's own editor and non-round-trippable.
 
-        (a) a player-scoped ENTRY is deleted            <- what this check assumes
-        (b) a player-scoped ITEM drops its per-character entries
-
-    Reading (b) is arguably the more natural implementation. The two decisive cells —
-    item "player" + entry "character", and item "character" + entry "player" — have never
-    been imported. Under (b) this check has a false negative (the first cell) and a false
-    positive (the second). It errors regardless because it is correct in every case actually
-    observed, and because both readings agree the world is broken; but a future Probe C should
-    run those two cells before this is treated as settled. See probes/README.md.
-
-    What IS separately established: ``"player"`` on the tracked ITEM is not by itself fatal to
-    the item — every such item round-tripped byte-identical, including the two backing the
-    deleted entries. That is why this check does not error on ``trackedItems``. It does not,
-    however, establish that the item's setting is innocent of the ENTRY's deletion.
+    ``"player"`` on the tracked ITEM itself remains fine for the item — items round-trip
+    byte-identical in every observed cell. See probes/README.md (Probe E).
     """
+    item_scopes = {
+        item.get("id"): item.get("initialValueBasedOnPC")
+        for item in world.get("trackedItems", [])
+        if isinstance(item, dict)
+    }
     for character in world.get("possibleCharacters", []):
         if not isinstance(character, dict):
             continue
@@ -1067,17 +1067,25 @@ def _check_initial_tracked_item_value_scope(
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
-            if entry.get("initialValueBasedOnPC") != "player":
-                continue
             label = entry.get("name") or entry.get("id") or "?"
-            errors.append(
-                f"Character '{cname}': initialTrackedItemValues entry '{label}' has "
-                "initialValueBasedOnPC 'player'. IW deletes the entry on import — a "
-                "per-character override cannot be player-scoped. Set both this entry and its "
-                "tracked item to 'character', or drop the entry and set the value on the "
-                "tracked item itself (only observed with the item player-scoped too, so "
-                "changing the entry alone is untested)"
-            )
+            if entry.get("initialValueBasedOnPC") == "player":
+                errors.append(
+                    f"Character '{cname}': initialTrackedItemValues entry '{label}' has "
+                    "initialValueBasedOnPC 'player'. IW deletes the entry on import, "
+                    "whatever the backing tracked item's scope is (confirmed by Probe E, "
+                    "2026-08-28). Scope the entry and its tracked item 'character', or drop "
+                    "the entry and set the value on the tracked item itself"
+                )
+            elif item_scopes.get(entry.get("id")) == "player":
+                warnings.append(
+                    f"Character '{cname}': initialTrackedItemValues entry '{label}' is "
+                    "backed by a tracked item whose initialValueBasedOnPC is 'player'. The "
+                    "entry survives this import, but IW rewrites entry scopes to the item's "
+                    "on export, so the next export/import round trip silently deletes it "
+                    "(Probe E, 2026-08-28). Per-character entries belong on "
+                    "'character'-scoped items; a player-scoped item takes its value from "
+                    "the player character and needs no entry"
+                )
 
 
 # schema v2.4 changed the `data` shape of the two trigger-gating condition types.

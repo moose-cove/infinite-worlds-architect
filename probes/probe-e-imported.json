@@ -1,0 +1,183 @@
+{
+    "favorite": false,
+    "title": "SCHEMA PROBE E - scope level, model control, absent conditions key",
+    "description": "Probe world: which level of initialValueBasedOnPC is fatal (entry vs item), whether a bogus recommendedAIModel survives, and whether a trigger with an absent triggerConditions key ever fires.",
+    "background": "A featureless white room containing twelve numbered doors. Nothing happens here unless a trigger makes it happen.",
+    "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery.",
+    "authorStyle": "Terse and clinical.",
+    "recommendedAIModel": "notarealmodel",
+    "firstInput": "I count the doors.",
+    "objective": "Advance turns so the probe triggers fire.",
+    "imageModel": "manticore",
+    "imageStyle": "photo_1",
+    "illustrationStyleNonCharacterLowPriority": "",
+    "illustrationStyleNonCharacterHighPriority": "",
+    "illustrationStyleCharacterLowPriority": "",
+    "illustrationStyleCharacterHighPriority": "",
+    "imageStyleCharacterPre": "",
+    "imageStyleCharacterPost": "",
+    "imageStyleNonCharacterPre": "",
+    "imageStyleNonCharacterPost": "",
+    "mature": false,
+    "nsfw": false,
+    "contentWarnings": "",
+    "enableAISpecificInstructionBlocks": true,
+    "previewImage": "",
+    "fullSizePreviewImage": "",
+    "previewImageOptions": [],
+    "fullSizePreviewImageOptions": [],
+    "currentPreviewImageIndex": 0,
+    "imagePromptDetails": {
+        "illustrGenre": "",
+        "illustrClothes": "",
+        "illustrSetting": "",
+        "illustrSubject": "",
+        "illustrAppearance": "",
+        "illustrIsCharacter": false,
+        "illustrExpressionPosition": ""
+    },
+    "permissionsOnceShared": {
+        "sharing": false,
+        "editing": false
+    },
+    "allowChangeCharacterName": true,
+    "allowChangeCharacterDescription": true,
+    "allowChangeCharacterSkills": true,
+    "allowChangeCharacterItemValues": true,
+    "allowChangeCharacterPortrait": true,
+    "allowChangeCharacterNewPortrait": true,
+    "conditions": [],
+    "schemaVersion": 2.4,
+    "charSelectText": "Pick the probe character.",
+    "skills": [
+        "Observation",
+        "Patience"
+    ],
+    "possibleCharacters": [
+        {
+            "name": "Probe Subject",
+            "description": "A plain figure in a grey coat who exists only so the world has a player character.",
+            "portrait": "",
+            "portraitPromptDetails": {},
+            "fullSizePortrait": "",
+            "portraitOptions": [],
+            "fullSizePortraitOptions": [],
+            "currentPortraitIndex": 0,
+            "characterId": "PrbSubj2",
+            "skills": {
+                "Patience": 3,
+                "Observation": 3
+            },
+            "initialTrackedItemValues": [
+                {
+                    "id": "PrbEScp01",
+                    "visibility": "everyone",
+                    "name": "PE1 Item-Player Entry-Character",
+                    "initialPCValue": "PROBE PE1 SINGLE VALUE",
+                    "initialValueBasedOnPC": "player"
+                }
+            ]
+        }
+    ],
+    "triggerEvents": [
+        {
+            "id": "PrbEQ10x1",
+            "name": "Q10 absent conditions key",
+            "triggerEffects": [
+                {
+                    "id": "55550000-5555-4555-8555-555500000001",
+                    "data": "PROBE Q10 ABSENT-KEY FIRED.",
+                    "type": "effectShowMessage"
+                }
+            ],
+            "canTriggerMoreThanOnce": true,
+            "triggerConditions": []
+        },
+        {
+            "id": "PrbECtl01",
+            "name": "PE Control always-true gate",
+            "triggerEffects": [
+                {
+                    "id": "55550000-5555-4555-8555-555500000002",
+                    "data": "PROBE PE CONTROL FIRED.",
+                    "type": "effectShowMessage"
+                }
+            ],
+            "triggerConditions": [
+                {
+                    "id": "55550000-5555-4555-8555-555500000101",
+                    "data": "$pe_anchor_n > 0",
+                    "type": "triggerOnPawScript",
+                    "category": "condition"
+                }
+            ],
+            "canTriggerMoreThanOnce": true
+        }
+    ],
+    "victoryCondition": {
+        "condition": "The player types the word VICTORY.",
+        "text": "Probe complete.",
+        "alreadyFired": false
+    },
+    "defeatCondition": {
+        "condition": "The player types the word DEFEAT.",
+        "text": "Probe aborted.",
+        "alreadyFired": false
+    },
+    "trackedItems": [
+        {
+            "id": "PrbEScp01",
+            "name": "PE1 Item-Player Entry-Character",
+            "positionInList": 0,
+            "dataType": "text",
+            "visibility": "everyone",
+            "description": "PROBE PE1: backing ITEM is scoped 'player', its per-character ENTRY is scoped 'character'. If this entry is deleted on import, the ITEM level is the fatal one (reading b).",
+            "updateInstructions": "",
+            "formatExample": "",
+            "enforceFormat": false,
+            "formatSchema": "",
+            "initialValue": "",
+            "initialValueBasedOnPC": "player",
+            "autoUpdate": false,
+            "variableName": "pe1_item_player",
+            "driftAcknowledgedForName": null
+        },
+        {
+            "id": "PrbEScp02",
+            "name": "PE2 Item-Character Entry-Player",
+            "positionInList": 1,
+            "dataType": "text",
+            "visibility": "everyone",
+            "description": "PROBE PE2: backing ITEM is scoped 'character', its per-character ENTRY is scoped 'player'. If this entry is deleted on import, the ENTRY level is the fatal one (reading a - what the validator assumes).",
+            "updateInstructions": "",
+            "formatExample": "",
+            "enforceFormat": false,
+            "formatSchema": "",
+            "initialValue": "",
+            "initialValueBasedOnPC": "character",
+            "autoUpdate": false,
+            "variableName": "pe2_item_character",
+            "driftAcknowledgedForName": null
+        },
+        {
+            "id": "PrbENum01",
+            "name": "PE Anchor",
+            "positionInList": 2,
+            "dataType": "number",
+            "visibility": "everyone",
+            "description": "PROBE anchor: holds 3 so the control trigger's gate '$pe_anchor_n > 0' is always true. If the control never fires, nothing else is interpretable.",
+            "updateInstructions": "",
+            "formatExample": "",
+            "enforceFormat": false,
+            "formatSchema": "",
+            "initialValue": "3",
+            "initialValueBasedOnPC": "same",
+            "autoUpdate": false,
+            "variableName": "pe_anchor_n",
+            "driftAcknowledgedForName": null
+        }
+    ],
+    "autoAdvanceVersion": false,
+    "version": "1.00",
+    "designNotes": "SCHEMA PROBE E. Two cells breaking the entry/item initialValueBasedOnPC covariance (P10-followup), a bogus recommendedAIModel control, and the Q10 absent-triggerConditions-key trigger with an always-true control gate. See probes/README.md in the infinite-worlds-architect repo for the read protocol."
+}

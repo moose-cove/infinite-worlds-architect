@@ -403,7 +403,7 @@ wheels = [
 
 [[package]]
 name = "iw-architect"
-version = "0.21.0"
+version = "0.22.0"
 source = { editable = "." }
 dependencies = [
     { name = "jsonschema" },

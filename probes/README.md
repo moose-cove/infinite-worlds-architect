@@ -10,8 +10,9 @@ the wiki.
 | `probes/probe-a-core.json` | Gate-condition shapes, `firedThisTurn`, the `conditions` registry, `hidden_boring`, `not_equal`, nested YAML, image-style precedence, menu-backed `initialPCValue` | **Round trip run** — see [Recorded results](#recorded-results) |
 | `probes/probe-b-cap.json` | The ten-event cap, `recommendedAIModel`, and the factor-isolating follow-ups Probe A's results demanded | **Round trip run** — see [Recorded results](#recorded-results) |
 | `probes/probe-d-pawscript-runtime.json` ([build spec](probe-d-pawscript-runtime.md)) | SoG-without-conditions, `or`/`and` in conditions, chance-formula dialect (`if(…)`, bare `$handle`, `turn_number` forms), same-turn state visibility, pass order, errored one-shots vs `triggerPrereqs`, multi-level / runtime-key record creation | **Round trip + played** — see [Answered by Probe D](#answered-by-probe-d-2026-08-22-played) |
+| `probes/probe-e-scope-q10.json` | P10-followup (entry vs item scope level), `recommendedAIModel` bogus-value control, Q10 (absent `triggerConditions` key) | **Two round trips + played** — see [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played) |
 
-All three have been run, and their `-imported.json` counterparts are committed as evidence.
+All four have been run, and their `-imported.json` counterparts are committed as evidence.
 Probe D was driven end-to-end (import, export, play, World Debug) by the Playwright harness in
 [`harness/`](harness/README.md); use it for the next round rather than clicking.
 The A and B source files **now fail validation** — see
@@ -174,23 +175,15 @@ byte-identical: the first known-authorable value for a field the fixture only ev
 string, not that it validates the field or honours it at runtime. No bogus-model control was
 run, so we cannot even show IW rejects a nonsense value. **The `DESIGN_BRIEF_v2.md` §9 open
 question was the full enum, and it remains open** — this narrows it by one value rather than
-closing it.
+closing it. *(Superseded: the bogus-value control ran in Probe E, 2026-08-28 — IW stores any
+string verbatim; there is no enforced enum. See
+[Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played).)*
 
 ### Still open — needs another round trip (Probe C)
 
-**P10-followup — which level is fatal, the entry or its backing item?** The only unresolved
-question that a round trip *can* answer, and the one carrying a live validator rule. Probe C
-needs exactly two cells, both of which break the entry/item covariance every existing cell has:
-
-| Tracked item `initialValueBasedOnPC` | Entry `initialValueBasedOnPC` | Distinguishes |
-|---|---|---|
-| `"player"` | `"character"` | survives ⇒ reading (a); entry deleted ⇒ reading (b) |
-| `"character"` | `"player"` | entry deleted ⇒ reading (a); survives ⇒ reading (b) |
-
-If reading (b) wins, `_check_initial_tracked_item_value_scope` must key off the tracked item
-rather than the entry, and `test_check_reads_the_entry_not_the_item_in_an_untested_platform_cell`
-is the assertion that has to flip. Worth pairing with a `recommendedAIModel` bogus-value
-control (does IW reject an unknown model string, or store anything?) since both are cheap.
+**P10-followup — ANSWERED by Probe E (2026-08-28), along with the `recommendedAIModel`
+bogus-value control it was paired with.** See
+[Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played).
 
 **P14 — `triggerOnPawScript` malformed-input handling.** Fixture 1.09 (2026-08) introduced
 this condition type with one well-formed sample; the plugin registers it and warns on
@@ -283,13 +276,52 @@ still open; the validator treats it like `[]`.
   do not assume the argument form scales the range.
 - An empty expression errors ("Empty expression - nothing to evaluate").
 
+### Answered by Probe E (2026-08-28, two round trips + played)
+
+Built by [`harness/build_probe_e.py`](harness/build_probe_e.py), driven end-to-end by the
+harness: import → export (`probe-e-imported.json`) → re-import of that export → export again
+(`probe-e-imported-2.json`) → new game, two `wait` turns with World Debug open
+(`harness/probe-e-turn*-debug.txt`).
+
+**P10-followup — the ENTRY's own scope value drives the delete, and entry scope is a
+projection of the item's.** The two covariance-breaking cells:
+
+| Cell | Item scope | Entry scope (authored) | Round trip 1 | Round trip 2 |
+|---|---|---|---|---|
+| PE1 | `"player"` | `"character"` | entry KEPT, but exported with scope rewritten to `"player"` | entry DELETED |
+| PE2 | `"character"` | `"player"` | entry DELETED | entry auto-recreated with `""` value, scope `"character"` |
+
+So the old reading (a) is confirmed for the delete decision — import deletes any incoming
+entry whose own `initialValueBasedOnPC` is `"player"`, whatever the item says — but the
+deeper model is that entry-level scope is not an independent field at all: IW stores/exports
+it as a copy of the item's, and a `"character"`-scoped item with no entry gets one
+auto-created (empty value) on import. Consequences: (1) the validator's entry-level error
+stands, now unhedged; (2) NEW warning — an entry backed by a `"player"`-scoped item survives
+one import but the next export/import round trip silently deletes it (PE1's fate), so the
+state is non-round-trippable and unreachable from IW's own editor; (3) **IW's export is not
+always re-importable byte-stable** — PE1 is the first observed case of an IW export that
+IW's own import then mutates (see the invariant caveat under
+[Expected validator output](#expected-validator-output)).
+
+**P12-followup — `recommendedAIModel` is not validated at all.** `"notarealmodel"` survived
+both round trips verbatim. Combined with Probe B's `"smilodon"` result: the field is stored
+as free text, IW neither rejects nor normalizes unknown values, and the `DESIGN_BRIEF_v2.md`
+§9 "full enum" question is CLOSED as unanswerable-by-construction — there is no enforced
+enum. The plugin correctly type-checks it as string-or-null and goes no further.
+
+**Q10 — an absent `triggerConditions` key is normalized to `[]` at import and is
+runtime-dead.** The exported trigger carries `"triggerConditions": []`; in play it sat at
+"not yet fired" for three turns while the always-true `triggerOnPawScript` control fired
+every turn (fired 3 times). The absent-key case now has the same confirmed status as `[]`:
+dead, not unconditional. `_check_conditionless_triggers`' warning covers both shapes with
+no remaining hedge.
+
 ### Still open — all runtime-only
 
 P2 semantics (does `firedThisTurn: true` narrow the gate?), P4's editor-UI read, P7
-enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, Q10 (an
-*absent* `triggerConditions` key), and the cap half of P14 (does a `triggerOnPawScript` gate
-count toward the ten-event cap?). None of these can be read from a round trip; each needs a
-played session or a generated image.
+enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, and the
+cap half of P14 (does a `triggerOnPawScript` gate count toward the ten-event cap?). None of
+these can be read from a round trip; each needs a played session or a generated image.
 
 ---
 
@@ -471,12 +503,20 @@ ruled out and runtime enforcement is untested; and the P13 trigger's empty `trig
 `probes/probe-d-pawscript-runtime.json` — 0 errors, 1 warning (the `[]` trigger), and
 `probe-d-imported.json` reports exactly the same because nothing was deleted.
 
-The useful invariant is the inverse one, and it holds: **every `-imported.json` file validates
-with zero errors**, because IW already deleted everything the validator now objects to. The
-validator's errors and the platform's deletions line up exactly. If that ever stops being
-true, something has drifted. (They do carry warnings — `probe-a-imported.json` 7,
-`probe-b-imported.json` 4 — because every condition IW deleted left behind a conditionless,
-dead trigger, which the v0.21.0 warning now names.)
+`probes/probe-e-scope-q10.json` — 1 error, 2 warnings. Error: PE2's player-scoped entry
+(deleted on import, as predicted). Warnings: the Q10 conditionless trigger, and PE1's entry
+backed by a player-scoped item (the v0.22.0 doomed-entry warning).
+
+The useful invariant is the inverse one, and it *almost* holds: **every `-imported.json` file
+validates with zero errors**, because IW already deleted everything the validator now objects
+to — with one instructive exception. `probe-e-imported.json` reports **1 error**: IW's own
+export of the PE1 cell carries the entry rewritten to `"player"` scope, a state IW's own next
+import deletes (`probe-e-imported-2.json` — 0 errors, 1 warning — proves it). So the
+exception confirms the validator rather than contradicting it: the error names data that
+really is one round trip away from vanishing. Everywhere else the validator's errors and the
+platform's deletions line up exactly. (The imported files do carry warnings —
+`probe-a-imported.json` 7, `probe-b-imported.json` 4 — because every condition IW deleted
+left behind a conditionless, dead trigger, which the v0.21.0 warning now names.)
 
 The three canonical fixtures must continue to validate with **zero errors** (`CLAUDE.md`
 source-of-truth rule 1). That is why the legacy-gate rule is version-conditional rather than
@@ -486,8 +526,9 @@ flat — see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGE
 
 ## Probe C *(designed, not yet built)*
 
-Carries the P10-followup cells above plus P14. Build it as `probes/probe-c-pawscript.json`
-when there is a round trip to spend; keep it minimal like the others.
+Carries P14 (the P10-followup cells it originally also carried were run as Probe E,
+2026-08-28). Build it as `probes/probe-c-pawscript.json` when there is a round trip to
+spend; keep it minimal like the others.
 
 ### P14 — `triggerOnPawScript` malformed input
 

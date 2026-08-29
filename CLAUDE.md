@@ -82,6 +82,9 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── probe-d-pawscript-runtime.md    # Probe D build spec (trigger firing + PawScript runtime cells)
 ├── probe-d-pawscript-runtime.json  # Probe D world as built
 ├── probe-d-imported.json           # Probe D after import/export — evidence, do not edit
+├── probe-e-scope-q10.json          # Entry-vs-item scope, recommendedAIModel control, absent conditions key
+├── probe-e-imported.json           # Probe E after round trip 1 — evidence, do not edit
+├── probe-e-imported-2.json         # Probe E after round trip 2 (re-import of round 1) — evidence, do not edit
 └── harness/                # Playwright/CDP scripts that import, export and play probes against live IW
 
 .claude-plugin/
@@ -230,9 +233,11 @@ Markdown reference files in `references/` and its subdirectories (`fields/`, `me
 ## Open questions (from DESIGN_BRIEF_v2.md §9)
 
 - `illustrationStyle*HighPriority` / `LowPriority` coexistence rules with older `imageStyle*` fields
-- `recommendedAIModel` full enum of valid values (fixture only shows `null`)
 
 These are preserved verbatim and not validated beyond type-checking until a fixture clarifies them.
+(The other original §9 question — the `recommendedAIModel` enum — was closed by Probe E,
+2026-08-28: the platform does not validate the field at all, so there is no enforced enum;
+it stays type-checked as string-or-null. See `probes/README.md`.)
 
 ## Python version
 

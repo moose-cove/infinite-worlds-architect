@@ -1,0 +1,19 @@
+World debug tools
+Triggers (1)
+Triggers fired this turn
+PE Control always-true gate
+All triggers
+Q10 absent conditions key - not yet fired
+PE Control always-true gate - fired turn 1
+PawScript (1)
+
+What your PawScript did this turn. None of it stopped your game - this is here so you can see what happened and fix anything that needs a look.
+
+Trigger:
+PE Control always-true gate
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+Replay this turn
+OK
