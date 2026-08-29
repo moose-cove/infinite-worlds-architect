@@ -43,7 +43,7 @@ No v2.3 fixture reached this plugin, so the deltas above are measured 2.2 → 2.
 | Key | Type | Category | Notes |
 |---|---|---|---|
 | `schemaVersion` | number | Platform | `2.4` in current fixture. Read on input, write on output. Warn on unknown versions. |
-| `conditions` | string[] | Editable | **New in v2.4.** The world's named-event registry. Each entry is a natural-language event description (fixture: `["The marmut eats the marmalade"]`), matched to a `triggerOnEvent` condition by **exact text**. Keep the two in sync — the plugin warns on drift in either direction, never errors. What the registry *does* is an open question; see below. Absent entirely in pre-v2.4 worlds. |
+| `conditions` | string[] | Editable | **New in v2.4.** The world's named-event registry. Each entry is a natural-language event description (fixture: `["The marmut eats the marmalade"]`), matched to a `triggerOnEvent` condition by **exact text**. Keep the two in sync — the plugin warns on drift in either direction, never errors. The registry is **author-maintained**, not platform-derived: it round-tripped byte-identical, still missing a used-but-undeclared event and still holding an orphan (Probe A, 2026-08-06). What it *drives* — editor-UI selectability versus runtime matching — is still open (`probes/README.md` P3/P4). Absent entirely in pre-v2.4 worlds. |
 | `title` | string | Editable | World name |
 | `description` | string | Editable | User-facing blurb shown in the world browser |
 | `background` | string | Editable | Initial story situation sent to the AI |
@@ -239,16 +239,7 @@ For `category: "condition"`, the condition has a `type`:
 | `triggerPrereqs` | `{prereqs: string[], firedThisTurn: boolean}` | **Shape changed in v2.4** (was a bare `string[]`). `prereqs` is the array of trigger IDs that must have fired first. `firedThisTurn` selects the window — see below. |
 | `triggerOnPawScript` | `string` (PawScript expression) | **New in fixture 1.09 (2026-08).** A deterministic, scripted gate: `data` is a bare PawScript boolean expression that the platform evaluates against live tracked-item values each turn, e.g. `"$favorite_flavor = \"Lemon\""` (the fixture's one sample, on "Test Trigger 3", where `favorite_flavor` is a text tracked item's `variableName`). Use the `$variableName` form, not `<<…>>` interpolation, and combine sub-tests with `and` / `or` inside the one expression — see [`PAWSCRIPT.md` §3](./mechanics/PAWSCRIPT.md#3-expressions-). Prefer it over stacking `triggerOnTrackedItem` conditions under a `logic` node whenever the test is compound, arithmetic, or reaches into a YAML item's sub-fields. Not AI-evaluated, so it is presumed **not** to count toward the ten-event cap (unverified). **Malformed input is silently fatal** (Probe C, 2026-08-29): a missing `data` key has its condition deleted at import; a blank string errors every turn; an undeclared `$name`, a `<<…>>` interpolation and a bare `$handle` are all kept verbatim and then fail at runtime. The plugin errors on missing/blank `data` and warns on the other three — see [`PAWSCRIPT.md` §3](./mechanics/PAWSCRIPT.md#3-expressions-). |
 
-> **`firedThisTurn` picks the window — confirmed in play (Probe C, 2026-08-29).** `false` (the fixture's only value) means "at any point in the past"; `true` narrows the match to **this turn**, on both condition types. Against a one-shot anchor that fired on turn 1:
->
-> | `data` | Turn 1 | Turn 2+ |
-> |---|---|---|
-> | `{prereqs: [anchor], firedThisTurn: true}` | fires | silent |
-> | `{prereqs: [anchor], firedThisTurn: false}` | fires | fires |
-> | `{blockers: [anchor], firedThisTurn: true}` | blocked | fires |
-> | `{blockers: [anchor], firedThisTurn: false}` | blocked | blocked |
->
-> So `true` is a **same-turn interlock** (fire only alongside the other trigger; or block only for the turn it fired) and `false` is a **permanent gate**. **Default to `false`** — it is what every fixture carries and what the wiki's "any previous turn" / "has ever fired" wording describes. Reach for `true` deliberately, when you mean "in the same pass as". Note the pass-order dependency: within a turn, triggers evaluate in list order (Probe D Q6), so a `firedThisTurn: true` consumer must sit **after** its anchor in `triggerEvents` or it will evaluate before the anchor has fired.
+> **`firedThisTurn` picks the window — confirmed in play (Probe C, 2026-08-29).** `false` (the fixture's only value, and the default to emit) means "the listed trigger fired at any point in the past"; `true` narrows the match to the current turn, making the pair a **same-turn interlock** on both condition types. The cell-by-cell 2×2, and the ordering caveat (pass order is list order, so place a `firedThisTurn: true` consumer *after* its anchor), are in [`TRIGGER_EVENTS.md`](./fields/TRIGGER_EVENTS.md).
 
 For `category: "logic"`:
 

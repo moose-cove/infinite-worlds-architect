@@ -119,31 +119,35 @@ work; **`or` short-circuits left-to-right**, so a branch that may not exist goes
 right (`$probe.n > 2 or $subjects.ghost.suspicion > 0` fires; the reverse errors) or
 behind `.exists()`. Equality is a single `=` — `==` is a syntax error.
 
-**Every malformed shape fails silently, in one of two ways** (Probe C, 2026-08-29,
-round trip + play; Probe D + Expression Sandbox, 2026-08-22). Nothing is rejected at
-import and nothing errors in-game — the trigger simply never fires:
+**Every malformed shape fails without stopping the game, and none is rejected at import
+— but the runtime failures are all named in World Debug** (Probe C, 2026-08-29, round
+trip + play; Probe D + Expression Sandbox, 2026-08-22). Turn the PawScript panel on when
+a gate isn't firing; it quotes the expression and the reason:
 
 | `data` | Import | Runtime |
 |---|---|---|
-| *(key absent)* | **condition deleted** → conditionless trigger | dead |
-| `""` | dropped from the export, but kept server-side | `Empty expression - nothing to evaluate` |
+| *(key absent)* | gone from the export | no World Debug entry at all — the gate does nothing |
+| `""` | gone from the export, but kept server-side | `Empty expression - nothing to evaluate` |
 | `"$no_such_item = 1"` | kept verbatim | `No tracked item or variable called 'no_such_item'` |
 | `"$flavor"` (bare handle) | kept verbatim | "worked out to Lemon, not true or false" |
 | `"<<flavor>> = \"Lemon\""` | kept verbatim | evaluated as `Lemon = "Lemon"` → unknown-name error |
-| `"$probe.ghost > 0"` | kept verbatim | `Field 'ghost' not found` |
+| `"$subjects.ghost.suspicion > 0"` | kept verbatim | `Field 'ghost' not found` |
 
-Two of these are worth dwelling on. **A blank `data` is not the same as an absent
-one**: the absent key is deleted everywhere, while the blank string disappears from
-the exported JSON yet keeps erroring every turn — so an export is not a reliable
-inventory of what the platform is still evaluating. And **`<<…>>` interpolation in a
-condition is substituted *textually* before the expression is parsed**, so
-`<<flavor>>` holding `Lemon` produces the expression `Lemon = "Lemon"`, which reads
-`Lemon` as an identifier and errors. It is not merely the wrong style: it silently
-breaks the gate for any non-numeric item. Use `$flavor`.
+Two of these are worth dwelling on. **A blank `data` is not the same as an absent one**:
+the blank string disappears from the exported JSON yet keeps erroring every turn, so an
+export is not a reliable inventory of what the platform is still evaluating. (The absent
+key is *also* missing from the export, and produces no World Debug entry either — which
+means the round trip cannot say whether IW deleted it at import or kept it and never
+logged it. The authoring consequence is identical, so the plugin errors on both.) And
+**`<<…>>` interpolation used as a bare operand is substituted *textually* before the
+expression is parsed**, so `<<flavor>>` holding `Lemon` produces `Lemon = "Lemon"`, which
+reads `Lemon` as an identifier and errors. It is not merely the wrong style: it breaks
+the gate for any non-numeric item. Use `$flavor`. Inside a quoted literal
+(`$flavor = "<<other>>"`) the substitution lands in the string and is fine.
 
-`validate_world` **errors** on missing or blank `data` and **warns** on the other
-three shapes plus any `$name` that is not a tracked item's `variableName` or a native.
-See [`probes/README.md`](../../probes/README.md). Authoring guidance:
+`validate_world` **errors** on missing or blank `data` and **warns** on the undeclared-
+`$name`, bare-handle and `<<…>>` shapes (a missing YAML path is not statically
+detectable). See [`probes/README.md`](../../probes/README.md). Authoring guidance:
 [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
 **Play-confirmed 2026-08-22.** `"$probe.n > 2"` fired on the turn it became true
@@ -179,7 +183,10 @@ warns on a non-string/blank formula and on a `$name` that is not a tracked item'
 errors every turn (`No tracked item or variable called 'x'`), so the trigger is dead
 rather than merely unlucky (Probe C, 2026-08-29). Unlike `triggerOnPawScript`, a
 **bare `$handle` is the correct form here** — the formula wants a number, not a
-boolean.
+boolean. It also warns on `<<…>>` interpolation outside a string literal, on the
+assumption that the pre-parse substitution documented above applies to this field too;
+that was only probed on `triggerOnPawScript`, so treat the warning as a caution rather
+than a confirmed failure. Use the `$` form either way.
 
 At runtime (play-confirmed 2026-08-22, rounds 1–2 and Probe D) the field is a
 **numeric** expression and every numeric form tried fires when the value beats the

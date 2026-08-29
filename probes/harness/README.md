@@ -73,6 +73,8 @@ the anchor plus both prereq cells firing and both blocker cells silent; turn 3's
 list separates them (`P2a … fired turn 1` alone, `P2b … fired 3 times`, `P2c … first fired
 turn 2`, `P2d … not yet fired`). The same modals carry the per-cell PawScript errors for P14b,
 P14d, P14e, P14f and the P15 rider — including `Lemon = "Lemon"`, which is what `<<…>>`
-interpolation compiles to. `probe-c-turn3-items.txt` shows the auto-created per-character entry
-holding the item's seeded value. The round-trip evidence is `../probe-c-imported.json`. Results
-are read out in [`../README.md`](../README.md#answered-by-probe-c-2026-08-29-round-trip--played).
+interpolation compiles to. Note P14c (absent `data`) appears in neither panel, which is the
+only signal distinguishing it from P14b. `probe-c-turn3-items.txt` confirms the seeded value is
+live in play; the auto-created entry itself is visible in the export,
+`../probe-c-imported.json`. Results are read out in
+[`../README.md`](../README.md#answered-by-probe-c-2026-08-29-round-trip--played).

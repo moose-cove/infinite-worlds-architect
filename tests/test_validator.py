@@ -2426,16 +2426,35 @@ def test_pawscript_condition_nested_in_logic_is_checked():
     ]
 
 
-@pytest.mark.parametrize("data", [_MISSING, "", "   "])
-def test_pawscript_condition_blank_data_errors(data):
-    # Probe C (2026-08-29) imported both shapes: a missing `data` key had its condition
-    # deleted outright, and a blank string errored at runtime every turn. Either way the
-    # trigger is silently dead, so these are errors rather than warnings.
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        # The two shapes fail differently and the messages must stay distinguishable —
+        # collapsing them back into one string is the regression this pins.
+        (_MISSING, "does no gating"),
+        ("", "never holds"),
+        ("   ", "never holds"),
+    ],
+)
+def test_pawscript_condition_blank_data_errors(data, expected):
+    # Probe C (2026-08-29) imported both shapes. A missing `data` key left no condition in
+    # the export and no World Debug entry; a blank string errored at runtime every turn.
+    # Either way the gate does no gating, so these are errors rather than warnings.
     world = _pawscript_condition_world(data, [_yaml_item(variable_name="favorite_flavor")])
     result = _validate(world)
     assert not result["valid"]
     hits = [e for e in result["errors"] if "triggerOnPawScript data is" in e]
-    assert len(hits) == 1 and "never fires" in hits[0], result["errors"]
+    assert len(hits) == 1 and expected in hits[0], result["errors"]
+
+
+def test_pawscript_blank_data_errors_inside_a_logic_node():
+    # The error path must recurse into `category: "logic"` trees like the warnings do.
+    world = _pawscript_condition_world(
+        "", [_yaml_item(variable_name="favorite_flavor")], nested=True
+    )
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("triggerOnPawScript data is" in e for e in result["errors"]), result["errors"]
 
 
 @pytest.mark.parametrize("data", [None, 5, {"expr": "$x = 1"}])
@@ -2455,7 +2474,8 @@ def test_pawscript_condition_non_string_data_warns(data):
 def test_pawscript_interpolation_warns():
     # Probe C: IW substitutes the item's VALUE into the text before parsing, so
     # `<<probe_flavor>> = "Lemon"` was evaluated as `Lemon = "Lemon"` and errored. Warn
-    # rather than error — a numeric value would substitute into a valid comparison.
+    # rather than error — a numeric value would probably substitute into a valid
+    # comparison, though only a text item was probed.
     world = _pawscript_condition_world(
         '<<favorite_flavor>> = "Lemon"', [_yaml_item(variable_name="favorite_flavor")]
     )
@@ -2465,14 +2485,65 @@ def test_pawscript_interpolation_warns():
     assert len(hits) == 1 and "$favorite_flavor" in hits[0], result["warnings"]
 
 
+@pytest.mark.parametrize(
+    "expr",
+    [
+        # Substitution is textual and PRE-parse, so a `<<…>>` inside a quoted literal
+        # lands in the string and leaves a well-formed comparison. Warning here would be a
+        # false positive, and "use $favorite_flavor instead" would be actively wrong — it
+        # would compare against the literal characters "$favorite_flavor".
+        '$favorite_flavor = "<<favorite_flavor>>"',
+        "$favorite_flavor = '<<favorite_flavor>>'",
+    ],
+)
+def test_pawscript_interpolation_inside_a_string_literal_is_silent(expr):
+    world = _pawscript_condition_world(expr, [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
+    assert not any("interpolation" in w for w in result["warnings"]), result["warnings"]
+
+
+@pytest.mark.parametrize(
+    "expr", ["<<favorite_flavor.name>> = 'x'", "<<favorite_flavor.count()>> > 2"]
+)
+def test_pawscript_interpolation_matches_dotted_and_call_forms(expr):
+    # `<<…>>` legally wraps dot paths and calls (PAWSCRIPT.md §6), and those fail the same
+    # textual-substitution way — the check must not be limited to bare identifiers.
+    world = _pawscript_condition_world(expr, [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
+    assert any("interpolation" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_pawscript_repeated_interpolation_warns_once_per_distinct_name():
+    world = _pawscript_condition_world(
+        "<<favorite_flavor>> = <<favorite_flavor>> and <<other>> > 1",
+        [_yaml_item(variable_name="favorite_flavor")],
+    )
+    result = _validate(world)
+    hits = [w for w in result["warnings"] if "interpolation" in w]
+    assert len(hits) == 2, result["warnings"]
+
+
 @pytest.mark.parametrize("expr", ["$favorite_flavor", "  $favorite_flavor  ", "$favorite_flavor.n"])
 def test_pawscript_bare_handle_warns(expr):
     # Probe C: `$probe_flavor` "worked out to Lemon, not true or false", so a condition
-    # that is only a value reference can never fire.
+    # that is only a value reference does not fire. The message is hedged for the dot-path
+    # form, which reaches past the probed evidence (a YAML leaf could itself be a boolean).
     world = _pawscript_condition_world(expr, [_yaml_item(variable_name="favorite_flavor")])
     result = _validate(world)
     assert result["valid"]
-    assert any("bare value reference" in w for w in result["warnings"]), result["warnings"]
+    hits = [w for w in result["warnings"] if "bare value reference" in w]
+    assert len(hits) == 1 and "unless that value is itself true/false" in hits[0], result[
+        "warnings"
+    ]
+
+
+def test_pawscript_bare_handle_defers_to_the_undeclared_name_warning():
+    # `$typo` alone would otherwise draw two warnings for one token. The undeclared-name
+    # message is strictly more actionable, so the bare-handle one stands down.
+    world = _pawscript_condition_world("$typo", [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
+    assert not any("bare value reference" in w for w in result["warnings"]), result["warnings"]
+    assert any("references $typo" in w for w in result["warnings"]), result["warnings"]
 
 
 @pytest.mark.parametrize(

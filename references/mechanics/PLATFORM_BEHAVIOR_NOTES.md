@@ -92,14 +92,14 @@ probe round trips (`probes/probe-a-core.json`, `probes/probe-b-cap.json`): IW do
 a world it cannot fully understand. It **imports the world successfully and silently deletes
 the parts it did not accept**, leaving everything around them intact.
 
-Four distinct construct classes, across seven probe cells, were destroyed this way — with no
-error message in-game, in the editor, or in the export:
+Four distinct construct classes have been destroyed this way — with no error message
+in-game, in the editor, or in the export:
 
 | Construct | What survived | What was deleted |
 |---|---|---|
 | Pre-v2.4 bare-array `triggerPrereqs`/`triggerBlockers` | trigger id, name, effects | the gate condition — trigger left with no conditions — and a trigger with no conditions never fires (confirmed in play 2026-08-22) |
 | `triggerOnTrackedItem` with absent or empty `textComparison` | trigger id, name, effects | the entire condition |
-| `triggerOnPawScript` with **no `data` key** | trigger id, name, effects | the entire condition (Probe C, 2026-08-29) |
+| `triggerOnPawScript` with **no `data` key** | trigger id, name, effects | the entire condition — gone from the export and absent from World Debug, so it does no gating (Probe C, 2026-08-29; deletion-at-import vs kept-and-never-logged is not distinguishable from one round trip) |
 | `initialTrackedItemValues` entry with `initialValueBasedOnPC: "player"` | the character, the tracked item | the per-character entry (the entry's own scope drives the delete, whatever the item says — Probe E) |
 | *(control)* each of those shapes done correctly | the construct under test, byte-identical | nothing |
 
@@ -115,15 +115,26 @@ but it keeps any `data` that is a plausible string and lets it fail at runtime i
 undeclared `$name`, a non-boolean expression and a legacy `<<…>>` interpolation all survived
 import verbatim and then errored every turn. So the rule to carry is: **a structurally
 unusable payload is deleted at import; a syntactically present but unevaluable one is kept
-and dies quietly in play.** Both end in a trigger that never fires, and neither is reported.
-Treat any condition `data` you are unsure of as load-bearing. (The `initialTrackedItemValues`
-deletion is a separate mechanism — not a condition.)
+and fails in play.** Both end in a trigger that never fires, and neither is reported at
+import or in the editor — but the second class **is** reported in-game: World Debug's
+PawScript panel names each failure and quotes the expression (`No tracked item or variable
+called 'x'`, `Empty expression - nothing to evaluate`). That panel is the fastest way to
+tell a deleted condition from a surviving-but-broken one, since a deleted condition simply
+never appears there. Treat any condition `data` you are unsure of as load-bearing. (The
+`initialTrackedItemValues` deletion is a separate mechanism — not a condition.)
 
 **One shape sits in between, and it matters for how you read an export.** A
 `triggerOnPawScript` with `data: ""` is *absent from the exported JSON* yet still evaluated
 every turn, where World Debug reports `Empty expression - nothing to evaluate` (Probe C). So
 an export is not a complete inventory of what the platform is still running: a re-export diff
-can under-report as well as over-report. Re-importing that export makes the loss real.
+can under-report as well as over-report. Re-importing that export would presumably make the
+loss real — by Probe E's Q10 result, an absent key normalizes to `[]`, which is runtime-dead
+— but Probe C ran only one round trip, so that step is inference, not observation.
+
+This is the same *direction* of loss as the empty-field stripping below (§Other Import
+Findings): IW's exporter drops selected empty values, and a `data`-empty condition behaves
+like one more of them. What makes it worth its own note is that the dropped thing is still
+running.
 
 Two consequences worth internalising:
 

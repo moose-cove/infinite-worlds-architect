@@ -819,19 +819,38 @@ _EXPRESSION_CONDITION_TYPES: dict[str, tuple[str, str]] = {
     ),
 }
 
-# `<<name>>` interpolation inside an expression condition. IW substitutes the tracked
-# item's *value* textually before PawScript parses the result (Probe C, 2026-08-29:
-# `<<probe_flavor>> = "Lemon"` was evaluated as `Lemon = "Lemon"` and errored with
-# "No tracked item or variable called 'Lemon'"). Warn rather than error: substituting a
-# number would produce a valid comparison, so the form is not fatal in every case.
-_INTERPOLATION_RE = re.compile(r"<<\s*([A-Za-z_][A-Za-z0-9_]*)\s*>>")
+# `<<…>>` interpolation used as a bare operand in an expression condition. IW substitutes
+# the tracked item's *value* textually before PawScript parses the result (Probe C,
+# 2026-08-29: `<<probe_flavor>> = "Lemon"` was evaluated as `Lemon = "Lemon"` and errored
+# with "No tracked item or variable called 'Lemon'"). The inner text is matched loosely —
+# `<<flavor.name>>` and `<<pups.count()>>` are legal interpolation forms (PAWSCRIPT.md §6)
+# and fail the same way when the value is non-numeric.
+#
+# Warn rather than error: the failure depends on the value, not the syntax — substituting
+# a number would probably yield a valid comparison (`<<hp>> > 5` → `3 > 5`), though only a
+# text item was probed, so that counterfactual is untested.
+_INTERPOLATION_RE = re.compile(r"<<\s*([^<>]+?)\s*>>")
+
+# Quoted spans, stripped before the interpolation scan. `$flavor = "<<lemon>>"` is a
+# LEGITIMATE form: the substitution lands inside the string literal and produces a valid
+# comparison, so warning on it would be a false positive — and "use $lemon instead" would
+# be actively wrong, rewriting it into a comparison against the literal text "$lemon".
+_QUOTED_SPAN_RE = re.compile(r'"[^"]*"|\'[^\']*\'')
+
+# A plain `<<name>>` whose inner text is a bare identifier can be rewritten as `$name`.
+# Anything else (a dot path, a call) gets the diagnosis without the rewrite suggestion.
+_PLAIN_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 # An expression that is *only* a $handle (with an optional dot path) and nothing else.
-# It yields a value, never a boolean, so a condition of this shape can never fire
-# (Probe C: `$probe_flavor` → "It worked out to Lemon, not true or false"). Anything
-# with an operator, keyword, or call — `not $x`, `$a and $b`, `$pups.item("rex").exists()`
-# — fails this match and is left alone. Applies to triggerOnPawScript only: a bare
-# $handle is the *correct* form for a triggerOnRandomChance formula (Probe D #8).
+# It yields a value, so a condition of this shape does not fire (Probe C: `$probe_flavor`
+# → "It worked out to Lemon, not true or false"). Anything with an operator, keyword, or
+# call — `not $x`, `$a and $b`, `$pups.item("rex").exists()` — fails this match and is
+# left alone. Applies to triggerOnPawScript only: a bare $handle is the *correct* form for
+# a triggerOnRandomChance formula (Probe D #8).
+#
+# The dot-path arm reaches beyond the probed evidence, which used a scalar text item: a
+# YAML leaf holding `true`/`false` would gate correctly. Hence the hedged wording in the
+# message rather than a flat "never fires".
 _BARE_HANDLE_RE = re.compile(r"^\$[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
 
@@ -847,9 +866,14 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
     below are observed rather than presumed:
 
     - **Error** on a ``triggerOnPawScript`` whose ``data`` is missing or blank. The two
-      shapes die differently — a missing key is deleted at import, leaving a conditionless
-      trigger; a blank string is dropped from the export but still evaluated at runtime,
-      where it errors every turn — and both leave a trigger that never fires.
+      shapes behave differently — a missing key leaves no condition in the export and no
+      World Debug entry at all, while a blank string is likewise absent from the export
+      yet still evaluated every turn, where it errors. Note what this does *not* establish:
+      because the export shows ``triggerConditions: []`` in both cases, it cannot say
+      whether the missing-key condition was deleted at import or merely kept and never
+      logged. The author-facing outcome — a gate that does no gating — is the same either
+      way, which is what the severity rests on. Whitespace-only ``data`` is treated as
+      blank; only ``""`` was probed, so that is a deliberate generalization.
     - Warn when ``data`` is present but not a string: clearly malformed, but that shape
       was not probed, so it stays a warning. Blank ``triggerOnRandomChance`` data is
       likewise untested and stays a warning.
@@ -859,8 +883,11 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
       trigger is dead — but the check is a heuristic over an incomplete native list, so a
       warning is the honest severity. Same string-literal caveat as
       ``_check_pawscript_scripts``.
-    - Warn on ``<<name>>`` interpolation and on an expression that is only a bare
-      ``$handle`` — see ``_INTERPOLATION_RE`` and ``_BARE_HANDLE_RE``.
+    - Warn on ``<<…>>`` interpolation outside a string literal (both condition types — the
+      substitution is pre-parse, though only ``triggerOnPawScript`` was probed) and on an
+      expression that is only a bare ``$handle`` (``triggerOnPawScript`` only). See
+      ``_INTERPOLATION_RE``, ``_QUOTED_SPAN_RE`` and ``_BARE_HANDLE_RE`` for the
+      false-positive shapes each one deliberately declines.
 
     The random-chance dialect is mixed: ``turn_number`` and ``random`` appear as bare
     identifiers, so only ``$``-prefixed roots are checked and the bare tokens pass
@@ -890,13 +917,16 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
                 tail = f"Give it a non-empty expression, e.g. {example}."
                 if ctype == "triggerOnPawScript" and "data" not in cond:
                     errors.append(
-                        f"{where}missing — IW deletes the condition on import, leaving a "
-                        f"conditionless trigger that never fires (Probe C, 2026-08-29). {tail}"
+                        f"{where}missing — the condition is gone from IW's export and never "
+                        "appears in World Debug, so it does no gating at all: the trigger "
+                        "either never fires or fires under-gated, depending on what else "
+                        f"gates it (Probe C, 2026-08-29). {tail}"
                     )
                 elif ctype == "triggerOnPawScript" and isinstance(expr, str):
                     errors.append(
-                        f"{where}{expr!r} — an empty expression errors every turn, so the "
-                        f"trigger never fires (Probe C, 2026-08-29, on ''). {tail}"
+                        f"{where}blank ({expr!r}) — IW keeps evaluating it every turn and an "
+                        "empty expression errors, so this condition never holds (Probe C, "
+                        f"2026-08-29, on ''). {tail}"
                     )
                 else:
                     shown = "missing" if "data" not in cond else repr(expr)
@@ -905,19 +935,35 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
                         f"drop the condition on import. {tail}"
                     )
                 continue
-            if ctype == "triggerOnPawScript" and _BARE_HANDLE_RE.match(expr.strip()):
+            bare = expr.strip()
+            bare_root = bare[1:].split(".", 1)[0] if _BARE_HANDLE_RE.match(bare) else None
+            # An undeclared root is reported below, and that message is strictly more
+            # actionable — don't also tell the author to compare a name that resolves to
+            # nothing.
+            if ctype == "triggerOnPawScript" and bare_root is not None and bare_root in legal:
                 warnings.append(
                     f"Trigger '{tname}' condition '{cid}': triggerOnPawScript data "
-                    f"{expr.strip()!r} is a bare value reference, not a comparison — it "
-                    "works out to a value rather than true/false, so the trigger never "
-                    f"fires (Probe C, 2026-08-29). Compare it to something, e.g. {example}."
+                    f"{bare!r} is a bare value reference, not a comparison — it works out "
+                    "to a value, and unless that value is itself true/false the trigger "
+                    f"never fires (Probe C, 2026-08-29). Compare it to something, "
+                    f"e.g. {example}."
                 )
-            for name in dict.fromkeys(_INTERPOLATION_RE.findall(expr)):
+            # Interpolation *inside a quoted literal* is legitimate — the value lands in
+            # the string and the comparison stays well-formed — so scan only outside quotes.
+            unquoted = _QUOTED_SPAN_RE.sub("", expr)
+            for inner in dict.fromkeys(_INTERPOLATION_RE.findall(unquoted)):
+                fix = (
+                    f"Use ${inner} instead."
+                    if _PLAIN_IDENT_RE.match(inner) and inner in legal
+                    else "Reference the value with the $ form instead, or quote the "
+                    "interpolation if you meant it as text."
+                )
                 warnings.append(
                     f"Trigger '{tname}' condition '{cid}': {ctype} data uses "
-                    f"<<{name}>> interpolation — IW substitutes the item's value into the "
-                    "text before parsing it, so a non-numeric value becomes a bare word and "
-                    f"the condition errors (Probe C, 2026-08-29). Use ${name} instead."
+                    f"<<{inner}>> interpolation outside a string literal — IW substitutes "
+                    "the item's value into the text before parsing it, so a non-numeric "
+                    f"value becomes a bare word and the condition errors (Probe C, "
+                    f"2026-08-29). {fix}"
                 )
             seen_unknown: set[str] = set()
             for root in _SCRIPT_IDENT_RE.findall(expr):
@@ -1219,7 +1265,8 @@ def _gate_condition_trigger_ids(
     if not isinstance(data.get("firedThisTurn"), bool):
         warnings.append(
             f"Trigger '{tname}': {ctype} data has no boolean 'firedThisTurn'; schema v2.4 "
-            "expects one. Emit false — the only value the canonical fixture shows"
+            "expects one. Emit false for a permanent gate, true for a same-turn "
+            "interlock — see references/fields/TRIGGER_EVENTS.md"
         )
     return [i for i in inner if isinstance(i, str)]
 

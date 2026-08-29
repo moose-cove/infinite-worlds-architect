@@ -119,6 +119,7 @@ Once the author's requested changes are complete:
    existing tracked-item variableNames and must never write to $player/$game.
    v2.4 shapes: triggerPrereqs/triggerBlockers take
    data: {prereqs|blockers: [...], firedThisTurn: false} — not a bare array
+   (false = permanent gate; true = same-turn interlock)
    triggerOnTrackedItem needs a non-empty textComparison (e.g. "contains") —
    without it IW deletes the whole condition on import
 4. If a condition is triggerOnEvent, add its exact event string to the world's

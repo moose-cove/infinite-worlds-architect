@@ -79,15 +79,15 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── probe-a-imported.json   # Probe A after an IW import/export round trip — evidence, do not edit
 ├── probe-b-cap.json        # Ten-event cap, recommendedAIModel, Probe A factor-isolation follow-ups
 ├── probe-b-imported.json   # Probe B after an IW import/export round trip — evidence, do not edit
+├── probe-c-pawscript.json          # Malformed triggerOnPawScript cells, firedThisTurn 2x2, chance-formula rider
+├── probe-c-imported.json           # Probe C after import/export — evidence, do not edit
 ├── probe-d-pawscript-runtime.md    # Probe D build spec (trigger firing + PawScript runtime cells)
 ├── probe-d-pawscript-runtime.json  # Probe D world as built
 ├── probe-d-imported.json           # Probe D after import/export — evidence, do not edit
 ├── probe-e-scope-q10.json          # Entry-vs-item scope, recommendedAIModel control, absent conditions key
 ├── probe-e-imported.json           # Probe E after round trip 1 — evidence, do not edit
 ├── probe-e-imported-2.json         # Probe E after round trip 2 (re-import of round 1) — evidence, do not edit
-├── probe-c-pawscript.json          # Malformed triggerOnPawScript cells, firedThisTurn 2x2, chance-formula rider
-├── probe-c-imported.json           # Probe C after import/export — evidence, do not edit
-└── harness/                # Playwright/CDP scripts that import, export and play probes against live IW
+└── harness/                # Playwright/CDP scripts that drive live IW, plus committed World Debug transcripts
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)
@@ -168,7 +168,7 @@ The three versions must be **equal** at all times. CI's `version-bump` job fails
 **When to bump which component (semver):**
 
 - **Patch (`0.2.0` → `0.2.1`)** — bug fixes, doc-only changes, internal refactors, CI/test/chore changes, new negative tests. Anything that doesn't change what a world author or plugin user observes.
-- **Minor (`0.2.0` → `0.3.0`)** — new commands, new MCP tools, new optional schema fields, new validator warnings, new skill content. Additive, backwards-compatible.
+- **Minor (`0.2.0` → `0.3.0`)** — new commands, new MCP tools, new optional schema fields, new validator warnings, new skill content. Additive, backwards-compatible. **New validator *errors*, and promotions of an existing warning to an error, are also minor** when they name a construct the platform already destroys or leaves dead: no previously-working world changes behaviour, and the world was broken before the plugin said so. This is settled precedent, not a judgment call to re-litigate — v0.18.0 promoted three rules to errors, v0.21.0 added a new error outright, and v0.23.0 promoted two, all as minor. Reserve major for a rule that newly invalidates a world which genuinely still works.
 - **Major (`0.2.0` → `1.0.0`)** — schema breaking changes (renamed/removed fields, stricter required-ness), removed commands or tools, renamed MCP tool surfaces, anything that would force a world author to edit existing `world.json` files. **Pre-1.0 exception:** while the project is still pre-1.0, renamed MCP tool surfaces are treated as **minor** bumps rather than major — pre-1.0 semver conventionally allows breaking changes in minor increments.
 
 **Platform world-schema version bumps** (e.g. v2.2 → v2.4) don't get their own tier — classify by what the change does to *existing worlds*, not by the size of the version jump:

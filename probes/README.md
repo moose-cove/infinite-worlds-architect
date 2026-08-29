@@ -112,7 +112,9 @@ cleared.
 **P2 (partial) — `firedThisTurn: true` survives the round trip.** Not reset on import, so
 it is at minimum author-writable. That weakens the "platform-managed runtime state" reading
 without killing it: stored-then-overwritten-at-runtime is still possible. Runtime semantics
-remain open.
+remain open. *(Superseded: closed in play by Probe C, 2026-08-29 — `true` narrows the gate to
+the current turn, and the platform-managed reading is dead. See
+[Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played).)*
 
 **P9 (partial), P7 (partial)** — all eight style fields, and the nested `formatSchema` with
 `enforceFormat: true`, round-tripped exactly. Storage is confirmed; precedence (P9) and
@@ -183,17 +185,17 @@ closing it. *(Superseded: the bogus-value control ran in Probe E, 2026-08-28 —
 string verbatim; there is no enforced enum. See
 [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played).)*
 
-### Still open — needs another round trip (Probe C)
+### Formerly open — both closed by later probes
 
 **P10-followup — ANSWERED by Probe E (2026-08-28), along with the `recommendedAIModel`
 bogus-value control it was paired with.** See
 [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played).
 
-**P14 — `triggerOnPawScript` malformed-input handling.** Fixture 1.09 (2026-08) introduced
-this condition type with one well-formed sample; the plugin registers it and warns on
-non-string / blank `data` and on undeclared `$names`, but has no evidence for what the
-platform does with a bad expression. Import-side half is round-trip-answerable — see
-[Probe C · P14](#p14--triggeronpawscript-malformed-input) below.
+**P14 — ANSWERED by Probe C (2026-08-29)**, except the cap half (does a `triggerOnPawScript`
+gate count toward the ten-event cap?), which stays open. Six malformed-input cells were
+imported and played; see
+[Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played). The cell design is
+retained as the read protocol at [Probe C · P14](#p14--triggeronpawscript-malformed-input).
 
 **P15 — `$variableName` inside a `triggerOnRandomChance` formula.** Fixture 1.1 (2026-08)
 carries `"$number_of_non_human_friends+round(turn_number%random)"`, which proves the `$` form
@@ -339,22 +341,34 @@ structural, not semantic.** Six cells, one condition each, against a text item h
 |---|---|---|---|
 | P14a (control) | `$probe_flavor = "Lemon"` | survived | fired every turn ✓ |
 | P14b | `""` | **dropped from the export** | still evaluated: `Empty expression - nothing to evaluate` |
-| P14c | *(key absent)* | **condition deleted** | conditionless → never fired |
+| P14c | *(key absent)* | **gone from the export** | no World Debug entry at all → never fired |
 | P14d | `$no_such_item = 1` | kept verbatim | `No tracked item or variable called 'no_such_item'` |
 | P14e | `$probe_flavor` | kept verbatim | "It worked out to Lemon, not true or false" |
 | P14f | `<<probe_flavor>> = "Lemon"` | kept verbatim | evaluated as `Lemon = "Lemon"` → unknown-name error |
 
 Three consequences shipped in v0.23.0:
 
-1. **Blank and absent `data` became errors.** Both leave a permanently dead trigger, so they
+1. **Blank and absent `data` became errors.** Both leave a gate that does no gating, so they
    join the `textComparison` rules rather than staying warnings. Scoped to
    `triggerOnPawScript` — the `triggerOnRandomChance` equivalent was not probed and stays a
    warning.
+
+   > **What P14c does *not* establish.** P14b and P14c come back byte-identical in the export
+   > (`"triggerConditions": []`), so the export alone cannot say whether the absent-key
+   > condition was deleted at import or kept and simply never logged — and P14b is itself the
+   > proof that export-absence does not imply platform-absence. The one asymmetry is that
+   > P14b produced a World Debug entry and P14c produced none, which is suggestive but has a
+   > rival reading (no expression string to echo). The authoring consequence is identical
+   > either way, which is what the error severity rests on. To separate them: re-import
+   > `probe-c-imported.json`, or give a P14c cell a second, valid condition and see whether
+   > the trigger ends up single-gated or dead.
 2. **`<<…>>` in a condition is now warned about.** P14f is the finding this probe was
    predicted to produce, and the mechanism is worse than "wrong style": IW substitutes the
    item's **value** into the text *before* parsing, so a text item yields a bare identifier
-   and the gate silently dies. A numeric item would substitute into a valid comparison, which
-   is why this is a warning and not an error.
+   and the gate dies. A numeric item would *probably* substitute into a valid comparison
+   (`<<hp>> > 5` → `3 > 5`) — untested, only a text item was probed — which is why this is a
+   warning and not an error. Interpolation inside a quoted literal (`$flavor = "<<other>>"`)
+   is legitimate and the validator leaves it alone.
 3. **A bare `$handle` is now warned about** for `triggerOnPawScript` only — it is the
    *correct* form for a `triggerOnRandomChance` formula (Probe D #8).
 
@@ -364,7 +378,10 @@ keeps the condition, and the failure is a runtime error every turn.
 **P14b is the first construct known to differ between the export and the live world.** The
 condition is absent from the exported JSON yet the runtime keeps evaluating it. So a
 re-export diff can *under*-report as well as over-report, and "it's not in the export" is not
-proof the platform has stopped running it.
+proof the platform has stopped running it. This is the same *direction* as the long-known
+empty-field stripping (six empty top-level keys were dropped in this round trip too) — the
+generalisation is "IW's exporter drops selected empty values"; what is new is that one of
+them is still being evaluated.
 
 **P2 — `firedThisTurn` selects the match window. Confirmed, both condition types.** A
 one-shot anchor fired on turn 1 and never again; four repeatable consumers gated on it:
@@ -380,9 +397,11 @@ So `true` narrows "has the listed trigger fired?" from *ever* to *this turn*, ex
 name suggests and as the wiki's `false`-baseline wording implied. The rival reading — that the
 field is platform-managed runtime state — is dead: the value is author-written and drives
 evaluation. The plugin keeps type-checking it only, which is now correct rather than cautious,
-since both values are legitimate. Note the anchor was listed **first**, so Probe D's Q6 pass
-ordering let P2a see it as fired-this-turn on turn 1; a `firedThisTurn: true` consumer placed
-above its anchor would never fire.
+since both values are legitimate. Note the anchor was listed **first** by design, so Probe D's
+Q6 pass ordering let P2a see it as fired-this-turn on turn 1. The reverse arrangement was
+never run: whether a consumer placed *above* its anchor would miss the window, or whether the
+fired-registry is finalized per turn and ordering is irrelevant, is an open follow-up — one
+cell settles it. Leading with the anchor is safe under both readings.
 
 **P15 rider — an undeclared `$name` in a `triggerOnRandomChance` formula is kept on import**
 and errors at runtime (`No tracked item or variable called 'no_such_item'`), never firing.
@@ -415,12 +434,13 @@ The runtime half — does a trigger left with `triggerConditions: []` fire every
 never? — was answered in play on 2026-08-22 (P13, above): **never**. The deleted gate leaves a
 dead trigger, and the fix wording follows from that.
 
-### P2 — What is `firedThisTurn`? *(round trip partially answered)*
-`P2a` sets `true`, `P2b` is the `false` control, both gate on the anchor. The anchor fires
-on turn 1 only, so from turn 2 the anchor has fired *at some point* but not *this turn*. If
-`P2a` goes quiet from turn 2 while `P2b` keeps firing, `firedThisTurn: true` narrows the
-gate to the current turn. Also check whether the trigger editor exposes a checkbox for it —
-if it does not, that still favours the platform-managed reading despite the value surviving.
+### P2 — What is `firedThisTurn`? *(answered — Probe C, 2026-08-29)*
+The design, kept as the read protocol: `P2a` sets `true`, `P2b` is the `false` control, both
+gate on the anchor. The anchor fires on turn 1 only, so from turn 2 the anchor has fired *at
+some point* but not *this turn*. If `P2a` goes quiet from turn 2 while `P2b` keeps firing,
+`firedThisTurn: true` narrows the gate to the current turn. Probe C ran exactly this, plus
+the two blocker cells the design omitted, and got that result — see
+[Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played).
 
 ### P3 — the `conditions` registry *(answered — author-maintained)*
 One runtime question is left: the `P3a` trigger's event is declared nowhere. If it still
