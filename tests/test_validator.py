@@ -1540,7 +1540,9 @@ def test_not_equal_with_text_comparison_is_accepted():
 # ── schema v2.4: per-character tracked-item override scope ───────────────────
 
 
-def _world_with_initial_tracked_item_value(based_on_pc: str, value) -> dict:
+def _world_with_initial_tracked_item_value(
+    based_on_pc: str, value, item_scope: str = "player"
+) -> dict:
     """A world whose one character carries one initialTrackedItemValues entry."""
     world = _base_world()
     world["trackedItems"] = [
@@ -1552,7 +1554,7 @@ def _world_with_initial_tracked_item_value(based_on_pc: str, value) -> dict:
             "description": "",
             "visibility": "everyone",
             "autoUpdate": False,
-            "initialValueBasedOnPC": "player",
+            "initialValueBasedOnPC": item_scope,
             "variableName": "probe_item",
         }
     ]
@@ -1592,6 +1594,9 @@ def test_player_scoped_initial_tracked_item_value_errors(value, shape):
     assert any(
         "initialValueBasedOnPC 'player'" in e and "deletes the entry" in e for e in result["errors"]
     ), result["errors"]
+    # The error and the doomed-entry warning are mutually exclusive branches: a
+    # player-scoped entry must never ALSO draw the backed-by-player-item warning.
+    assert not any("backed by a tracked item" in w for w in result["warnings"]), result["warnings"]
 
 
 @pytest.mark.parametrize(
@@ -1603,31 +1608,75 @@ def test_character_scoped_initial_tracked_item_value_is_accepted(value, shape):
     """Probe B's P10a/P10d controls: ``"character"`` survives at either value shape.
 
     The array cell matters most — it is the combination the canonical fixture demonstrates,
-    so flagging it would break real authoring.
+    so flagging it would break real authoring. Item scoped ``"character"`` too — the pairing
+    the canonical fixture and editor-authored worlds carry — so this must be silent in
+    warnings as well.
     """
-    result = _validate(_world_with_initial_tracked_item_value("character", value))
+    result = _validate(
+        _world_with_initial_tracked_item_value("character", value, item_scope="character")
+    )
     assert not any("initialValueBasedOnPC" in e for e in result["errors"]), (
         shape,
         result["errors"],
     )
+    assert not any("initialValueBasedOnPC" in w for w in result["warnings"]), (
+        shape,
+        result["warnings"],
+    )
 
 
-def test_check_reads_the_entry_not_the_item_in_an_untested_platform_cell():
-    """Pins CURRENT VALIDATOR behavior in a cell the platform has never been asked about.
+def test_player_scoped_entry_on_character_scoped_item_still_errors():
+    """Probe E's decisive PE2 cell: entry ``"player"`` + item ``"character"`` was DELETED.
 
-    This is deliberately not phrased as a platform claim. The helper always sets item-level
-    ``initialValueBasedOnPC: "player"``, so this case is item ``"player"`` + entry
-    ``"character"`` — and in every cell of both probes those two levels were held EQUAL. The
-    experiment therefore cannot distinguish "a player-scoped entry is deleted" from "a
-    player-scoped item drops its per-character entries"; see the docstring on
-    ``_check_initial_tracked_item_value_scope``.
+    Import keys the delete on the incoming ENTRY's own scope value, whatever the backing
+    item says — the cell Probe B could not separate. Confirmed 2026-08-28 by
+    probes/probe-e-scope-q10.json vs probe-e-imported.json.
+    """
+    result = _validate(
+        _world_with_initial_tracked_item_value("player", "PLAIN", item_scope="character")
+    )
+    assert not result["valid"]
+    assert any(
+        "initialValueBasedOnPC 'player'" in e and "deletes the entry" in e for e in result["errors"]
+    ), result["errors"]
 
-    Under the second reading IW would delete this entry and the validator would stay silent —
-    a false negative. The test exists so that if a future Probe C resolves the question, this
-    is the assertion that has to change, and it is findable by name.
+
+def test_entry_backed_by_player_scoped_item_warns_as_doomed():
+    """Probe E's PE1 cell: entry ``"character"`` + item ``"player"`` survives ONE import.
+
+    But IW rewrites entry scopes to the item's on export, so the next round trip deletes
+    it (probe-e-imported.json carries the rewritten "player" scope; probe-e-imported-2.json
+    shows the entry gone). Not an error — the first import genuinely keeps it — but the
+    author must hear that the state is non-round-trippable.
     """
     result = _validate(_world_with_initial_tracked_item_value("character", "PLAIN"))
     assert result["valid"], result["errors"]
+    assert any(
+        "backed by a tracked item" in w and "round trip silently deletes it" in w
+        for w in result["warnings"]
+    ), result["warnings"]
+
+
+@pytest.mark.parametrize(
+    ("item_scope", "entry_id_suffix"),
+    [("same", ""), ("character", ""), ("player", "MISSING")],
+    ids=["item-same", "item-character", "unresolvable-item-id"],
+)
+def test_doomed_entry_warning_only_fires_on_player_scoped_backing_items(
+    item_scope, entry_id_suffix
+):
+    """The warning is scoped to a resolvable, player-scoped backing item — nothing else.
+
+    Pins the silent cells: item ``"same"`` (never probed, no evidence of harm), item
+    ``"character"`` (the normal pairing), and an entry whose ``id`` resolves to no tracked
+    item at all (``item_scopes.get`` must miss quietly, not warn or crash).
+    """
+    world = _world_with_initial_tracked_item_value("character", "PLAIN", item_scope=item_scope)
+    if entry_id_suffix:
+        entry = world["possibleCharacters"][0]["initialTrackedItemValues"][0]
+        entry["id"] = entry["id"] + entry_id_suffix
+    result = _validate(world)
+    assert not any("backed by a tracked item" in w for w in result["warnings"]), result["warnings"]
 
 
 # ── textComparison: "unset" has more spellings than absent-or-empty ──────────

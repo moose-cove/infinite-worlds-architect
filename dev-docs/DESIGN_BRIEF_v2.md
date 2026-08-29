@@ -302,7 +302,7 @@ See §10 for choices the brief leaves to the implementer.
 These items are documented in the schema doc. The plugin preserves unknown values verbatim (via read-edit-write) and refuses to emit values for unverified enums/types until a fixture clarifies them.
 
 1. **`illustrationStyle*HighPriority` / `LowPriority`** — semantics versus the older `imageStyle*Pre` / `Post` fields and coexistence rules.
-2. **`recommendedAIModel` enum** — fixture has `null`; the platform has AI profiles (e.g., `"smilodon"`). Valid values unverified.
+2. **`recommendedAIModel` enum** — fixture has `null`; the platform has AI profiles (e.g., `"smilodon"`). Valid values unverified. *(CLOSED 2026-08-28, Probe E: no import-time enum — IW stores unknown strings verbatim. See `probes/README.md`.)*
 
 ---
 

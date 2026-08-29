@@ -1,0 +1,29 @@
+PE1 Item-Player Entry-Character:
+PE2 Item-Character Entry-Player:
+PE Anchor: 3
+Approach Door Seven and examine it closely.
+
+Remain still and continue observing what Door Seven does.
+
+Turn your attention to one of the other doors instead.
+
+Or type any action you want below:
+and/or tell the AI what should happen next:
+
+Take action
+Previous turn
+Regenerate turn
+(Turn 0)
+Generate images for current turn
+© Friendly Fox Games, 2026
+About Infinite Worlds
+|
+FAQ
+|
+Wiki
+|
+fox@infiniteworlds.app
+Join the Infinite Worlds community!
+Privacy policy
+|
+Terms & Conditions

@@ -184,6 +184,17 @@ def import_json(pg: Page, title: str, src: Path):
     if d:
         log("dialog after import:\n" + d[:1500])
         dismiss_alert(pg)
+    # That dismissed the overwrite confirmation. The "World imported from raw JSON."
+    # alert arrives up to ~20s AFTER the confirm and intercepts every click until it
+    # is closed — poll for it and dismiss before touching the Save button.
+    for _ in range(60):
+        pg.wait_for_timeout(500)
+        d = dialog_text(pg)
+        if d:
+            log("dialog after confirm: " + d[:200].replace("\n", " / "))
+            dismiss_alert(pg)
+            if "imported" in d:
+                break
     vis(pg, 'button:has-text("Save changes and exit")').first.click()
     for _ in range(30):
         pg.wait_for_timeout(500)
@@ -220,6 +231,8 @@ def main():
             export_json(pg, a.world, Path(a.arg))
         elif a.cmd == "import-json":
             import_json(pg, a.world, Path(a.arg))
+        elif a.cmd == "recover":
+            recover(pg)
         elif a.cmd == "snap":
             print(pg.locator("body").aria_snapshot()[:6000])
             print(dialog_text(pg)[:2000])

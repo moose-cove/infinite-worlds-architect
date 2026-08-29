@@ -47,7 +47,10 @@ one condition. For an every-turn effect, gate it on an always-true
 `"data": "$clock.day >= 0"`, plus `canTriggerMoreThanOnce: true`.
 `validate_world` warns on any non-SoG trigger with an empty or absent
 `triggerConditions`. Probe D (2026-08-22) re-confirmed the mechanism: the `[]`
-shape survives import byte-identical and is runtime-dead, not deleted.
+shape survives import byte-identical and is runtime-dead, not deleted. Probe E
+(2026-08-28) closed the absent-key variant: import normalizes a missing
+`triggerConditions` key to `[]`, after which the confirmed `[]` result applies
+(the played turns re-confirmed it stays dead).
 
 **`triggerOnStartOfGame: true` with no conditions is the one exception — it fires.**
 Probe D's SoG trigger with `triggerConditions: []` fired at turn 0 alongside a

@@ -99,7 +99,7 @@ error message in-game, in the editor, or in the export:
 |---|---|---|
 | Pre-v2.4 bare-array `triggerPrereqs`/`triggerBlockers` | trigger id, name, effects | the gate condition — trigger left with no conditions — and a trigger with no conditions never fires (confirmed in play 2026-08-22) |
 | `triggerOnTrackedItem` with absent or empty `textComparison` | trigger id, name, effects | the entire condition |
-| `initialTrackedItemValues` entry with `initialValueBasedOnPC: "player"` | the character, the tracked item | the per-character entry |
+| `initialTrackedItemValues` entry with `initialValueBasedOnPC: "player"` | the character, the tracked item | the per-character entry (the entry's own scope drives the delete, whatever the item says — Probe E) |
 | *(control)* each of those shapes done correctly | the construct under test, byte-identical | nothing |
 
 **The likely single rule behind the first two.** Every destroyed *condition* — bare array where
@@ -128,8 +128,8 @@ place these constructs are still visible.
 
 ### Import is also *additive* — it does not only delete
 
-"Lossy" is the headline, but deletion is not the only mutation. Two changes were made to
-constructs that were not under test at all, both reproducible from the committed probe pairs:
+"Lossy" is the headline, but deletion is not the only mutation. Four changes are reproducible
+from the committed probe pairs — the first two on constructs that were not under test at all:
 
 - **A character with no `portraitPromptDetails` gains `portraitPromptDetails: {}`.** Probe B's
   character omitted the key entirely and came back carrying an empty object. (Probe A's
@@ -141,9 +141,19 @@ constructs that were not under test at all, both reproducible from the committed
   `skills` *array* held its order in both runs, as did every other array. **Never treat
   per-character skills-map ordering as meaningful**, and don't chase it as a finding when
   diffing a round trip.
+- **A `"character"`-scoped tracked item that *arrives with no per-character entry* gets one
+  auto-created** (`initialPCValue: ""`, scope `"character"`); an entry deleted during an
+  import is not re-created in that same import — Probe E, 2026-08-28.
+- **A surviving `initialTrackedItemValues` entry is exported with its `initialValueBasedOnPC`
+  rewritten to the backing item's** — entry scope is a projection, not stored state
+  (Probe E). So IW's own export is not guaranteed losslessly re-importable: an entry kept
+  under a `"player"`-scoped item exports player-scoped, which the next import deletes. (The
+  only export→import cycle anyone has run, and it was not a fixed point.)
 
-Neither is harmful, and neither affects validation — but both mean a naive "is the export
-byte-identical to the source?" check will report a false positive on any world.
+The first three are harmless and invisible to validation; the fourth is not — it is why
+`probes/probe-e-imported.json`, an IW export, fails validation (see probes/README.md,
+"Expected validator output"). All four mean a naive "is the export byte-identical to the
+source?" check will report a false positive on any world.
 
 ---
 
@@ -174,6 +184,15 @@ sure you wish to overwrite…", then reports "World imported from raw JSON." —
 already saved at that point: **Save changes and exit** afterwards says "No changes to save."
 **Discard changes** does not undo an import. On a large world the import alert can arrive
 10–20 s after the click. (Observed via the Playwright harness in `probes/harness/`.)
+
+**An absent `triggerConditions` key is normalized to `[]` at import** — after which the
+confirmed `[]` result applies: runtime-dead (Probe E, 2026-08-28, re-confirmed in play).
+Start-of-Game remains the only conditionless trigger that fires; see
+[`fields/TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md).
+
+**`recommendedAIModel` has no import-time validation.** IW stored `"notarealmodel"` verbatim
+across two round trips (Probe E) — no enum check on unknown strings; runtime honoring
+untested. Author real model strings anyway.
 
 **`autoAdvanceVersion: false` holds `version` still across a round trip.** Useful when
 diffing an import: it removes the version-drift noise described below.

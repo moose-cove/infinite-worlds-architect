@@ -619,10 +619,9 @@ def _check_conditionless_triggers(world: dict, errors: list[str], warnings: list
     intentional: it is a dead trigger, not an unconditional one.
 
     Warning, not error: the world still imports and plays, and the author may be mid-edit.
-    Scope, stated honestly: only the empty-array case was played (re-confirmed by Probe D,
-    2026-08-22: `[]` survived import byte-identical and sat at "not yet fired" for four
-    turns, so the shape is runtime-dead, not deleted). An ABSENT key is treated the same
-    because the platform has nothing to evaluate either way, but that cell is untested.
+    Both shapes are confirmed dead: `[]` (played twice; re-confirmed by Probe D, 2026-08-22)
+    and an absent key, which import normalizes to `[]` (Probe E, 2026-08-28 — turn detail in
+    probes/README.md).
     `triggerOnStartOfGame: true` with no conditions is EXEMPT, and rightly so: Probe D's
     SoG trigger with `[]` fired at turn 0 alongside its gated control — the flag is its own
     gate.
@@ -1021,39 +1020,28 @@ def _check_initial_tracked_item_value_scope(
 ) -> None:
     """A per-character tracked-item override may not be scoped to the player.
 
-    CONFIRMED 2026-08-06 by the probes/probe-b-cap.json round trip. An entry in
-    ``possibleCharacters[].initialTrackedItemValues`` whose ``initialValueBasedOnPC`` is
-    ``"player"`` is DELETED on import. The 2x2 varied the value shape against the scope:
+    IW deletes any ``possibleCharacters[].initialTrackedItemValues`` entry whose own
+    ``initialValueBasedOnPC`` is ``"player"`` on import, whatever the backing item's scope
+    says (Probe B 2026-08-06 for the value shape; Probe E 2026-08-28 broke the entry/item
+    covariance and pinned the delete to the entry). Entry scope is a PROJECTION of the
+    item's on export, which gives two severities:
 
-        array  + "character" -> survived
-        string + "player"    -> DELETED
-        array  + "player"    -> DELETED
-        string + "character" -> survived
+    - entry scope "player": ERROR — deleted by the very next import.
+    - entry backed by a "player"-scoped ITEM: WARNING — the entry survives one import, but
+      the export rewrites its scope to "player", so the following round trip deletes it.
+      probes/probe-e-imported.json is the committed example: an IW export carrying exactly
+      this doomed pairing. (Normally IW pairs entries only with "character"-scoped items —
+      an item arriving with no entry gets one auto-created; a deleted entry is NOT
+      re-created in the same import.)
 
-    That cleanly clears the array form of ``initialPCValue`` — it is ``"player"`` that is
-    fatal, at any value shape. The pre-probe theory blamed the array; it was wrong.
-
-    KNOWN LIMIT OF THE EXPERIMENT — do not overstate this rule. In every cell of both probes,
-    the per-character ENTRY's ``initialValueBasedOnPC`` and its backing tracked ITEM's
-    ``initialValueBasedOnPC`` were held equal (deliberately, to vary one factor — but it means
-    the two levels covary perfectly and nothing separates them). So the evidence is equally
-    consistent with two readings:
-
-        (a) a player-scoped ENTRY is deleted            <- what this check assumes
-        (b) a player-scoped ITEM drops its per-character entries
-
-    Reading (b) is arguably the more natural implementation. The two decisive cells —
-    item "player" + entry "character", and item "character" + entry "player" — have never
-    been imported. Under (b) this check has a false negative (the first cell) and a false
-    positive (the second). It errors regardless because it is correct in every case actually
-    observed, and because both readings agree the world is broken; but a future Probe C should
-    run those two cells before this is treated as settled. See probes/README.md.
-
-    What IS separately established: ``"player"`` on the tracked ITEM is not by itself fatal to
-    the item — every such item round-tripped byte-identical, including the two backing the
-    deleted entries. That is why this check does not error on ``trackedItems``. It does not,
-    however, establish that the item's setting is innocent of the ENTRY's deletion.
+    ``"player"`` on the tracked ITEM itself is fine for the item. Cell-by-cell evidence:
+    probes/README.md (Probe E).
     """
+    item_scopes = {
+        item.get("id"): item.get("initialValueBasedOnPC")
+        for item in world.get("trackedItems", [])
+        if isinstance(item, dict)
+    }
     for character in world.get("possibleCharacters", []):
         if not isinstance(character, dict):
             continue
@@ -1067,17 +1055,22 @@ def _check_initial_tracked_item_value_scope(
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
-            if entry.get("initialValueBasedOnPC") != "player":
-                continue
             label = entry.get("name") or entry.get("id") or "?"
-            errors.append(
-                f"Character '{cname}': initialTrackedItemValues entry '{label}' has "
-                "initialValueBasedOnPC 'player'. IW deletes the entry on import — a "
-                "per-character override cannot be player-scoped. Set both this entry and its "
-                "tracked item to 'character', or drop the entry and set the value on the "
-                "tracked item itself (only observed with the item player-scoped too, so "
-                "changing the entry alone is untested)"
-            )
+            if entry.get("initialValueBasedOnPC") == "player":
+                errors.append(
+                    f"Character '{cname}': initialTrackedItemValues entry '{label}' has "
+                    "initialValueBasedOnPC 'player' — IW deletes the entry on import. Scope "
+                    "both the entry and its tracked item 'character', or drop the entry and "
+                    "set the value on the tracked item itself"
+                )
+            elif item_scopes.get(entry.get("id")) == "player":
+                warnings.append(
+                    f"Character '{cname}': initialTrackedItemValues entry '{label}' is "
+                    "backed by a tracked item whose initialValueBasedOnPC is 'player'. IW "
+                    "rewrites entry scopes to the item's on export, so even if this import "
+                    "keeps the entry, the next round trip silently deletes it. Set the "
+                    "tracked item to 'character', or drop the entry"
+                )
 
 
 # schema v2.4 changed the `data` shape of the two trigger-gating condition types.

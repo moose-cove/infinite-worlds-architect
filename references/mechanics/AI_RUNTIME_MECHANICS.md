@@ -287,7 +287,7 @@ The `authorStyle` field is free-form prose that frames the AI's voice. Three pri
 
 ### Removed / no-longer-valid models
 
-These strings have been removed from IW and will be **silently stripped on import**. Do not use them in `selectedAIProfiles` or `recommendedAIModel`.
+These strings have been removed from IW and will be **silently stripped on import** from `selectedAIProfiles` — do not use them there. Whether `recommendedAIModel` gets the same stripping is unverified: an *unknown* string demonstrably survives import in that field (Probe E, 2026-08-28 — see `PLATFORM_BEHAVIOR_NOTES.md`), so avoid retired names there too, but on general principle rather than observed stripping.
 
 | IW Name | Was | Notes |
 |---|---|---|
