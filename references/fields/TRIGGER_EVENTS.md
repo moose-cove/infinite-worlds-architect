@@ -88,13 +88,21 @@ Same shape as `triggerPrereqs`, with the array under `blockers` instead of `prer
 "data": { "blockers": ["PKRVGe1E"], "firedThisTurn": false }
 ```
 
-**`firedThisTurn` is still an open question — emit `false`.** The canonical fixture shows only `false`, on both condition types.
+**`firedThisTurn` picks the window: `false` = ever, `true` = this turn. Default to `false`.** Confirmed in play (Probe C, 2026-08-29) against a one-shot anchor that fired on turn 1:
 
-The documented default behaviour gives the guess its shape. The wiki describes prereqs as *"met if all of the selected triggers have fired at least once in **any previous turn**"* and blockers as *"met if one or more of the selected triggers **has ever** fired"* (wiki-sourced, and predating v2.4). So the baseline really is "at any point in the past", which makes "`firedThisTurn` toggles exactly that" the most plausible reading — but plausible is not verified, and the platform's behaviour when it is `true` is untested.
+| `data` | Turn 1 | Turn 2+ | Reading |
+|---|---|---|---|
+| `{prereqs: […], firedThisTurn: true}` | fires | silent | same-turn interlock |
+| `{prereqs: […], firedThisTurn: false}` | fires | fires | permanent gate |
+| `{blockers: […], firedThisTurn: true}` | blocked | fires | blocked only for that turn |
+| `{blockers: […], firedThisTurn: false}` | blocked | blocked | permanent block |
 
-A round trip narrowed this without closing it: `firedThisTurn: true` **survived import unchanged**, so it is at minimum author-writable and not reset on the way in. That weakens the competing reading — that it is platform-managed runtime state the exporter writes — without killing it, since a value can be stored on import and still overwritten at runtime. Its *meaning* remains untested.
+`false` matches the wiki's baseline for both types — prereqs *"met if all of the selected triggers have fired at least once in **any previous turn**"*, blockers *"met if one or more of the selected triggers **has ever** fired"* — and `true` is exactly the narrowing the name suggests. It is author-writable, not platform-managed runtime state: the value survives import unchanged and drives evaluation as written.
 
-The advice is unchanged: **emit `false`**, and don't set `true` unless the author has confirmed the behaviour in-game.
+**Use `true` only when you mean "in the same pass as".** Two things make it easy to get wrong:
+
+- **Pass order is list order** (Probe D Q6). A `firedThisTurn: true` prereq must sit *after* its anchor in `triggerEvents`, or it evaluates before the anchor has fired and stays silent forever.
+- **A one-shot anchor gives a `firedThisTurn: true` prereq exactly one chance.** Once the anchor is spent, the interlock can never open again — which is the point when you want a one-turn reaction, and a silent dead trigger when you didn't.
 
 **Migrate a legacy bare array BEFORE importing — the platform destroys it.** Confirmed 2026-08-06 by round trip: IW does not migrate the pre-v2.4 shape. It **deletes the condition outright**, leaving `"triggerConditions": []` with the trigger's ID, name and effects intact. The result is a trigger with no conditions — and a trigger with no conditions never fires (confirmed in play 2026-08-22), so the trigger is dead, not ungated — with no error in-game and none in the export. Two same-anchor gates in the v2.4 object form round-tripped byte-identical in the same import, so the bare array is definitively the cause.
 

@@ -85,6 +85,8 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── probe-e-scope-q10.json          # Entry-vs-item scope, recommendedAIModel control, absent conditions key
 ├── probe-e-imported.json           # Probe E after round trip 1 — evidence, do not edit
 ├── probe-e-imported-2.json         # Probe E after round trip 2 (re-import of round 1) — evidence, do not edit
+├── probe-c-pawscript.json          # Malformed triggerOnPawScript cells, firedThisTurn 2x2, chance-formula rider
+├── probe-c-imported.json           # Probe C after import/export — evidence, do not edit
 └── harness/                # Playwright/CDP scripts that import, export and play probes against live IW
 
 .claude-plugin/

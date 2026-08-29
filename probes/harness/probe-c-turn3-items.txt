@@ -1,0 +1,6 @@
+PC Flavor: Lemon
+PC Anchor Number: 3
+PC Inherit Seed: PROBE INHERIT SEED
+Approach and attempt to open door 1.
+
+Examine the smudge on door 7 more closely.

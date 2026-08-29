@@ -2426,16 +2426,83 @@ def test_pawscript_condition_nested_in_logic_is_checked():
     ]
 
 
-@pytest.mark.parametrize("data", [_MISSING, "", "   ", None, 5, {"expr": "$x = 1"}])
-def test_pawscript_condition_non_string_data_warns(data):
+@pytest.mark.parametrize("data", [_MISSING, "", "   "])
+def test_pawscript_condition_blank_data_errors(data):
+    # Probe C (2026-08-29) imported both shapes: a missing `data` key had its condition
+    # deleted outright, and a blank string errored at runtime every turn. Either way the
+    # trigger is silently dead, so these are errors rather than warnings.
     world = _pawscript_condition_world(data, [_yaml_item(variable_name="favorite_flavor")])
     result = _validate(world)
-    # Warn, never error — one fixture sample is not enough to know how the platform reacts.
+    assert not result["valid"]
+    hits = [e for e in result["errors"] if "triggerOnPawScript data is" in e]
+    assert len(hits) == 1 and "never fires" in hits[0], result["errors"]
+
+
+@pytest.mark.parametrize("data", [None, 5, {"expr": "$x = 1"}])
+def test_pawscript_condition_non_string_data_warns(data):
+    # A present-but-not-a-string `data` is clearly malformed, but Probe C did not probe
+    # that shape — so it stays a warning rather than joining the errors above.
+    world = _pawscript_condition_world(data, [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
     assert result["valid"]
     assert any(
-        "triggerOnPawScript data is" in w and "non-empty PawScript" in w for w in result["warnings"]
+        "triggerOnPawScript data is" in w and "non-empty expression" in w
+        for w in result["warnings"]
     ), result["warnings"]
     assert not any("triggerOnPawScript" in e for e in result["errors"])
+
+
+def test_pawscript_interpolation_warns():
+    # Probe C: IW substitutes the item's VALUE into the text before parsing, so
+    # `<<probe_flavor>> = "Lemon"` was evaluated as `Lemon = "Lemon"` and errored. Warn
+    # rather than error — a numeric value would substitute into a valid comparison.
+    world = _pawscript_condition_world(
+        '<<favorite_flavor>> = "Lemon"', [_yaml_item(variable_name="favorite_flavor")]
+    )
+    result = _validate(world)
+    assert result["valid"]
+    hits = [w for w in result["warnings"] if "interpolation" in w]
+    assert len(hits) == 1 and "$favorite_flavor" in hits[0], result["warnings"]
+
+
+@pytest.mark.parametrize("expr", ["$favorite_flavor", "  $favorite_flavor  ", "$favorite_flavor.n"])
+def test_pawscript_bare_handle_warns(expr):
+    # Probe C: `$probe_flavor` "worked out to Lemon, not true or false", so a condition
+    # that is only a value reference can never fire.
+    world = _pawscript_condition_world(expr, [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
+    assert result["valid"]
+    assert any("bare value reference" in w for w in result["warnings"]), result["warnings"]
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        '$favorite_flavor = "Lemon"',
+        "not $favorite_flavor",
+        '$favorite_flavor.item("rex").exists()',
+        "$favorite_flavor > 0 and $player.name != ''",
+    ],
+)
+def test_pawscript_boolean_expressions_are_not_flagged_as_bare(expr):
+    # The bare-handle check must not fire on anything carrying an operator, keyword or
+    # call — those can all evaluate to true/false.
+    world = _pawscript_condition_world(expr, [_yaml_item(variable_name="favorite_flavor")])
+    result = _validate(world)
+    assert not any("bare value reference" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_random_chance_bare_handle_is_silent():
+    # A bare $handle is the CORRECT form for a chance formula (Probe D #8 — it fired and
+    # the value drove the roll), so the bare-handle warning is triggerOnPawScript-only.
+    world = _pawscript_condition_world(
+        "$number_of_non_human_friends",
+        [_yaml_item(variable_name="number_of_non_human_friends")],
+        ctype="triggerOnRandomChance",
+    )
+    result = _validate(world)
+    assert result["valid"]
+    assert not any("bare value reference" in w for w in result["warnings"]), result["warnings"]
 
 
 # ── triggerOnRandomChance formulas referencing tracked items (fixture 1.1) ───────
@@ -2490,7 +2557,8 @@ def test_random_chance_formula_nested_in_logic_is_checked():
 @pytest.mark.parametrize("data", [_MISSING, "", "   ", None, 30, {"chance": 30}])
 def test_random_chance_non_string_data_warns(data):
     # The schema types the formula as a string; anything else is warn-only (never an
-    # error) until a probe shows how IW treats it.
+    # error) until a probe shows how IW treats it. Probe C escalated the blank/missing
+    # case for triggerOnPawScript only — the random-chance equivalent is still untested.
     world = _pawscript_condition_world(
         data,
         [_yaml_item(variable_name="number_of_non_human_friends")],
@@ -2499,7 +2567,7 @@ def test_random_chance_non_string_data_warns(data):
     result = _validate(world)
     assert result["valid"]
     assert any(
-        "triggerOnRandomChance data is" in w and "non-empty PawScript" in w
+        "triggerOnRandomChance data is" in w and "non-empty expression" in w
         for w in result["warnings"]
     ), result["warnings"]
     assert not any("triggerOnRandomChance" in e for e in result["errors"])

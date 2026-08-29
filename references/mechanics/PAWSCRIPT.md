@@ -114,18 +114,36 @@ the trigger when it is truthy. It is deterministic — no AI judgment, so it is
 presumed not to count toward the ten-event `triggerOnEvent` cap (unverified).
 Compound tests go inside the one expression (`$gold >= 50 and $puppies.count > 2`)
 rather than across several conditions under a `logic` node, and it can reach into
-YAML sub-fields with the same dot paths scripts use (§5). Every `$name` in it must
-be a tracked item's `variableName` or a native; `validate_world` warns on anything
-else, and on a `data` that is not a non-empty string. A malformed or non-boolean
-expression survives import unchanged and simply **never fires** (Probe D + Expression
-Sandbox, 2026-08-22): a numeric result is reported as "not true or false — so the
-trigger never fires", an unknown `$name` as `No tracked item or variable called 'x'`,
-and a missing YAML path as `Field 'x' not found`, with World Debug logging "Its
-condition couldn't be worked out, so the trigger didn't run". `and` / `or` / `not` all
+YAML sub-fields with the same dot paths scripts use (§5). `and` / `or` / `not` all
 work; **`or` short-circuits left-to-right**, so a branch that may not exist goes on the
 right (`$probe.n > 2 or $subjects.ghost.suspicion > 0` fires; the reverse errors) or
-behind `.exists()`. Equality is a single `=` — `==` is a syntax error. See
-[`probes/README.md`](../../probes/README.md). Authoring guidance:
+behind `.exists()`. Equality is a single `=` — `==` is a syntax error.
+
+**Every malformed shape fails silently, in one of two ways** (Probe C, 2026-08-29,
+round trip + play; Probe D + Expression Sandbox, 2026-08-22). Nothing is rejected at
+import and nothing errors in-game — the trigger simply never fires:
+
+| `data` | Import | Runtime |
+|---|---|---|
+| *(key absent)* | **condition deleted** → conditionless trigger | dead |
+| `""` | dropped from the export, but kept server-side | `Empty expression - nothing to evaluate` |
+| `"$no_such_item = 1"` | kept verbatim | `No tracked item or variable called 'no_such_item'` |
+| `"$flavor"` (bare handle) | kept verbatim | "worked out to Lemon, not true or false" |
+| `"<<flavor>> = \"Lemon\""` | kept verbatim | evaluated as `Lemon = "Lemon"` → unknown-name error |
+| `"$probe.ghost > 0"` | kept verbatim | `Field 'ghost' not found` |
+
+Two of these are worth dwelling on. **A blank `data` is not the same as an absent
+one**: the absent key is deleted everywhere, while the blank string disappears from
+the exported JSON yet keeps erroring every turn — so an export is not a reliable
+inventory of what the platform is still evaluating. And **`<<…>>` interpolation in a
+condition is substituted *textually* before the expression is parsed**, so
+`<<flavor>>` holding `Lemon` produces the expression `Lemon = "Lemon"`, which reads
+`Lemon` as an identifier and errors. It is not merely the wrong style: it silently
+breaks the gate for any non-numeric item. Use `$flavor`.
+
+`validate_world` **errors** on missing or blank `data` and **warns** on the other
+three shapes plus any `$name` that is not a tracked item's `variableName` or a native.
+See [`probes/README.md`](../../probes/README.md). Authoring guidance:
 [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#choosing-condition-types).
 
 **Play-confirmed 2026-08-22.** `"$probe.n > 2"` fired on the turn it became true
@@ -157,7 +175,11 @@ so the bare form is a convention, not a requirement. `random` is a 0–1 float (
 Expression Sandbox returned 0.29 / 0.42 for it, and the same range for
 `random(1,100)`, so do not assume the argument form rescales it). `validate_world`
 warns on a non-string/blank formula and on a `$name` that is not a tracked item's
-`variableName` or a native.
+`variableName` or a native — an undeclared name is kept verbatim on import and then
+errors every turn (`No tracked item or variable called 'x'`), so the trigger is dead
+rather than merely unlucky (Probe C, 2026-08-29). Unlike `triggerOnPawScript`, a
+**bare `$handle` is the correct form here** — the formula wants a number, not a
+boolean.
 
 At runtime (play-confirmed 2026-08-22, rounds 1–2 and Probe D) the field is a
 **numeric** expression and every numeric form tried fires when the value beats the

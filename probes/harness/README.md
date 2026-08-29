@@ -12,6 +12,8 @@ with `sessionStorage.iwx = "1"`, so an operator's tab is never touched.
 | `play_probe_d.py <outdir> [--resume]` | Play → Choose character → collect SoG popups → AI model Lynx, illustrations Never → World Debug on → three `wait` turns, saving `turnN-{body,debug,items}.txt`. | Yes — ~21–26 credits per Lynx turn, no images |
 | `build_probe_e.py <probe-b-cap.json> <out.json>` | Builds `probes/probe-e-scope-q10.json` (P10-followup scope cells, bogus `recommendedAIModel`, Q10 absent-conditions-key trigger + control). | No |
 | `play_probe_e.py <outdir> [--resume]` | Same flow as `play_probe_d.py` (reuses its machinery with the title swapped), two `wait` turns. | Yes — same rates |
+| `build_probe_c.py <probe-e-scope-q10.json> <out.json>` | Builds `probes/probe-c-pawscript.json` (six malformed-`triggerOnPawScript` cells, the `firedThisTurn` 2×2 over prereqs and blockers, an undeclared-`$name` chance formula, and a character-scoped item with no per-character entry). | No |
+| `play_probe_c.py <outdir> [--resume]` | Same flow again, two `wait` turns — enough to split `firedThisTurn` against a one-shot anchor. | Yes — same rates |
 
 Run with the iw-likeness environment, which already has Playwright installed:
 
@@ -62,3 +64,15 @@ trigger "not yet fired" throughout); `probe-e-turn3-items.txt` is the final trac
 panel. The round-trip evidence is `../probe-e-imported.json` and `../probe-e-imported-2.json`.
 Results are read out in
 [`../README.md`](../README.md#answered-by-probe-e-2026-08-28-two-round-trips--played).
+
+## Probe C evidence kept here
+
+`probe-c-turn1-debug.txt` / `probe-c-turn3-debug.txt` are the World Debug modal after the
+opening turn and after the second `wait`. Read them together for `firedThisTurn`: turn 1 shows
+the anchor plus both prereq cells firing and both blocker cells silent; turn 3's "All triggers"
+list separates them (`P2a … fired turn 1` alone, `P2b … fired 3 times`, `P2c … first fired
+turn 2`, `P2d … not yet fired`). The same modals carry the per-cell PawScript errors for P14b,
+P14d, P14e, P14f and the P15 rider — including `Lemon = "Lemon"`, which is what `<<…>>`
+interpolation compiles to. `probe-c-turn3-items.txt` shows the auto-created per-character entry
+holding the item's seeded value. The round-trip evidence is `../probe-c-imported.json`. Results
+are read out in [`../README.md`](../README.md#answered-by-probe-c-2026-08-29-round-trip--played).
