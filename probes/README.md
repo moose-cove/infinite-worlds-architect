@@ -11,11 +11,12 @@ the wiki.
 | `probes/probe-b-cap.json` | The ten-event cap, `recommendedAIModel`, and the factor-isolating follow-ups Probe A's results demanded | **Round trip run** — see [Recorded results](#recorded-results) |
 | `probes/probe-d-pawscript-runtime.json` ([build spec](probe-d-pawscript-runtime.md)) | SoG-without-conditions, `or`/`and` in conditions, chance-formula dialect (`if(…)`, bare `$handle`, `turn_number` forms), same-turn state visibility, pass order, errored one-shots vs `triggerPrereqs`, multi-level / runtime-key record creation | **Round trip + played** — see [Answered by Probe D](#answered-by-probe-d-2026-08-22-played) |
 | `probes/probe-e-scope-q10.json` | P10-followup (entry vs item scope level), `recommendedAIModel` bogus-value control, Q10 (absent `triggerConditions` key) | **Two round trips + played** — see [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played) |
+| `probes/probe-c-pawscript.json` | P14 (malformed `triggerOnPawScript`), P2 (`firedThisTurn` semantics), P15 import rider, per-character auto-create seeding | **Round trip + played** — see [Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played) |
 
-All four have been run, and their `-imported.json` counterparts are committed as evidence.
-Probe D was driven end-to-end (import, export, play, World Debug) by the Playwright harness in
-[`harness/`](harness/README.md); use it for the next round rather than clicking.
-The A, B and E source files **now fail validation** — see
+All five have been run, and their `-imported.json` counterparts are committed as evidence.
+Probes D, E and C were driven end-to-end (import, export, play, World Debug) by the Playwright
+harness in [`harness/`](harness/README.md); use it for the next round rather than clicking.
+The A, B, E and C source files **now fail validation** — see
 [Expected validator output](#expected-validator-output), which explains why that is the
 correct end state rather than a regression.
 
@@ -111,7 +112,9 @@ cleared.
 **P2 (partial) — `firedThisTurn: true` survives the round trip.** Not reset on import, so
 it is at minimum author-writable. That weakens the "platform-managed runtime state" reading
 without killing it: stored-then-overwritten-at-runtime is still possible. Runtime semantics
-remain open.
+remain open. *(Superseded: closed in play by Probe C, 2026-08-29 — `true` narrows the gate to
+the current turn, and the platform-managed reading is dead. See
+[Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played).)*
 
 **P9 (partial), P7 (partial)** — all eight style fields, and the nested `formatSchema` with
 `enforceFormat: true`, round-tripped exactly. Storage is confirmed; precedence (P9) and
@@ -182,17 +185,17 @@ closing it. *(Superseded: the bogus-value control ran in Probe E, 2026-08-28 —
 string verbatim; there is no enforced enum. See
 [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played).)*
 
-### Still open — needs another round trip (Probe C)
+### Formerly open — both closed by later probes
 
 **P10-followup — ANSWERED by Probe E (2026-08-28), along with the `recommendedAIModel`
 bogus-value control it was paired with.** See
 [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played).
 
-**P14 — `triggerOnPawScript` malformed-input handling.** Fixture 1.09 (2026-08) introduced
-this condition type with one well-formed sample; the plugin registers it and warns on
-non-string / blank `data` and on undeclared `$names`, but has no evidence for what the
-platform does with a bad expression. Import-side half is round-trip-answerable — see
-[Probe C · P14](#p14--triggeronpawscript-malformed-input) below.
+**P14 — ANSWERED by Probe C (2026-08-29)**, except the cap half (does a `triggerOnPawScript`
+gate count toward the ten-event cap?), which stays open. Six malformed-input cells were
+imported and played; see
+[Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played). The cell design is
+retained as the read protocol at [Probe C · P14](#p14--triggeronpawscript-malformed-input).
 
 **P15 — `$variableName` inside a `triggerOnRandomChance` formula.** Fixture 1.1 (2026-08)
 carries `"$number_of_non_human_friends+round(turn_number%random)"`, which proves the `$` form
@@ -323,12 +326,100 @@ every turn (fired 3 times). The absent-key case now has the same confirmed statu
 dead, not unconditional. `_check_conditionless_triggers`' warning covers both shapes with
 no remaining hedge.
 
+### Answered by Probe C (2026-08-29, round trip + played)
+
+Built by [`harness/build_probe_c.py`](harness/build_probe_c.py) from Probe E's skeleton,
+imported over the Probe E world slot, exported immediately (`probe-c-imported.json`), then
+played on Lynx with illustrations off: the opening turn plus two `wait` turns with World Debug
+open (`harness/probe-c-turn*-debug.txt`).
+
+**P14 — malformed `triggerOnPawScript` fails in two distinct ways, and the split is
+structural, not semantic.** Six cells, one condition each, against a text item holding
+`"Lemon"`:
+
+| Cell | `data` | Import | Runtime (World Debug) |
+|---|---|---|---|
+| P14a (control) | `$probe_flavor = "Lemon"` | survived | fired every turn ✓ |
+| P14b | `""` | **dropped from the export** | still evaluated: `Empty expression - nothing to evaluate` |
+| P14c | *(key absent)* | **gone from the export** | no World Debug entry at all → never fired |
+| P14d | `$no_such_item = 1` | kept verbatim | `No tracked item or variable called 'no_such_item'` |
+| P14e | `$probe_flavor` | kept verbatim | "It worked out to Lemon, not true or false" |
+| P14f | `<<probe_flavor>> = "Lemon"` | kept verbatim | evaluated as `Lemon = "Lemon"` → unknown-name error |
+
+Three consequences shipped in v0.23.0:
+
+1. **Blank and absent `data` became errors.** Both leave a gate that does no gating, so they
+   join the `textComparison` rules rather than staying warnings. Scoped to
+   `triggerOnPawScript` — the `triggerOnRandomChance` equivalent was not probed and stays a
+   warning.
+
+   > **What P14c does *not* establish.** P14b and P14c come back byte-identical in the export
+   > (`"triggerConditions": []`), so the export alone cannot say whether the absent-key
+   > condition was deleted at import or kept and simply never logged — and P14b is itself the
+   > proof that export-absence does not imply platform-absence. The one asymmetry is that
+   > P14b produced a World Debug entry and P14c produced none, which is suggestive but has a
+   > rival reading (no expression string to echo). The authoring consequence is identical
+   > either way, which is what the error severity rests on. To separate them: re-import
+   > `probe-c-imported.json`, or give a P14c cell a second, valid condition and see whether
+   > the trigger ends up single-gated or dead.
+2. **`<<…>>` in a condition is now warned about.** P14f is the finding this probe was
+   predicted to produce, and the mechanism is worse than "wrong style": IW substitutes the
+   item's **value** into the text *before* parsing, so a text item yields a bare identifier
+   and the gate dies. A numeric item would *probably* substitute into a valid comparison
+   (`<<hp>> > 5` → `3 > 5`) — untested, only a text item was probed — which is why this is a
+   warning and not an error. Interpolation inside a quoted literal (`$flavor = "<<other>>"`)
+   is legitimate and the validator leaves it alone.
+3. **A bare `$handle` is now warned about** for `triggerOnPawScript` only — it is the
+   *correct* form for a `triggerOnRandomChance` formula (Probe D #8).
+
+P14d's survival confirms the undeclared-`$name` check belongs at warning severity: import
+keeps the condition, and the failure is a runtime error every turn.
+
+**P14b is the first construct known to differ between the export and the live world.** The
+condition is absent from the exported JSON yet the runtime keeps evaluating it. So a
+re-export diff can *under*-report as well as over-report, and "it's not in the export" is not
+proof the platform has stopped running it. This is the same *direction* as the long-known
+empty-field stripping (six empty top-level keys were dropped in this round trip too) — the
+generalisation is "IW's exporter drops selected empty values"; what is new is that one of
+them is still being evaluated.
+
+**P2 — `firedThisTurn` selects the match window. Confirmed, both condition types.** A
+one-shot anchor fired on turn 1 and never again; four repeatable consumers gated on it:
+
+| Cell | `data` | Observed | Reading |
+|---|---|---|---|
+| P2a | `{prereqs: [anchor], firedThisTurn: true}` | "fired turn 1" only | same-turn interlock |
+| P2b | `{prereqs: [anchor], firedThisTurn: false}` | fired turns 1, 2, 3 | permanent gate (control) |
+| P2c | `{blockers: [anchor], firedThisTurn: true}` | first fired turn 2, then 3 | blocked only on the anchor's turn |
+| P2d | `{blockers: [anchor], firedThisTurn: false}` | never fired | permanent block (control) |
+
+So `true` narrows "has the listed trigger fired?" from *ever* to *this turn*, exactly as the
+name suggests and as the wiki's `false`-baseline wording implied. The rival reading — that the
+field is platform-managed runtime state — is dead: the value is author-written and drives
+evaluation. The plugin keeps type-checking it only, which is now correct rather than cautious,
+since both values are legitimate. Note the anchor was listed **first** by design, so Probe D's
+Q6 pass ordering let P2a see it as fired-this-turn on turn 1. The reverse arrangement was
+never run: whether a consumer placed *above* its anchor would miss the window, or whether the
+fired-registry is finalized per turn and ordering is irrelevant, is an open follow-up — one
+cell settles it. Leading with the anchor is safe under both readings.
+
+**P15 rider — an undeclared `$name` in a `triggerOnRandomChance` formula is kept on import**
+and errors at runtime (`No tracked item or variable called 'no_such_item'`), never firing.
+Same shape as P14d: no import-time name resolution in either condition type.
+
+**Auto-create rider — the entry IW materializes is seeded from the item's `initialValue`.**
+A `"character"`-scoped item carrying `"PROBE INHERIT SEED"` and *no* per-character entry came
+back with an entry whose `initialPCValue` was that string (and the value was live in play).
+That explains Probe E's `""` result — its item's `initialValue` was empty — and upgrades
+`TRACKED_ITEMS.md`'s "drop the entry and set the value on the item" from a hedged suggestion
+to a confirmed fix.
+
 ### Still open — all runtime-only
 
-P2 semantics (does `firedThisTurn: true` narrow the gate?), P4's editor-UI read, P7
-enforcement recursion, P8 YAML coercion, P9 image precedence, P11 firing behaviour, and the
-cap half of P14 (does a `triggerOnPawScript` gate count toward the ten-event cap?). None of
-these can be read from a round trip; each needs a played session or a generated image.
+P4's editor-UI read, P7 enforcement recursion, P8 YAML coercion, P9 image precedence, P11
+firing behaviour, and the cap half of P14 (does a `triggerOnPawScript` gate count toward the
+ten-event cap?). None of these can be read from a round trip; each needs a played session or a
+generated image.
 
 ---
 
@@ -343,12 +434,13 @@ The runtime half — does a trigger left with `triggerConditions: []` fire every
 never? — was answered in play on 2026-08-22 (P13, above): **never**. The deleted gate leaves a
 dead trigger, and the fix wording follows from that.
 
-### P2 — What is `firedThisTurn`? *(round trip partially answered)*
-`P2a` sets `true`, `P2b` is the `false` control, both gate on the anchor. The anchor fires
-on turn 1 only, so from turn 2 the anchor has fired *at some point* but not *this turn*. If
-`P2a` goes quiet from turn 2 while `P2b` keeps firing, `firedThisTurn: true` narrows the
-gate to the current turn. Also check whether the trigger editor exposes a checkbox for it —
-if it does not, that still favours the platform-managed reading despite the value surviving.
+### P2 — What is `firedThisTurn`? *(answered — Probe C, 2026-08-29)*
+The design, kept as the read protocol: `P2a` sets `true`, `P2b` is the `false` control, both
+gate on the anchor. The anchor fires on turn 1 only, so from turn 2 the anchor has fired *at
+some point* but not *this turn*. If `P2a` goes quiet from turn 2 while `P2b` keeps firing,
+`firedThisTurn: true` narrows the gate to the current turn. Probe C ran exactly this, plus
+the two blocker cells the design omitted, and got that result — see
+[Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played).
 
 ### P3 — the `conditions` registry *(answered — author-maintained)*
 One runtime question is left: the `P3a` trigger's event is declared nowhere. If it still
@@ -488,7 +580,7 @@ empty-array case never fires, so a stripped gate leaves a dead trigger. The SoG 
 
 ## Expected validator output
 
-**The Probe A, B and E source files fail validation, and that is correct.** Do not "fix" them.
+**The Probe A, B, E and C source files fail validation, and that is correct.** Do not "fix" them.
 
 An earlier version of this file said that a validator change making these probes error "means
 the change needs rethinking". That guard was written when the probes were instruments waiting
@@ -514,6 +606,12 @@ ruled out and runtime enforcement is untested; and the P13 trigger's empty `trig
 (deleted on import, as predicted). Warnings: the Q10 conditionless trigger, and PE1's entry
 backed by a player-scoped item (the v0.22.0 doomed-entry warning).
 
+`probes/probe-c-pawscript.json` — 2 errors, 4 warnings. Errors: P14b and P14c (blank and
+absent `triggerOnPawScript` data, v0.23.0). Warnings: P14d and the P15 rider (undeclared
+`$name`), P14e (bare handle) and P14f (`<<…>>` interpolation). `probe-c-imported.json` reports
+0 errors / 6 warnings — the two errored cells come back as conditionless triggers, which the
+v0.21.0 warning names, and the four kept-but-broken cells still warn.
+
 The useful invariant is the inverse one, and it *almost* holds: **every `-imported.json` file
 validates with zero errors**, because IW already deleted everything the validator now objects
 to — with one instructive exception. `probe-e-imported.json` reports **1 error**: IW's own
@@ -522,8 +620,14 @@ import deletes (`probe-e-imported-2.json` — 0 errors, 1 warning — proves it)
 exception confirms the validator rather than contradicting it: the error names data that
 really is one round trip away from vanishing. Everywhere else the validator's errors and the
 platform's deletions line up exactly. (The imported files do carry warnings —
-`probe-a-imported.json` 7, `probe-b-imported.json` 4 — because every condition IW deleted
-left behind a conditionless, dead trigger, which the v0.21.0 warning now names.)
+`probe-a-imported.json` 7, `probe-b-imported.json` 4, `probe-c-imported.json` 6 — because
+every condition IW deleted left behind a conditionless, dead trigger, which the v0.21.0
+warning now names.)
+
+Probe C added a second caveat to the same invariant, in the opposite direction from Probe E's:
+`probe-c-imported.json` validates cleanly on P14b **because the condition is missing from the
+export**, while the live world is still evaluating it. Zero errors on an export means the
+export is clean, not that the world is.
 
 The three canonical fixtures must continue to validate with **zero errors** (`CLAUDE.md`
 source-of-truth rule 1). That is why the legacy-gate rule is version-conditional rather than
@@ -531,12 +635,12 @@ flat — see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGE
 
 ---
 
-## Probe C *(designed, not yet built)*
+## Probe C *(built and run 2026-08-29 — results above)*
 
-Carries P14 (the P10-followup cells it originally also carried were run as Probe E,
-2026-08-28, and the P15 write-up below is retained as historical record — its cells are
-closed). Build it as `probes/probe-c-pawscript.json` when there is a round trip to spend;
-keep it minimal like the others.
+Carried P14 plus the P2 `firedThisTurn` cells (the P10-followup cells it originally also
+carried were run as Probe E, 2026-08-28, and the P15 write-up below is retained as historical
+record — its cells are closed). The design below is kept as the read protocol; the outcomes
+are in [Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played).
 
 ### P14 — `triggerOnPawScript` malformed input
 
@@ -560,6 +664,10 @@ Import outcomes drive the validator: a deleted P14b/P14c promotes the current wa
 version-conditional error (same shape as the legacy-gate rule); a deleted P14d promotes the
 undeclared-`$name` warning likewise; a *kept* P14f means the plugin should warn that
 `<<…>>` is the wrong form rather than stay silent.
+
+*(Outcome: P14b/P14c died — promoted to errors, though flat rather than version-conditional,
+since `triggerOnPawScript` has no pre-v2.4 legacy form to stay compatible with. P14d survived,
+so its warning stands. P14f survived and now warns.)*
 
 **Runtime half (played session):** P14a is answered — a well-formed condition survives import
 and fires (2026-08-22, see "Answered in play"). P14d/P14e are answered at runtime by the

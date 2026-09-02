@@ -1,0 +1,406 @@
+{
+  "favorite": false,
+  "title": "SCHEMA PROBE C - PawScript malformed input, firedThisTurn",
+  "description": "Probe world: what IW does with malformed triggerOnPawScript conditions on import, and whether firedThisTurn narrows a prereq/blocker gate to the current turn.",
+  "background": "A featureless white room containing twelve numbered doors. Nothing happens here unless a trigger makes it happen.",
+  "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery.",
+  "authorStyle": "Terse and clinical.",
+  "recommendedAIModel": null,
+  "firstInput": "I count the doors.",
+  "objective": "Advance turns so the probe triggers fire.",
+  "imageModel": "manticore",
+  "imageStyle": "photo_1",
+  "illustrationStyleNonCharacterLowPriority": "",
+  "illustrationStyleNonCharacterHighPriority": "",
+  "illustrationStyleCharacterLowPriority": "",
+  "illustrationStyleCharacterHighPriority": "",
+  "imageStyleCharacterPre": "",
+  "imageStyleCharacterPost": "",
+  "imageStyleNonCharacterPre": "",
+  "imageStyleNonCharacterPost": "",
+  "mature": false,
+  "nsfw": false,
+  "contentWarnings": "",
+  "enableAISpecificInstructionBlocks": true,
+  "previewImage": "",
+  "fullSizePreviewImage": "",
+  "previewImageOptions": [],
+  "fullSizePreviewImageOptions": [],
+  "currentPreviewImageIndex": 0,
+  "imagePromptDetails": {
+    "illustrGenre": "",
+    "illustrClothes": "",
+    "illustrSetting": "",
+    "illustrSubject": "",
+    "illustrAppearance": "",
+    "illustrIsCharacter": false,
+    "illustrExpressionPosition": ""
+  },
+  "permissionsOnceShared": {
+    "sharing": false,
+    "editing": false
+  },
+  "allowChangeCharacterName": true,
+  "allowChangeCharacterDescription": true,
+  "allowChangeCharacterSkills": true,
+  "allowChangeCharacterItemValues": true,
+  "allowChangeCharacterPortrait": true,
+  "allowChangeCharacterNewPortrait": true,
+  "conditions": [],
+  "descriptionRequest": "",
+  "evaluationRequest": "",
+  "summaryRequest": "",
+  "schemaVersion": 2.4,
+  "charSelectText": "Pick the probe character.",
+  "skills": [
+    "Observation",
+    "Patience"
+  ],
+  "possibleCharacters": [
+    {
+      "name": "Probe Subject",
+      "description": "A plain figure in a grey coat who exists only so the world has a player character.",
+      "portrait": "",
+      "fullSizePortrait": "",
+      "portraitOptions": [],
+      "fullSizePortraitOptions": [],
+      "currentPortraitIndex": 0,
+      "characterId": "PrbSubj2",
+      "skills": {
+        "Observation": 3,
+        "Patience": 3
+      },
+      "initialTrackedItemValues": []
+    }
+  ],
+  "triggerEvents": [
+    {
+      "id": "PrbCAnch01",
+      "name": "P2 Anchor one-shot",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000101",
+          "category": "condition",
+          "type": "triggerOnPawScript",
+          "data": "$pc_anchor_n > 0"
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-666600000001",
+          "data": "PROBE P2 ANCHOR FIRED.",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": false
+    },
+    {
+      "id": "PrbCP2a01",
+      "name": "P2a prereq firedThisTurn true",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000102",
+          "category": "condition",
+          "type": "triggerPrereqs",
+          "data": {
+            "prereqs": [
+              "PrbCAnch01"
+            ],
+            "firedThisTurn": true
+          }
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-666600000001",
+          "data": "PROBE P2a FIRED (prereq, firedThisTurn=true).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP2b01",
+      "name": "P2b prereq firedThisTurn false",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000103",
+          "category": "condition",
+          "type": "triggerPrereqs",
+          "data": {
+            "prereqs": [
+              "PrbCAnch01"
+            ],
+            "firedThisTurn": false
+          }
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-666600000001",
+          "data": "PROBE P2b FIRED (prereq, firedThisTurn=false, control).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP2c01",
+      "name": "P2c blocker firedThisTurn true",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000104",
+          "category": "condition",
+          "type": "triggerBlockers",
+          "data": {
+            "blockers": [
+              "PrbCAnch01"
+            ],
+            "firedThisTurn": true
+          }
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-666600000001",
+          "data": "PROBE P2c FIRED (blocker, firedThisTurn=true).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP2d01",
+      "name": "P2d blocker firedThisTurn false",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000105",
+          "category": "condition",
+          "type": "triggerBlockers",
+          "data": {
+            "blockers": [
+              "PrbCAnch01"
+            ],
+            "firedThisTurn": false
+          }
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-666600000001",
+          "data": "PROBE P2d FIRED (blocker, firedThisTurn=false, control).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP14a1",
+      "name": "P14a control well-formed",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000106",
+          "category": "condition",
+          "type": "triggerOnPawScript",
+          "data": "$probe_flavor = \"Lemon\""
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000a1",
+          "data": "PROBE P14a FIRED (control).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP14b1",
+      "name": "P14b blank data",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000107",
+          "category": "condition",
+          "type": "triggerOnPawScript",
+          "data": ""
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000b1",
+          "data": "PROBE P14b FIRED (blank data).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP14c1",
+      "name": "P14c absent data key",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000108",
+          "category": "condition",
+          "type": "triggerOnPawScript"
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000c1",
+          "data": "PROBE P14c FIRED (absent data key).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP14d1",
+      "name": "P14d undeclared name",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000109",
+          "category": "condition",
+          "type": "triggerOnPawScript",
+          "data": "$no_such_item = 1"
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000d1",
+          "data": "PROBE P14d FIRED (undeclared $name).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP14e1",
+      "name": "P14e non-boolean expression",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000110",
+          "category": "condition",
+          "type": "triggerOnPawScript",
+          "data": "$probe_flavor"
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000e1",
+          "data": "PROBE P14e FIRED (non-boolean).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP14f1",
+      "name": "P14f legacy interpolation",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000111",
+          "category": "condition",
+          "type": "triggerOnPawScript",
+          "data": "<<probe_flavor>> = \"Lemon\""
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000f1",
+          "data": "PROBE P14f FIRED (legacy <<>> form).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    },
+    {
+      "id": "PrbCP15g1",
+      "name": "P15 rider undeclared name in chance formula",
+      "triggerConditions": [
+        {
+          "id": "66660000-6666-4666-8666-666600000112",
+          "category": "condition",
+          "type": "triggerOnRandomChance",
+          "data": "$no_such_item"
+        }
+      ],
+      "triggerEffects": [
+        {
+          "id": "66660000-6666-4666-8666-6666000000g1",
+          "data": "PROBE P15 RIDER FIRED (undeclared $name in chance formula).",
+          "type": "effectShowMessage"
+        }
+      ],
+      "canTriggerMoreThanOnce": true
+    }
+  ],
+  "victoryCondition": {
+    "condition": "The player types the word VICTORY.",
+    "text": "Probe complete.",
+    "alreadyFired": false
+  },
+  "defeatCondition": {
+    "condition": "The player types the word DEFEAT.",
+    "text": "Probe aborted.",
+    "alreadyFired": false
+  },
+  "instructionBlocks": [],
+  "loreBookEntries": [],
+  "trackedItems": [
+    {
+      "id": "PrbCFlav01",
+      "name": "PC Flavor",
+      "positionInList": 0,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE P14 target: holds 'Lemon' so the control condition '$probe_flavor = \"Lemon\"' is true. Every P14 cell reads this item.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "Lemon",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "probe_flavor",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbCNum01",
+      "name": "PC Anchor Number",
+      "positionInList": 1,
+      "dataType": "number",
+      "visibility": "everyone",
+      "description": "PROBE anchor value: holds 3 so the P2 anchor's gate '$pc_anchor_n > 0' is always true. If the anchor never fires, no P2 cell is interpretable.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "3",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "pc_anchor_n",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbCInh01",
+      "name": "PC Inherit Seed",
+      "positionInList": 2,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "PROBE auto-create rider: this item is scoped 'character' and carries a non-empty initialValue, but the player character has NO per-character entry for it. If the export's auto-created entry carries this string, the item's initialValue seeds it; if it is empty, it does not.",
+      "updateInstructions": "",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "PROBE INHERIT SEED",
+      "initialValueBasedOnPC": "character",
+      "autoUpdate": false,
+      "variableName": "pc_inherit",
+      "driftAcknowledgedForName": null
+    }
+  ],
+  "NPCs": [],
+  "autoAdvanceVersion": false,
+  "version": "1.00",
+  "designNotes": "SCHEMA PROBE C. Six malformed-triggerOnPawScript cells (P14a-f, read from the export diff), a firedThisTurn 2x2 over prereqs and blockers against a one-shot anchor (P2, read in play), an undeclared-$name random-chance formula (P15 rider), and a character-scoped item with a non-empty initialValue and no per-character entry (auto-create rider). See probes/README.md in the infinite-worlds-architect repo for the read protocol."
+}

@@ -75,7 +75,7 @@ For **each field or entity**, follow this loop:
 **Triggers** (see [`references/fields/TRIGGER_EVENTS.md`](../references/fields/TRIGGER_EVENTS.md) and [`references/mechanics/PAWSCRIPT.md`](../references/mechanics/PAWSCRIPT.md) for the `effectRunScript` effect):
 - For each trigger: `name`, `canTriggerMoreThanOnce`, `advancedLogic`, `triggerOnStartOfGame`, then define conditions and effects
 - If an effect needs to update tracked items together as one unit, consider `effectRunScript` — a transactional PawScript that may only reference existing tracked-item `variableName`s and must never write to `$player`/`$game`; reach nested fields by chaining dots (`$puppy.stats.friendliness`)
-- **v2.4 shapes:** `triggerPrereqs` / `triggerBlockers` take `data: {prereqs|blockers: [...], firedThisTurn: false}`, not a bare array. Every `triggerOnEvent` needs its exact event string added to the world's top-level `conditions` array in the same edit
+- **v2.4 shapes:** `triggerPrereqs` / `triggerBlockers` take `data: {prereqs|blockers: [...], firedThisTurn: false}`, not a bare array. `false` = permanent gate (the default); `true` = same-turn interlock — see `references/fields/TRIGGER_EVENTS.md`. Every `triggerOnEvent` needs its exact event string added to the world's top-level `conditions` array in the same edit
 - Mint a trigger `id` with `mint_ids("triggerEvent", 1)`
 - Mint condition/effect `id`s with `mint_ids("triggerStep", n)`
 - After all triggers are defined, confirm `conditions` holds exactly the set of `triggerOnEvent` strings — `validate_world` warns once per undeclared event

@@ -1,0 +1,85 @@
+World debug tools
+Triggers (4)
+Triggers fired this turn
+P2 Anchor one-shot
+P2a prereq firedThisTurn true
+P2b prereq firedThisTurn false
+P14a control well-formed
+All triggers
+P2 Anchor one-shot - fired turn 1
+P2a prereq firedThisTurn true - fired turn 1
+P2b prereq firedThisTurn false - fired turn 1
+P2c blocker firedThisTurn true - not yet fired
+P2d blocker firedThisTurn false - not yet fired
+P14a control well-formed - fired turn 1
+P14b blank data - not yet fired
+P14c absent data key - not yet fired
+P14d undeclared name - not yet fired
+P14e non-boolean expression - not yet fired
+P14f legacy interpolation - not yet fired
+P15 rider undeclared name in chance formula - not yet fired
+PawScript (7)
+
+What your PawScript did this turn. None of it stopped your game - this is here so you can see what happened and fix anything that needs a look.
+
+Trigger:
+P2 Anchor one-shot
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+Trigger:
+P14a control well-formed
+•
+Its condition fired
+Open in Sandbox
+PawScript condition
+Trigger:
+P14b blank data
+🔧
+Its condition couldn't be worked out, so the trigger didn't run
+Open in Sandbox
+PawScript condition
+Empty expression - nothing to evaluate
+Trigger:
+P14d undeclared name
+🔧
+Its condition couldn't be worked out, so the trigger didn't run
+Open in Sandbox
+PawScript condition
+
+$no_such_item = 1
+
+No tracked item or variable called 'no_such_item'.
+Trigger:
+P14e non-boolean expression
+💡
+Its condition didn't give a true/false answer, so it couldn't fire
+Open in Sandbox
+PawScript condition
+
+$probe_flavor
+
+It worked out to Lemon, not true or false. A trigger fires only when its condition works out to true - compare it to something, e.g. $probe_flavor > 0.
+
+No effects ran - the condition didn't fire.
+Trigger:
+P14f legacy interpolation
+🔧
+Its condition couldn't be worked out, so the trigger didn't run
+Open in Sandbox
+PawScript condition
+
+Lemon = "Lemon"
+
+No tracked item or variable called 'Lemon'.
+Trigger:
+P15 rider undeclared name in chance formula
+🔧
+Its condition couldn't be worked out, so the trigger didn't run
+
+$no_such_item
+
+No tracked item or variable called 'no_such_item'.
+Replay this turn
+OK
