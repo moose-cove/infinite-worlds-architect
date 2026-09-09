@@ -1,7 +1,34 @@
 ---
-description: Read-only deep analysis of an existing Infinite Worlds world — ask questions, get evidence-cited answers. Never edits.
+description: Read-only Q&A analysis of an existing Infinite Worlds world
 argument-hint: "[world_path]"
+allowed-tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash(realpath:*)
+  - Bash(pwd:*)
+  - Bash(wc:*)
+  - WebFetch
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__confirm_path
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__validate_world
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__audit_world
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__read_world_field
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__format_world_for_review
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__get_schema_summary
 ---
+
+<!--
+Usage: /infinite-worlds-architect:analyze [world_path]
+  world_path is optional — the command asks for it if omitted.
+Requires: the iw-json-tools MCP server (bundled with this plugin).
+
+NAMING DECISION: `analyze` rather than the siblings' verb-noun `analyze-world` — chosen
+deliberately by the plugin author; the plugin namespace prevents any collision.
+
+TOOL ALLOWLIST: deliberately read-only. Edit / Write / make_draft_world / mint_ids are
+excluded on purpose — this command never changes a world. Keep the list in sync with the
+tools the body actually calls.
+-->
 
 # Analyze World
 
