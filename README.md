@@ -11,7 +11,7 @@ This plugin assists an author who is building or editing such a world by talking
 - Validates world JSON against the platform's schema before sending it live
 - Scaffolds new worlds from sane defaults
 - Audits quality (token budgets, trigger cycles, redundancy detection)
-- Provides one `world-architect` agent and four guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`)
+- Provides one `world-architect` agent and five guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`, `/analyze`)
 
 The plugin has **no write tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write`. The plugin is the validator, analyst, and helper; the agent is the author.
 
@@ -57,7 +57,7 @@ This is an **autonomous subagent** that handles world authoring and debugging en
 The agent is reached two ways:
 
 - **Automatically as a subagent** when you describe authoring or debugging work in natural language — e.g. *"I want to build a noir detective world..."*, *"My trigger doesn't fire even though..."*, *"Add a wandering merchant NPC to my world..."*. Claude routes the task to the agent.
-- **Inline through a slash command** (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`). Each command `@`-references the agent file, so the main session adopts the agent's persona before walking you through that command's specific workflow — preserving the field-by-field approval loop that needs multi-turn user interaction.
+- **Inline through a slash command** (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`, `/analyze`). Each command `@`-references the agent file, so the main session adopts the agent's persona before walking you through that command's specific workflow — preserving the field-by-field approval loop that needs multi-turn user interaction.
 
 On-demand reference material lives at [`references/`](./references/) at the plugin root — the agent loads individual files as needed.
 
@@ -69,6 +69,7 @@ On-demand reference material lives at [`references/`](./references/) at the plug
 | `/infinite-worlds-architect:modify-world <world_path>` | Guided field-by-field editing of an existing world, with per-change approval. | Path to the existing `world.json`. |
 | `/infinite-worlds-architect:spinoff-world <source_path> <target_path>` | Derive a divergent variant from an existing world, keeping the original intact. | Source path, then target path. |
 | `/infinite-worlds-architect:sequel-world <source_path> <story_export_path...> <target_path>` | Build a sequel that begins where a played story left off, evolving fields from what actually happened (each proposal cites its evidence). | Source world path, one or more story-export `.txt` paths, then target path. |
+| `/infinite-worlds-architect:analyze <world_path>` | Read-only deep analysis of an existing world: loads it into context, validates and audits it, then answers your questions with evidence-cited reasoning (why a trigger fires, how endings are reached, where the token budget goes). Never edits. | Path to the existing `world.json`. |
 
 Each command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md): read before write and pass-through preservation (which keeps `schemaVersion` and any unknown fields intact across edits).
 
@@ -106,6 +107,11 @@ Claude: <copies, then guides edits for the variant>
 
 You:    /infinite-worlds-architect:sequel-world ./my-world.json ./session-1-20.txt ./my-world-2.json
 Claude: <extracts the played story, then proposes each evolved field with cited evidence>
+
+You:    /infinite-worlds-architect:analyze ./my-world.json
+Claude: <loads, validates and audits the world, then asks what you want to know>
+You:    Why does the "betrayal" trigger never fire?
+Claude: <traces the condition to its tracked item and cites the runtime reference>
 ```
 
 Open any `world.json` and ask Claude what's wrong, what could be tighter, or what to add next — the agent will pull the right reference file on demand.
