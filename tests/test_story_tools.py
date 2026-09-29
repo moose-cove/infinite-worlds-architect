@@ -14,6 +14,7 @@ from iw_architect.tools.story_tools import (
     extract_story_data,
     get_character_list,
     query_story_data,
+    search_turns,
 )
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -260,6 +261,121 @@ class TestGetCharacterList:
 
 
 # ---------------------------------------------------------------------------
+# search_turns
+# ---------------------------------------------------------------------------
+
+
+class TestSearchTurns:
+    def test_camelcase_wire_shape(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "rival"))
+        assert out["matchingTurnCount"] == 4
+        assert out["totalMatches"] == 4
+        assert out["sectionsSearched"] == ["action", "outcome", "secretInfo"]
+        assert out["results"][0] == {
+            "turn": 2,
+            "matchCount": 1,
+            "sectionCounts": {"secretInfo": 1},
+        }
+        assert "error" not in out
+
+    def test_snippets_omitted_unless_requested(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "rival"))
+        assert all("snippets" not in hit for hit in out["results"])
+
+    def test_snippets_included_when_requested(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "rival", include_snippets=True))
+        assert out["results"][0]["snippets"] == [
+            {"section": "secretInfo", "match": "rival", "text": "The paper was planted by a rival."}
+        ]
+
+    def test_relative_dir_errors(self):
+        out = json.loads(search_turns("extraction", "rival"))
+        assert "relative path" in out["error"]
+
+    def test_invalid_regex_errors(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "(", mode="regex"))
+        assert list(out) == ["error"]
+        assert "Invalid regex" in out["error"]
+
+    def test_missing_turn_index_errors(self, tmp_path):
+        out = json.loads(search_turns(str(tmp_path), "rival"))
+        assert "turn_index.json" in out["error"]
+
+    def test_flags_pass_through_and_echo(self, extraction_dir):
+        out = json.loads(
+            search_turns(
+                extraction_dir,
+                "The rival",
+                case_sensitive=True,
+                whole_word=True,
+                sections=["secretInfo"],
+            )
+        )
+        assert [h["turn"] for h in out["results"]] == [3, 5]
+        assert out["caseSensitive"] is True
+        assert out["wholeWord"] is True
+        assert out["sectionsSearched"] == ["secretInfo"]
+
+    def test_mode_passes_through(self, tmp_path):
+        turns = [
+            {"number": n, "action": None, "outcome": text, "secretInfo": None,
+             "trackedItems": None, "hiddenTrackedItems": None,
+             "source": "/nowhere.txt", "lineRange": [1, 1]}
+            for n, text in ((1, "a.b"), (2, "axb"))
+        ]  # fmt: skip
+        (tmp_path / "turn_index.json").write_text(json.dumps({"turns": turns}))
+        keyword = json.loads(search_turns(str(tmp_path), "a.b"))
+        regex = json.loads(search_turns(str(tmp_path), "a.b", mode="regex"))
+        assert [h["turn"] for h in keyword["results"]] == [1]
+        assert [h["turn"] for h in regex["results"]] == [1, 2]
+
+    def test_malformed_turn_index_errors(self, tmp_path):
+        (tmp_path / "turn_index.json").write_text("{not json")
+        out = json.loads(search_turns(str(tmp_path), "rival"))
+        assert list(out) == ["error"]
+
+    def test_unreadable_turn_index_errors(self, tmp_path):
+        (tmp_path / "turn_index.json").mkdir()
+        out = json.loads(search_turns(str(tmp_path), "rival"))
+        assert list(out) == ["error"]
+
+    def test_hits_feed_query_story_data(self, extraction_dir):
+        # The find → read handoff: int turn numbers from search_turns go straight into
+        # query_story_data over the MCP boundary (FastMCP validates against the schema).
+        import asyncio
+
+        import iw_architect.server as server
+
+        hits = json.loads(search_turns(extraction_dir, "rival"))["results"]
+        turns = [h["turn"] for h in hits]
+        result = asyncio.run(
+            server.mcp.call_tool(
+                "query_story_data",
+                {"extraction_dir": extraction_dir, "category": "turn_index", "turns": turns},
+            )
+        )
+        assert isinstance(result, tuple)
+        structured = result[1]
+        assert isinstance(structured, dict)
+        out = json.loads(structured["result"])
+        assert [t["number"] for t in out["turns"]] == turns
+
+    def test_schema_enumerates_mode_and_sections(self):
+        import asyncio
+
+        import iw_architect.server as server
+
+        tools = {t.name: t for t in asyncio.run(server.mcp.list_tools())}
+        props = tools["search_turns"].inputSchema["properties"]
+        assert props["mode"]["enum"] == ["keyword", "regex"]
+        assert props["sections"]["anyOf"][0]["items"]["enum"] == [
+            "action",
+            "outcome",
+            "secretInfo",
+        ]
+
+
+# ---------------------------------------------------------------------------
 # server registration
 # ---------------------------------------------------------------------------
 
@@ -272,3 +388,4 @@ class TestServerRegistration:
         assert callable(server.extract_story_data)
         assert callable(server.query_story_data)
         assert callable(server.get_character_list)
+        assert callable(server.search_turns)

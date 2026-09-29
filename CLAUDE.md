@@ -12,7 +12,9 @@ Before making *any* change to this repository:
 1. Create and enter a worktree with the `EnterWorktree` tool (it branches from `origin/HEAD`
    onto a new `worktree-<name>` branch and switches the session into it). Do **not** hand-roll
    this with `git worktree add` — see the global worktree rules.
-2. Make your edits, commit them on that branch, and open a PR from it.
+2. Make your edits, commit them on that branch, and open a PR from it. Before pushing,
+   rename the `worktree-<name>` branch to follow [`CONTRIBUTING.md`](CONTRIBUTING.md)
+   (`feat/…`, `fix/…`, etc.).
 3. Leave the worktree with `ExitWorktree` when done.
 
 The only times it is acceptable to edit the primary checkout / `main` directly are when the

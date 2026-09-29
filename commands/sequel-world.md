@@ -11,7 +11,7 @@ You are helping an author create a **sequel** to an existing Infinite Worlds wor
 
 **Before you start, also read:**
 
-- `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` — how to drive the `extract_story_data` / `query_story_data` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
+- `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` — how to drive the `extract_story_data` / `query_story_data` / `search_turns` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
 - `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` — the no-fabrication discipline for characters.
 
 ---
@@ -144,7 +144,7 @@ All three lines are required. Keep `**Field:**` and `**Proposed Value:**` on con
    - `From Turn #<N> Tracked Item <name>: <value>`
    - `From Story Metadata: field <field name>` (e.g. the title, story background, or character name/skills/background)
 
-   Cite only turns you have actually queried (verify via `turn_index`).
+   Cite only turns you have actually queried (verify via `turn_index`). A `search_turns` snippet locates evidence but is not a read — query the turn before citing it.
 2. **`USER_DIRECTED: <what the author said>`** — the author gave a direct instruction this session.
 3. **`CARRY_FORWARD: <why it's unchanged>`** — the value comes from the **original world JSON** and no story event changed it. This is how *every* static field the export doesn't touch is sourced (`objective`, `authorStyle`, image style, an unaddressed NPC's `detail`, …).
 4. **`NO_STORY_EVIDENCE: <what you looked for and didn't find>`** — you checked the export, found nothing, and are not carrying a value forward. Prefer this honest gap over silence or invention.
@@ -198,7 +198,7 @@ The story export is the evidence floor. Valid sources, strongest first: (1) the 
 
 ## Step 6 — Query story data, then propose fields
 
-Load the story data following `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` (Tier-1 first, then Tier-2/3 on demand within the 3–7 `turn_detail` budget), then propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
+Load the story data following `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` (Tier-1 first, then Tier-2/3 on demand within the 3–7 `turn_detail` budget — locate turns by content with `search_turns`, then read them with `turn_index` filtered by `turns`, keeping `turn_detail` for raw lines), then propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
 
 ### Sourcing rules (per field)
 

@@ -182,6 +182,47 @@ class TurnDetailResult(_Base):
 
 
 # ---------------------------------------------------------------------------
+# search_turns (query result — not a stored file)
+# ---------------------------------------------------------------------------
+
+
+class SearchSnippet(_Base):
+    """One match excerpt: the section it came from, the matched text, and context."""
+
+    section: str
+    match: str
+    text: str
+
+
+class TurnSearchHit(_Base):
+    """One turn with at least one match.
+
+    ``section_counts`` keys are camelCase section names (``secretInfo``) — dict keys
+    are data, not model fields, so the alias generator does not touch them.
+    ``snippets`` is ``None`` unless snippets were requested.
+    """
+
+    turn: int
+    match_count: int
+    section_counts: dict[str, int]
+    snippets: list[SearchSnippet] | None = None
+
+
+class SearchResult(_Base):
+    """Result of ``search_turns``: echoed parameters, totals, and per-turn hits."""
+
+    query: str
+    mode: str
+    case_sensitive: bool
+    whole_word: bool
+    sections_searched: list[str]
+    turns_searched: int
+    matching_turn_count: int
+    total_matches: int
+    results: list[TurnSearchHit]
+
+
+# ---------------------------------------------------------------------------
 # Internal pipeline models — produced/consumed within story/ (never written to
 # disk, but use the same _Base so the casing convention holds if ever dumped).
 # ---------------------------------------------------------------------------

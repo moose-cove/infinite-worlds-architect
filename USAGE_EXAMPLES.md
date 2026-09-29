@@ -29,7 +29,7 @@ Before the layouts, a quick refresher on what you're invoking (see the
   work in natural language ("add a wandering merchant NPC", "my trigger won't fire").
 - **MCP tools** — `validate_world`, `audit_world`, `format_world_for_review`, `compare_worlds`,
   `get_diff_summary`, `create_new_world_json`, `mint_ids`, plus the story-export tools
-  `extract_story_data` / `query_story_data` / `get_character_list`, etc. You rarely call these
+  `extract_story_data` / `query_story_data` / `search_turns` / `get_character_list`, etc. You rarely call these
   directly; the agent and commands do. But knowing they exist helps you ask for specific operations.
 
 The minimal viable layout is just:
