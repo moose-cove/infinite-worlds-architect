@@ -24,6 +24,7 @@ and file I/O. The MCP wrappers that surface these functions as tools are added i
 | `extract` | Orchestrates the full pipeline: combine → parse header → parse turns → build snapshots → index characters → write JSON files. Returns an `ExtractionSummary` model. |
 | `characters` | Scans each turn's source lines for word-boundary matches of character names and aliases, returning a `CharacterIndex` model. |
 | `query` | Reads the JSON files written by `extract` and returns typed models for each category: `manifest`, `metadata`, `turn_index`, `tracked_state`, `character_index`, `turn_detail`. |
+| `search` | Keyword/regex search over each turn's parsed `action` / `outcome` / `secretInfo` text in `turn_index.json`; returns a `SearchResult` of matching turns with per-section counts and optional snippets. |
 | `models` | Pydantic v2 model definitions for all pipeline inputs and outputs. |
 
 ## Casing convention
@@ -56,6 +57,7 @@ tests/story/
 ├── test_characters.py
 ├── test_extract.py
 ├── test_query.py
+├── test_search.py
 └── test_header.py
 ```
 

@@ -18,7 +18,7 @@ The canonical fixture lives at `example-world-schema-v2.4.json` in the plugin ro
 | `mechanics/AI_RUNTIME_MECHANICS.md` | Designing `instructions`, `authorStyle`, `descriptionRequest`, any trigger, or any tracked item. **First place to look when something "doesn't fire" or "the AI ignored X".** |
 | `mechanics/PAWSCRIPT.md` | Writing `<<…>>` expressions beyond a bare variable name, or authoring an `effectRunScript` script. Covers expressions vs. scripts, native `$player`/`$game` variables, the statement set, bounded loops, transactional execution, and the function cheat-sheet. |
 | `mechanics/PLATFORM_BEHAVIOR_NOTES.md` | Debugging import issues, understanding IW's canonical JSON field ordering, renaming tracked item / EIB / KIB IDs safely, using the World Debug tools, or using the Export function. |
-| `mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` | Reading a played story with the `extract_story_data` / `query_story_data` / `get_character_list` tools — the tiered loading sequence and the `turn_detail` query budget. For any agent that needs to inspect a story export (e.g. a `modify-world` agent checking how a change played out), not only `sequel-world`. |
+| `mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` | Reading a played story with the `extract_story_data` / `query_story_data` / `search_turns` / `get_character_list` tools — the tiered loading sequence and the `turn_detail` query budget. For any agent that needs to inspect a story export (e.g. a `modify-world` agent checking how a change played out), not only `sequel-world`. |
 
 ## `guidance/` — Authoring principles
 

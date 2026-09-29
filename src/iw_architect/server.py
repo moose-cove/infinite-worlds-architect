@@ -24,6 +24,7 @@ from iw_architect.tools.story_tools import (
     extract_story_data,
     get_character_list,
     query_story_data,
+    search_turns,
 )
 from iw_architect.validator import validate_world
 
@@ -43,6 +44,7 @@ mcp.tool()(make_draft_world)
 mcp.tool()(mint_ids)
 mcp.tool()(query_story_data)
 mcp.tool()(read_world_field)
+mcp.tool()(search_turns)
 mcp.tool()(validate_world)
 
 

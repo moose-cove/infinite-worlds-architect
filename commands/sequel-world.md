@@ -11,7 +11,7 @@ You are helping an author create a **sequel** to an existing Infinite Worlds wor
 
 **Before you start, also read:**
 
-- `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` — how to drive the `extract_story_data` / `query_story_data` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
+- `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` — how to drive the `extract_story_data` / `query_story_data` / `search_turns` / `get_character_list` tools: the tiered loading sequence and the `turn_detail` query budget (3–7 per session).
 - `references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md` — the no-fabrication discipline for characters.
 
 ---
@@ -198,7 +198,7 @@ The story export is the evidence floor. Valid sources, strongest first: (1) the 
 
 ## Step 6 — Query story data, then propose fields
 
-Load the story data following `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` (Tier-1 first, then Tier-2/3 on demand within the 3–7 `turn_detail` budget), then propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
+Load the story data following `references/mechanics/STORY_EXPORT_EXTRACTION_GUIDE.md` (Tier-1 first, then Tier-2/3 on demand within the 3–7 `turn_detail` budget — locate turns by content with `search_turns`, then read them with `turn_detail`), then propose each field per the proposal contract above. **This is a sequel — let the world evolve;** don't reflexively carry fields forward. Use the sourcing rules below.
 
 ### Sourcing rules (per field)
 

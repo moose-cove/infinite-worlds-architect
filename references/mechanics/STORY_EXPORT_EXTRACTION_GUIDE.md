@@ -2,7 +2,7 @@
 
 A guide for **any** plugin agent that needs to read a played Infinite Worlds story — not only the `sequel-world` command. For example, a `modify-world` agent can extract a story export to check how a world change actually played out, or to ground a revision in what happened during a session.
 
-The `extract_story_data`, `query_story_data`, and `get_character_list` MCP tools are **self-describing** — call them and read their tool descriptions for signatures, parameters, and return shapes. This document covers what the per-tool docstrings structurally cannot: **cross-call strategy** — which categories to load, in what order, and how to budget the expensive ones.
+The `extract_story_data`, `query_story_data`, `search_turns`, and `get_character_list` MCP tools are **self-describing** — call them and read their tool descriptions for signatures, parameters, and return shapes. This document covers what the per-tool docstrings structurally cannot: **cross-call strategy** — which categories to load, in what order, and how to budget the expensive ones.
 
 ---
 
@@ -38,12 +38,15 @@ These three fit in context and answer most questions on their own.
 
 - `query_story_data(category="tracked_state")` — when you need final tracked-item values or how they evolved over play.
 - `query_story_data(category="character_index")` — when mapping a character's mentions/interactions (requires a character list at extraction time).
+- `search_turns(query=...)` — when you need the turns that mention a thing (an object, a place, a phrase, a regex). Returns matching turn numbers with per-section match counts, and optional context snippets. Searches `action` / `outcome` / `secretInfo` only; follow tracked items with `tracked_state`.
+
+**Find with `search_turns`, read with `turn_detail`.** To locate turns by content, use `search_turns` — not `grep` over the export files. To read a turn it found, pass the turn number to `turn_detail` — not `Read` or `sed` on the `.txt` with line numbers you worked out yourself. The line ranges in the extraction account for multi-file merges and duplicate-turn resolution; a hand-computed slice of one export file can land on a superseded copy of the turn, or the wrong turn entirely.
 
 ### Tier 3 — targeted, budgeted (3–7 calls per session)
 
 - `query_story_data(category="turn_detail", turns=["N"])` / `turns=["last"]` — re-reads the **raw** source lines for a turn when exact wording matters (the `turn_index` stores summaries). `"last"` resolves to `manifest.totalTurns`.
 
-**Budget: 3–7 `turn_detail` calls.** Use `turn_index` to pick the few turns that matter (pivotal events, reveals, final states); don't slurp every turn. `turn_detail` re-reads the original `.txt` files, so they must still exist at their extraction-time paths.
+**Budget: 3–7 `turn_detail` calls.** Use `turn_index` (or `search_turns`, when you know what you're looking for) to pick the few turns that matter (pivotal events, reveals, final states); don't slurp every turn. `turn_detail` re-reads the original `.txt` files, so they must still exist at their extraction-time paths.
 
 ---
 

@@ -22,6 +22,7 @@ import json
 from iw_architect.paths import RelativePathError, require_absolute
 from iw_architect.story.extract import extract_story_data as _extract
 from iw_architect.story.query import query_story_data as _query
+from iw_architect.story.search import search_turns as _search
 from iw_architect.tools.inspection import _load_world
 
 
@@ -103,6 +104,69 @@ def query_story_data(
         return json.dumps({"error": str(exc)})
 
     return json.dumps(result.model_dump(by_alias=True, mode="json"), indent=2)
+
+
+def search_turns(
+    extraction_dir: str,
+    query: str,
+    mode: str = "keyword",
+    case_sensitive: bool = False,
+    whole_word: bool = False,
+    sections: list[str] | None = None,
+    include_snippets: bool = False,
+) -> str:
+    """Find which turns of an extracted story mention a keyword or match a regex.
+
+    This is the way to locate turns by content. To read a matching turn in full,
+    pass its number to ``query_story_data(category="turn_detail", turns=[...])`` —
+    do not grep or read the export ``.txt`` files directly.
+
+    Searches each turn's parsed ``action``, ``outcome`` and ``secretInfo`` text from
+    ``turn_index.json`` (tracked items are not searched — use ``tracked_state``).
+    Matches are non-overlapping and never span two sections.
+
+    extraction_dir: absolute path to a directory produced by ``extract_story_data``.
+    query: the keyword or regex pattern (non-empty).
+    mode: ``"keyword"`` (literal match, special characters need no escaping) or
+        ``"regex"`` (Python ``re`` syntax, compiled with MULTILINE so ``^``/``$``
+        anchor per line).
+    case_sensitive: match case exactly (default false — case-insensitive).
+    whole_word: keyword mode only — the match must not touch a letter, digit or
+        underscore on either side. In regex mode, write ``\\b`` yourself.
+    sections: optional subset of ``["action", "outcome", "secretInfo"]``; omit to
+        search all three.
+    include_snippets: also return up to 5 snippets per turn — ~50 characters either
+        side of each match, widened to whole words, whitespace collapsed, ``…``
+        marking cut edges. ``matchCount`` stays exact even when snippets are capped.
+
+    Returns camelCase JSON: ``{query, mode, caseSensitive, wholeWord,
+    sectionsSearched, turnsSearched, matchingTurnCount, totalMatches, results}``
+    where ``results`` is ``[{turn, matchCount, sectionCounts, snippets?}]`` sorted by
+    turn, listing only turns with a match; each snippet is ``{section, match, text}``.
+    On failure returns a bare ``{"error": "..."}``: a relative path, an empty query,
+    an unknown mode or section, an invalid regex, ``whole_word`` with regex mode,
+    or a missing ``turn_index.json``.
+    """
+    try:
+        abs_dir = str(require_absolute(extraction_dir))
+    except RelativePathError as exc:
+        return json.dumps({"error": str(exc)})
+
+    try:
+        result = _search(
+            abs_dir,
+            query,
+            mode=mode,
+            case_sensitive=case_sensitive,
+            whole_word=whole_word,
+            sections=sections,
+            include_snippets=include_snippets,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+
+    # exclude_none drops `snippets` from each hit when snippets weren't requested.
+    return json.dumps(result.model_dump(by_alias=True, mode="json", exclude_none=True), indent=2)
 
 
 def get_character_list(world_path: str) -> str:

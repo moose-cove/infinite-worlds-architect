@@ -61,6 +61,7 @@ tools:
   - mcp__plugin_infinite-worlds-architect_iw-json-tools__make_draft_world
   - mcp__plugin_infinite-worlds-architect_iw-json-tools__extract_story_data
   - mcp__plugin_infinite-worlds-architect_iw-json-tools__query_story_data
+  - mcp__plugin_infinite-worlds-architect_iw-json-tools__search_turns
   - mcp__plugin_infinite-worlds-architect_iw-json-tools__get_character_list
 ---
 

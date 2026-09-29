@@ -14,6 +14,7 @@ from iw_architect.tools.story_tools import (
     extract_story_data,
     get_character_list,
     query_story_data,
+    search_turns,
 )
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -260,6 +261,48 @@ class TestGetCharacterList:
 
 
 # ---------------------------------------------------------------------------
+# search_turns
+# ---------------------------------------------------------------------------
+
+
+class TestSearchTurns:
+    def test_camelcase_wire_shape(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "rival"))
+        assert out["matchingTurnCount"] == 4
+        assert out["totalMatches"] == 4
+        assert out["sectionsSearched"] == ["action", "outcome", "secretInfo"]
+        assert out["results"][0] == {
+            "turn": 2,
+            "matchCount": 1,
+            "sectionCounts": {"secretInfo": 1},
+        }
+        assert "error" not in out
+
+    def test_snippets_omitted_unless_requested(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "rival"))
+        assert all("snippets" not in hit for hit in out["results"])
+
+    def test_snippets_included_when_requested(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "rival", include_snippets=True))
+        assert out["results"][0]["snippets"] == [
+            {"section": "secretInfo", "match": "rival", "text": "The paper was planted by a rival."}
+        ]
+
+    def test_relative_dir_errors(self):
+        out = json.loads(search_turns("extraction", "rival"))
+        assert "relative path" in out["error"]
+
+    def test_invalid_regex_errors(self, extraction_dir):
+        out = json.loads(search_turns(extraction_dir, "(", mode="regex"))
+        assert list(out) == ["error"]
+        assert "Invalid regex" in out["error"]
+
+    def test_missing_turn_index_errors(self, tmp_path):
+        out = json.loads(search_turns(str(tmp_path), "rival"))
+        assert "turn_index.json" in out["error"]
+
+
+# ---------------------------------------------------------------------------
 # server registration
 # ---------------------------------------------------------------------------
 
@@ -272,3 +315,4 @@ class TestServerRegistration:
         assert callable(server.extract_story_data)
         assert callable(server.query_story_data)
         assert callable(server.get_character_list)
+        assert callable(server.search_turns)
