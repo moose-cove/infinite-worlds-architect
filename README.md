@@ -57,7 +57,7 @@ This is an **autonomous subagent** that handles world authoring and debugging en
 The agent is reached two ways:
 
 - **Automatically as a subagent** when you describe authoring or debugging work in natural language — e.g. *"I want to build a noir detective world..."*, *"My trigger doesn't fire even though..."*, *"Add a wandering merchant NPC to my world..."*. Claude routes the task to the agent.
-- **Inline through a slash command** (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`, `/analyze`). Each command `@`-references the agent file, so the main session adopts the agent's persona before walking you through that command's specific workflow — preserving the field-by-field approval loop that needs multi-turn user interaction.
+- **Inline through a slash command** (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`, `/analyze`). Each command `@`-references the agent file, so the main session adopts the agent's persona before walking you through that command's specific workflow — preserving the multi-turn user interaction the workflows need (the field-by-field approval loop for the editing commands, the question-and-answer loop for `/analyze`).
 
 On-demand reference material lives at [`references/`](./references/) at the plugin root — the agent loads individual files as needed.
 
@@ -71,7 +71,7 @@ On-demand reference material lives at [`references/`](./references/) at the plug
 | `/infinite-worlds-architect:sequel-world <source_path> <story_export_path...> <target_path>` | Build a sequel that begins where a played story left off, evolving fields from what actually happened (each proposal cites its evidence). | Source world path, one or more story-export `.txt` paths, then target path. |
 | `/infinite-worlds-architect:analyze <world_path>` | Read-only deep analysis of an existing world: loads it into context, validates and audits it, then answers your questions with evidence-cited reasoning (why a trigger fires, how endings are reached, where the token budget goes). Never edits. | Path to the existing `world.json`. |
 
-Each command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md): read before write and pass-through preservation (which keeps `schemaVersion` and any unknown fields intact across edits).
+Each editing command walks you through the relevant fields, validates after each change, and respects the source-of-truth rules in [`CLAUDE.md`](./CLAUDE.md): read before write and pass-through preservation (which keeps `schemaVersion` and any unknown fields intact across edits).
 
 ### 3. MCP tools (callable by Claude)
 
