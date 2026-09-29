@@ -1,0 +1,108 @@
+---
+name: new-world
+description: Create a new Infinite Worlds world from scratch using a guided field-by-field workflow.
+---
+
+# New World
+
+Apply the shared `../world-architect/SKILL.md` rules alongside this workflow.
+
+You are guiding an author through creating a brand-new Infinite Worlds story world. Follow this workflow precisely.
+
+## Recommended reading before drafting
+
+The references in `../../references/` cover authoring judgments that affect every step below. Read each on demand, not all upfront:
+
+- **Before drafting `background`, `instructions`, `loreBookEntries`, or `instructionBlocks`** → read `../../references/guidance/FIELD_ALLOCATION_STRATEGY.md`. The most common new-world mistake is packing always-on fields with content that belongs in keyword blocks or trigger effects.
+- **Before drafting any character** → read `../../references/guidance/CHARACTER_AUTHORING_GUARDRAILS.md`. New-world authoring has the highest temptation to invent characters to "fill out" the world before the author has decided who they are. Don't — ask the author for every detail and leave blanks where they don't have answers. Always ask for `img_appearance` and `img_clothing` explicitly; never invent them.
+- **Before drafting `instructions`, `authorStyle`, `descriptionRequest`, or any trigger effect that shapes AI output** → read `../../references/mechanics/AI_RUNTIME_MECHANICS.md`. Understanding what the AI emits each turn is the prerequisite for usefully constraining it.
+- **Before editing any specific field** → read the matching file in `../../references/fields/`. Each covers the "what the platform actually does with this field" knowledge that isn't in the schema doc.
+
+## Step 1 — Confirm the output path
+
+If the user supplied a path, use it as the output path. Otherwise, ask the user for the path they want to write to.
+
+**Resolve the path to an absolute path before passing it to any MCP world tool** (`confirm_path`, `create_new_world_json`, `validate_world`, …). These tools run in a separate MCP server process whose working directory is *not* your session's, so they reject relative paths (a relative path can't be resolved to the file the author means). If the user gave you a relative path, join it with your session's current working directory first — for example with `Path(path).expanduser().resolve(strict=False)` in Python. A leading `~` is fine; the tools expand it.
+
+Call `confirm_path` with that absolute path.
+
+- If the file already exists, warn the user and ask if they want to overwrite.
+- If the parent directory doesn't exist, tell the user and stop.
+- Present the resolved absolute path and wait for the user to say "yes", "confirmed", or similar before proceeding.
+
+## Step 2 — Scaffold the world
+
+Call `create_new_world_json(output_path, title)` with the confirmed path and the user's intended title.
+
+Confirm success, then call `validate_world` to verify the scaffold is clean.
+
+## Step 3 — Iterate field-by-field
+
+For **each field or entity**, follow this loop:
+
+1. **Show** the current value (call `read_world_field` or quote from the recently read file)
+2. **Propose** a new value based on the author's description
+3. **Wait** for the author's approval ("looks good", "yes", "next") or revision ("no, change X to Y")
+4. **Edit** the JSON field with targeted edits
+5. **Validate** after every 3–5 related edits; fix any errors before continuing
+
+### Suggested field order for a new world
+
+**Core narrative** (do first — see [`../../references/fields/INTRODUCING_THE_STORY.md`](../../references/fields/INTRODUCING_THE_STORY.md) and [`../../references/fields/MAIN_INSTRUCTIONS.md`](../../references/fields/MAIN_INSTRUCTIONS.md)):
+- `title`, `description`, `background`, `instructions`, `authorStyle`
+- `objective`, `firstInput`
+
+**Maturity and warnings** (see [`../../references/fields/MAIN_INSTRUCTIONS.md`](../../references/fields/MAIN_INSTRUCTIONS.md)):
+- `mature`, `nsfw`, `contentWarnings`
+
+**Skills** (see [`../../references/fields/PLAYER_CHARACTERS.md`](../../references/fields/PLAYER_CHARACTERS.md) — affects character creation and tracked items):
+- `skills` — agree the list before defining characters or tracked items
+
+**Player characters** (`possibleCharacters`) (see [`../../references/fields/PLAYER_CHARACTERS.md`](../../references/fields/PLAYER_CHARACTERS.md)):
+- For each character: `name`, `description`, `skills` object
+- Mint a `characterId` with `mint_ids("character", 1)`
+
+**NPCs** (see [`../../references/fields/OTHER_CHARACTERS.md`](../../references/fields/OTHER_CHARACTERS.md)):
+- For each NPC: `name`, `one_liner`, `detail`, `appearance`, `location`, `secret_info`, `names`, `img_appearance`, `img_clothing`
+- Mint an `id` with `mint_ids("npc", 1)`, assign `positionInList` sequentially
+
+**Tracked items** (see [`../../references/fields/TRACKED_ITEMS.md`](../../references/fields/TRACKED_ITEMS.md) and [`../../references/fields/YAML_TRACKED_ITEMS.md`](../../references/fields/YAML_TRACKED_ITEMS.md) for `dataType: "yaml"`):
+- For each item: `name`, `dataType`, `visibility`, `description`, `updateInstructions`, `initialValue`, `initialValueBasedOnPC`, `autoUpdate`
+- Prefer `dataType: "yaml"` over the deprecated `xml` for new items; when using `yaml`, also set a unique snake_case `variableName` (the PawScript `$handle`)
+- YAML items support the **entire** YAML language at any depth — nested maps, lists inside maps, records inside lists, block scalars (`|` / `>`). Shape the data honestly; don't flatten a hierarchy to avoid nesting. Mirror the nesting in `formatSchema` and pair it with `enforceFormat: true` when a script reads the item. See <https://infiniteworlds.app/yaml-guide>
+- Mint an `id` with `mint_ids("trackedItem", 1)`, assign `positionInList` sequentially
+
+**Triggers** (see [`../../references/fields/TRIGGER_EVENTS.md`](../../references/fields/TRIGGER_EVENTS.md) and [`../../references/mechanics/PAWSCRIPT.md`](../../references/mechanics/PAWSCRIPT.md) for the `effectRunScript` effect):
+- For each trigger: `name`, `canTriggerMoreThanOnce`, `advancedLogic`, `triggerOnStartOfGame`, then define conditions and effects
+- If an effect needs to update tracked items together as one unit, consider `effectRunScript` — a transactional PawScript that may only reference existing tracked-item `variableName`s and must never write to `$player`/`$game`; reach nested fields by chaining dots (`$puppy.stats.friendliness`)
+- **v2.4 shapes:** `triggerPrereqs` / `triggerBlockers` take `data: {prereqs|blockers: [...], firedThisTurn: false}`, not a bare array. `false` = permanent gate (the default); `true` = same-turn interlock — see `../../references/fields/TRIGGER_EVENTS.md`. Every `triggerOnEvent` needs its exact event string added to the world's top-level `conditions` array in the same edit
+- Mint a trigger `id` with `mint_ids("triggerEvent", 1)`
+- Mint condition/effect `id`s with `mint_ids("triggerStep", n)`
+- After all triggers are defined, confirm `conditions` holds exactly the set of `triggerOnEvent` strings — `validate_world` warns once per undeclared event
+
+**Instruction and lore blocks** (see [`../../references/fields/MAIN_INSTRUCTIONS.md`](../../references/fields/MAIN_INSTRUCTIONS.md) for `instructionBlocks` and [`../../references/fields/KEYWORD_INSTRUCTION_BLOCKS.md`](../../references/fields/KEYWORD_INSTRUCTION_BLOCKS.md) for `loreBookEntries`):
+- For each: `name`, `content`, and `keywords` (lore only)
+- Mint `id`s with `mint_ids("instructionBlock", 1)` or `mint_ids("loreBookEntry", 1)`
+
+**Permissions** (see [`../../references/fields/PLAYER_CHARACTERS.md`](../../references/fields/PLAYER_CHARACTERS.md) — optional, defaults are usually fine):
+- `allowChangeCharacter*` fields
+- `permissionsOnceShared`
+
+**Victory and defeat conditions** (see [`../../references/fields/VICTORY_DEFEAT.md`](../../references/fields/VICTORY_DEFEAT.md)):
+- `victoryCondition`, `defeatCondition`
+
+## Step 4 — Final validation and audit
+
+After the author says they're done with a section:
+
+1. Call `validate_world(world_path)` — fix any reported errors before continuing.
+2. Once all content is entered, call `audit_world(world_path)` and present findings to the author.
+3. Address any warnings the author cares about.
+
+## Step 5 — Review
+
+Optionally offer to call `format_world_for_review(world_path)`. It writes a `<world_stem>.review.md` file next to the world JSON and returns `{"success": "<path>"}`; point the author at that file rather than reading the markdown back into the conversation.
+
+---
+
+Read the file before making targeted edits. Prefer targeted edits over a full-file rewrite so unknown platform-managed fields survive.

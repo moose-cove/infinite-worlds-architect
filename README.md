@@ -1,21 +1,53 @@
 # Infinite Worlds Architect
 
-A Claude Code plugin for building and editing [Infinite Worlds](https://infiniteworlds.app) story worlds through conversation. The plugin exposes MCP tools that validate, scaffold, and analyze world JSON files, a `world-architect` agent that authors and debugs worlds end-to-end, and slash commands that walk authors through structured field-by-field workflows.
+A Claude Code and Codex plugin for building and editing [Infinite Worlds](https://infiniteworlds.app) story worlds through conversation. It includes MCP tools for validating and analyzing world JSON, plus guided authoring workflows.
 
 ## What this is
 
 Infinite Worlds is a third-party storytelling platform where authors design **worlds** — collections of characters, NPCs, instructions, tracked state, and conditional triggers that the platform uses to run interactive stories. A world is persisted as a single JSON file conforming to the v2.4 schema documented in [`references/WORLD_JSON_SCHEMA_v2.4.md`](./references/WORLD_JSON_SCHEMA_v2.4.md).
 
-This plugin assists an author who is building or editing such a world by talking to Claude in a Claude Code session. The plugin:
+This plugin assists an author who is building or editing such a world in Codex or Claude Code. The plugin:
 
 - Validates world JSON against the platform's schema before sending it live
 - Scaffolds new worlds from sane defaults
 - Audits quality (token budgets, trigger cycles, redundancy detection)
-- Provides one `world-architect` agent and four guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`)
+- Searches Community Worlds, reads descriptions, and retrieves original world JSON
+- Provides a Claude `world-architect` agent and four guided slash commands, plus matching Codex skills
 
-The plugin has **no write tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write`. The plugin is the validator, analyst, and helper; the agent is the author.
+The plugin has **no write tools**. The assistant edits world JSON with its normal file tools; the MCP server validates and analyzes it.
 
-## Install
+## Community Worlds login and search
+
+From the plugin directory, sign in locally:
+
+```bash
+uv run iw-community-auth login
+```
+
+The command prompts for your Infinite Worlds email and password in the terminal, then stores the credentials and session in the system keychain. When the site session expires, the plugin signs in again. The credentials are never entered into a chat or stored in the plugin source. Run `uv run iw-community-auth status` to check the session, or `uv run iw-community-auth logout` to remove the local credentials.
+
+If you already have a signed-in Chrome window launched with `--remote-debugging-port=9222`, you can import its session without entering a password:
+
+```bash
+uv run iw-community-auth import-chrome --port 9222
+```
+
+An imported session works until it expires. Use `login` for automatic renewal. Community tools connect directly to Infinite Worlds over HTTP and WebSocket; they do not control Chrome. You can ask for a text search, included tags that must all match or may match any, excluded tags, mature or NSFW filters, a sort order, and a page. `get_community_world_details` returns the full catalog description. `get_community_world_json` returns the original world JSON, which the assistant can save as a file using its normal file tools. Reading a world does not copy it into your Infinite Worlds account.
+
+These calls use Infinite Worlds' internal Anvil protocol. If the site changes that protocol, the community tools may need an update.
+
+## Install in Codex and the ChatGPT desktop app
+
+Install [`uv`](https://docs.astral.sh/uv/) first. From a terminal, register this checkout as a local marketplace and install the plugin:
+
+```bash
+codex plugin marketplace add /absolute/path/to/infinite-worlds-architect
+codex plugin add infinite-worlds-architect@iw-architect-local
+```
+
+The marketplace entry lives in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json). The Codex manifest is [`.codex-plugin/plugin.json`](./.codex-plugin/plugin.json), and [`.mcp.json`](./.mcp.json) starts `iw-json-tools` from the plugin root with `cwd: "."`. In the Plugins Directory, find **Infinite Worlds Architect**. It contributes the `world-architect`, `new-world`, `modify-world`, `spinoff-world`, and `sequel-world` skills.
+
+## Install in Claude Code
 
 **Prerequisite:** [`uv`](https://docs.astral.sh/uv/) must be on your PATH — the MCP server is launched with `uv run` at session start and will fail to start without it.
 
@@ -88,6 +120,9 @@ The agent and commands have access to these tools — you generally won't call t
 | `confirm_path(path)` | Resolve and verify a file path before acting on it. |
 | `compare_worlds(world_path_a, world_path_b)` | Structural diff between two worlds. |
 | `get_diff_summary(original_path, current_path)` | Human-readable narrative of what changed. |
+| `search_community_worlds(...)` | Search text across title, description, and author; include or exclude tags; filter mature and NSFW worlds; sort and paginate. |
+| `get_community_world_details(world_id)` | Read one community world's complete catalog description and metadata by code or UUID. |
+| `get_community_world_json(world_id)` | Read the original world JSON by code or UUID without making a copy in the account. |
 
 ### Typical session
 

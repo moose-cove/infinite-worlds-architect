@@ -1,0 +1,27 @@
+{
+  "name": "infinite-worlds-architect",
+  "version": "0.24.0",
+  "description": "Build, edit, validate, and audit Infinite Worlds story worlds with guided workflows and MCP tools.",
+  "author": {
+    "name": "moose-cove",
+    "email": "622268+moose-cove@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moose-cove/infinite-worlds-architect",
+  "license": "MIT",
+  "keywords": ["infinite-worlds", "world-building", "storytelling", "mcp", "json-schema"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Infinite Worlds Architect",
+    "shortDescription": "Build and validate Infinite Worlds story worlds.",
+    "longDescription": "Guided world authoring, modification, spinoff, sequel, and debugging workflows backed by the iw-json-tools MCP server and the v2.4 schema references.",
+    "developerName": "moose-cove",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Create an Infinite Worlds story world",
+      "Edit and validate my world JSON",
+      "Debug a trigger in my world"
+    ]
+  }
+}
