@@ -8,6 +8,11 @@ Tools registered alphabetically per the design brief.
 
 from mcp.server.fastmcp import FastMCP
 
+from iw_architect.community import (
+    get_community_world_details,
+    get_community_world_json,
+    search_community_worlds,
+)
 from iw_architect.tools.analysis import audit_world, compare_worlds, get_diff_summary
 from iw_architect.tools.helpers import (
     confirm_path,
@@ -36,6 +41,8 @@ mcp.tool()(confirm_path)
 mcp.tool()(create_new_world_json)
 mcp.tool()(extract_story_data)
 mcp.tool()(format_world_for_review)
+mcp.tool()(get_community_world_details)
+mcp.tool()(get_community_world_json)
 mcp.tool()(get_character_list)
 mcp.tool()(get_diff_summary)
 mcp.tool()(get_schema_summary)
@@ -43,6 +50,7 @@ mcp.tool()(make_draft_world)
 mcp.tool()(mint_ids)
 mcp.tool()(query_story_data)
 mcp.tool()(read_world_field)
+mcp.tool()(search_community_worlds)
 mcp.tool()(validate_world)
 
 

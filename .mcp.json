@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "iw-json-tools": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "iw_architect.server"],
+      "cwd": "."
+    }
+  }
+}
