@@ -10,8 +10,8 @@ Supports 6 categories:
                         a ``TurnDetailResult`` model
 - ``character_index`` — return CharacterIndex model
 
-The ``turns`` parameter accepts a list of strings; each element may be an
-int-string (``"3"``) or ``"last"`` (resolved via ``manifest.total_turns``).
+The ``turns`` parameter accepts a list; each element may be an
+int (``3``), an int-string (``"3"``) or ``"last"`` (resolved via ``manifest.total_turns``).
 
 ``tracked_state`` turn filtering returns snapshots that overlap the requested
 turn range (``fromTurn <= turn <= toTurn``).
@@ -47,7 +47,7 @@ def _read_json(path: str) -> object:
         return json.load(fh)
 
 
-def _resolve_turns(turns: list[str], total_turns: int) -> list[int]:
+def _resolve_turns(turns: list[str | int], total_turns: int) -> list[int]:
     resolved: list[int] = []
     for t in turns:
         if t == "last":
@@ -60,7 +60,7 @@ def _resolve_turns(turns: list[str], total_turns: int) -> list[int]:
 def query_story_data(
     extraction_dir: str,
     category: str,
-    turns: list[str] | None = None,
+    turns: list[str | int] | None = None,
 ) -> Manifest | Metadata | TurnIndex | TrackedState | CharacterIndex | TurnDetailResult:
     """Query structured extraction output.
 
@@ -72,7 +72,7 @@ def query_story_data(
         One of ``manifest``, ``metadata``, ``turn_index``, ``tracked_state``,
         ``turn_detail``, ``character_index``.
     turns:
-        Optional list of turn identifiers (int-strings or ``"last"``).
+        Optional list of turn identifiers (ints, int-strings or ``"last"``).
         Used for filtering ``turn_index``, ``tracked_state``, and for
         selecting the turn in ``turn_detail``.
 

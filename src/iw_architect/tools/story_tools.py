@@ -18,10 +18,12 @@ other tool modules (``inspection.py`` / ``analysis.py``): a bare
 from __future__ import annotations
 
 import json
+from typing import Literal
 
 from iw_architect.paths import RelativePathError, require_absolute
 from iw_architect.story.extract import extract_story_data as _extract
 from iw_architect.story.query import query_story_data as _query
+from iw_architect.story.search import search_turns as _search
 from iw_architect.tools.inspection import _load_world
 
 
@@ -73,7 +75,7 @@ def extract_story_data(
 def query_story_data(
     extraction_dir: str,
     category: str,
-    turns: list[str] | None = None,
+    turns: list[str | int] | None = None,
 ) -> str:
     """Query an extraction directory; return the category's model as camelCase JSON.
 
@@ -83,10 +85,11 @@ def query_story_data(
     extraction_dir: absolute path to a directory produced by ``extract_story_data``.
     category: one of ``manifest``, ``metadata``, ``turn_index``, ``tracked_state``,
         ``turn_detail``, ``character_index``.
-    turns: optional list of turn identifiers — int-strings (``"3"``) or the literal
-        ``"last"`` (resolved via the manifest's ``totalTurns``). Filters
-        ``turn_index`` / ``tracked_state`` and selects the turn(s) for
-        ``turn_detail`` (which re-reads the raw source lines).
+    turns: optional list of turn numbers (``3`` or ``"3"``) or the literal ``"last"``
+        (resolved via the manifest's ``totalTurns``). Filters ``turn_index`` /
+        ``tracked_state`` and selects the turn(s) for ``turn_detail`` (which re-reads
+        the raw source lines). To find which turns mention something, call
+        ``search_turns`` first and pass its ``turn`` numbers here.
 
     Returns the queried model serialised to camelCase JSON. On failure returns a
     bare ``{"error": "..."}``: a relative path, an unknown category, ``turn_detail``
@@ -103,6 +106,75 @@ def query_story_data(
         return json.dumps({"error": str(exc)})
 
     return json.dumps(result.model_dump(by_alias=True, mode="json"), indent=2)
+
+
+def search_turns(
+    extraction_dir: str,
+    query: str,
+    mode: Literal["keyword", "regex"] = "keyword",
+    case_sensitive: bool = False,
+    whole_word: bool = False,
+    sections: list[Literal["action", "outcome", "secretInfo"]] | None = None,
+    include_snippets: bool = False,
+) -> str:
+    """Find which turns of an extracted story mention a keyword or match a regex.
+
+    This is the way to locate turns by content — do not grep or read the export
+    ``.txt`` files directly. To read the turns it finds, pass their ``turn`` numbers
+    to ``query_story_data``: ``category="turn_index"`` returns each turn's full
+    section text (the same text searched here) at no budget cost; use
+    ``category="turn_detail"`` only when you need the raw exported lines. Snippets
+    locate evidence — read the turn before quoting or citing it.
+
+    Searches each turn's parsed ``action``, ``outcome`` and ``secretInfo`` text from
+    ``turn_index.json`` (tracked items are not searched — use ``tracked_state``).
+    Matches are non-overlapping and never span two sections.
+
+    extraction_dir: absolute path to a directory produced by ``extract_story_data``.
+    query: the keyword or regex pattern (non-empty).
+    mode: ``"keyword"`` (literal match, special characters need no escaping) or
+        ``"regex"`` (Python ``re`` syntax, compiled with MULTILINE so ``^``/``$``
+        anchor per line). The whole search has a 5-second budget; a pattern that
+        exceeds it returns an error.
+    case_sensitive: match case exactly (default false — case-insensitive).
+    whole_word: keyword mode only — the match must not touch a letter, digit or
+        underscore on either side. In regex mode, write ``\\b`` yourself.
+    sections: optional subset of ``["action", "outcome", "secretInfo"]``; omit to
+        search all three.
+    include_snippets: also return up to 5 snippets per turn — ~50 characters either
+        side of each match, widened to whole words, whitespace collapsed, ``…``
+        marking cut edges; matches over 200 characters are shown truncated.
+        ``matchCount`` stays exact even when snippets are capped.
+
+    Returns camelCase JSON: ``{query, mode, caseSensitive, wholeWord,
+    sectionsSearched, turnsSearched, matchingTurnCount, totalMatches, results}``
+    where ``results`` is ``[{turn, matchCount, sectionCounts, snippets?}]`` sorted by
+    turn, listing only turns with a match; each snippet is ``{section, match, text}``.
+    On failure returns a bare ``{"error": "..."}``: a relative path, an empty query,
+    an unknown mode or section, an invalid regex, ``whole_word`` with regex mode,
+    a search that exceeds its time budget, or a missing or unreadable
+    ``turn_index.json``.
+    """
+    try:
+        abs_dir = str(require_absolute(extraction_dir))
+    except RelativePathError as exc:
+        return json.dumps({"error": str(exc)})
+
+    try:
+        result = _search(
+            abs_dir,
+            query,
+            mode=mode,
+            case_sensitive=case_sensitive,
+            whole_word=whole_word,
+            sections=sections,
+            include_snippets=include_snippets,
+        )
+    except (OSError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+
+    # exclude_none drops `snippets` from each hit when snippets weren't requested.
+    return json.dumps(result.model_dump(by_alias=True, mode="json", exclude_none=True), indent=2)
 
 
 def get_character_list(world_path: str) -> str:
