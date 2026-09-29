@@ -24,6 +24,7 @@ Before the layouts, a quick refresher on what you're invoking (see the
   - `/infinite-worlds-architect:modify-world <world_path>` — guided field-by-field editing
   - `/infinite-worlds-architect:spinoff-world <source_path> <target_path>` — derive a variant
   - `/infinite-worlds-architect:sequel-world <source_path> <story_export_path...> <target_path>` — build a sequel from played story export(s)
+  - `/infinite-worlds-architect:analyze <world_path>` — read-only deep analysis; ask questions about an existing world
 - **The `world-architect` agent** — reached automatically when you describe authoring/debugging
   work in natural language ("add a wandering merchant NPC", "my trigger won't fire").
 - **MCP tools** — `validate_world`, `audit_world`, `format_world_for_review`, `compare_worlds`,

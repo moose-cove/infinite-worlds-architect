@@ -90,3 +90,37 @@ def test_agent_allowlist_has_no_unregistered_tools(rel_path):
         f"{rel_path} allowlists MCP tool(s) that {SERVER_PY.name} does not register "
         f"(renamed or removed?): {unknown}"
     )
+
+
+# Command frontmatter `allowed-tools:` has the opposite semantics to an agent's `tools:` —
+# it only pre-approves (no permission prompt); unlisted tools stay callable. So a missing
+# entry costs a prompt, not a failure, and the checks that matter are the reverse ones: every
+# entry must exist, and a read-only command must not pre-approve anything that writes.
+_READ_ONLY_COMMANDS = ("commands/analyze.md",)
+_WRITING_TOOLS = {"make_draft_world", "mint_ids", "create_new_world_json", "extract_story_data"}
+_WRITING_BUILTINS = ("Edit", "Write", "NotebookEdit")
+
+
+@pytest.mark.parametrize("rel_path", _READ_ONLY_COMMANDS)
+def test_read_only_command_preapproves_only_registered_tools(rel_path):
+    frontmatter, _ = _frontmatter_and_body(REPO_ROOT / rel_path)
+    allowlisted = _allowlisted_tools(frontmatter)
+    assert allowlisted, f"{rel_path} pre-approves no MCP tools — did the prefix change?"
+    unknown = sorted(allowlisted - _registered_tools())
+    assert not unknown, (
+        f"{rel_path} pre-approves MCP tool(s) that {SERVER_PY.name} does not register: {unknown}"
+    )
+
+
+@pytest.mark.parametrize("rel_path", _READ_ONLY_COMMANDS)
+def test_read_only_command_preapproves_no_writing_tools(rel_path):
+    frontmatter, _ = _frontmatter_and_body(REPO_ROOT / rel_path)
+    writing = sorted(_allowlisted_tools(frontmatter) & _WRITING_TOOLS)
+    builtins = [
+        name
+        for name in _WRITING_BUILTINS
+        if re.search(rf"^\s*-\s*{name}\b", frontmatter, re.MULTILINE)
+    ]
+    assert not writing and not builtins, (
+        f"{rel_path} is read-only but pre-approves writing tool(s): {writing + builtins}"
+    )

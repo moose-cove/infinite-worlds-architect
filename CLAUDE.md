@@ -69,7 +69,8 @@ commands/
 ├── new-world.md        # /infinite-worlds-architect:new-world  — guided world creation
 ├── modify-world.md     # /infinite-worlds-architect:modify-world — edit existing world
 ├── spinoff-world.md    # /infinite-worlds-architect:spinoff-world — derive a variant
-└── sequel-world.md     # /infinite-worlds-architect:sequel-world — build a sequel from story export(s)
+├── sequel-world.md     # /infinite-worlds-architect:sequel-world — build a sequel from story export(s)
+└── analyze.md          # /infinite-worlds-architect:analyze — read-only Q&A analysis of an existing world
 
 hooks/
 ├── citation_gate.py    # Stop hook: enforces evidence citations during a sequel-world flow
