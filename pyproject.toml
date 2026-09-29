@@ -12,6 +12,7 @@ dependencies = [
     "jsonschema>=4.23.0",
     "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
+    "regex>=2024.11.6",
 ]
 
 [project.optional-dependencies]

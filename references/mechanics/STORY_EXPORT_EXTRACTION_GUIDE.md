@@ -30,7 +30,7 @@ Load cheapest-first; stop at the tier that answers your question.
 
 - `query_story_data(category="manifest")` — turn count/range, file list, warnings.
 - `query_story_data(category="metadata")` — title, background, character.
-- `query_story_data(category="turn_index")` — every turn's action / outcome / secretInfo / tracked-item state in lightweight form.
+- `query_story_data(category="turn_index")` — every turn's full action / outcome / secretInfo text (whitespace-trimmed) plus tracked-item state. Pass `turns=[...]` to fetch only specific turns.
 
 These three fit in context and answer most questions on their own.
 
@@ -40,11 +40,11 @@ These three fit in context and answer most questions on their own.
 - `query_story_data(category="character_index")` — when mapping a character's mentions/interactions (requires a character list at extraction time).
 - `search_turns(query=...)` — when you need the turns that mention a thing (an object, a place, a phrase, a regex). Returns matching turn numbers with per-section match counts, and optional context snippets. Searches `action` / `outcome` / `secretInfo` only; follow tracked items with `tracked_state`.
 
-**Find with `search_turns`, read with `turn_detail`.** To locate turns by content, use `search_turns` — not `grep` over the export files. To read a turn it found, pass the turn number to `turn_detail` — not `Read` or `sed` on the `.txt` with line numbers you worked out yourself. The line ranges in the extraction account for multi-file merges and duplicate-turn resolution; a hand-computed slice of one export file can land on a superseded copy of the turn, or the wrong turn entirely.
+**Find with `search_turns`, read with `query_story_data`.** To locate turns by content, use `search_turns` — not `grep` over the export files. To read the turns it found, pass their numbers to `query_story_data(category="turn_index", turns=[...])`, which returns the full section text at no budget cost; spend a `turn_detail` call only when you need the raw exported lines (Tier 3). Never `Read` or `sed` the `.txt` with line numbers you worked out yourself: when several exports overlap, the extraction keeps the copy of each turn from the newest file, and a hand-computed slice can land on a superseded copy in an older one. Snippets from `search_turns` locate evidence — read the turn before quoting or citing it, since a snippet is cut at the edges and can drop a qualifier just outside its window.
 
 ### Tier 3 — targeted, budgeted (3–7 calls per session)
 
-- `query_story_data(category="turn_detail", turns=["N"])` / `turns=["last"]` — re-reads the **raw** source lines for a turn when exact wording matters (the `turn_index` stores summaries). `"last"` resolves to `manifest.totalTurns`.
+- `query_story_data(category="turn_detail", turns=["N"])` / `turns=["last"]` — re-reads the **raw** source lines for a turn when you need it exactly as exported — section headers, tracked-item blocks and layout intact. (`turn_index` already has each section's full text, so you don't need `turn_detail` just to see what a turn said.) `"last"` resolves to `manifest.totalTurns`.
 
 **Budget: 3–7 `turn_detail` calls.** Use `turn_index` (or `search_turns`, when you know what you're looking for) to pick the few turns that matter (pivotal events, reveals, final states); don't slurp every turn. `turn_detail` re-reads the original `.txt` files, so they must still exist at their extraction-time paths.
 
@@ -52,7 +52,7 @@ These three fit in context and answer most questions on their own.
 
 ## 3. Keep always-on context lean
 
-Load Tier 1 at the start; pull Tier 2/3 only when a specific question needs them. The `turn_index` already carries per-turn `action`, `outcome`, `secretInfo`, and tracked-item state, so most reads don't need `turn_detail` at all — reserve it for cases where exact wording matters (e.g., lifting a precise line for a quote or an opening premise).
+Load Tier 1 at the start; pull Tier 2/3 only when a specific question needs them. The `turn_index` already carries per-turn `action`, `outcome`, `secretInfo`, and tracked-item state, so most reads don't need `turn_detail` at all — reserve it for cases where you need the turn exactly as exported.
 
 ---
 

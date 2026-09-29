@@ -13,9 +13,13 @@ turn, so a term matching an item name would hit nearly every turn. Use
 
 Matching rules:
 
-- ``keyword`` mode matches the query literally (``re.escape``); ``regex`` mode takes
-  Python ``re`` syntax. Both compile with ``re.MULTILINE``; ``re.IGNORECASE`` unless
+- ``keyword`` mode matches the query literally (escaped); ``regex`` mode takes
+  Python ``re`` syntax. Both compile with ``MULTILINE``, plus ``IGNORECASE`` unless
   ``case_sensitive``.
+- Patterns run on the third-party ``regex`` module (its default ``VERSION0`` is
+  ``re``-compatible) rather than ``re``, because only ``regex`` can abandon a match:
+  the whole search shares a ``SEARCH_TIMEOUT_SECONDS`` budget, so a pathological
+  caller-supplied pattern returns an error instead of hanging the MCP server.
 - ``whole_word`` (keyword mode only) requires the match not be adjacent to a word
   character — lookarounds rather than ``\\b``, so queries that begin or end with
   punctuation (``Mr.``) still match.
@@ -25,14 +29,18 @@ Matching rules:
 Snippets take ``SNIPPET_CONTEXT`` characters either side of the match, widen each
 edge outward to a whole-word boundary (by at most ``SNIPPET_MAX_WIDEN`` extra
 characters), never cross the section boundary, collapse whitespace runs to single
-spaces, and mark cut edges with ``…``. At most ``MAX_SNIPPETS_PER_TURN`` snippets
-are returned per turn; ``match_count`` stays exact.
+spaces, and mark cut edges with ``…``. A match longer than ``MAX_MATCH_CHARS`` is
+shown truncated (with ``…``) in both ``match`` and the snippet. At most
+``MAX_SNIPPETS_PER_TURN`` snippets are returned per turn, filled in section order;
+``match_count`` stays exact.
 """
 
 from __future__ import annotations
 
 import os
-import re
+import time
+
+import regex
 
 from iw_architect.story.models import SearchResult, SearchSnippet, TurnIndex, TurnSearchHit
 from iw_architect.story.query import _read_json
@@ -48,9 +56,11 @@ SEARCH_MODES = ("keyword", "regex")
 SNIPPET_CONTEXT = 50
 SNIPPET_MAX_WIDEN = 30
 MAX_SNIPPETS_PER_TURN = 5
+MAX_MATCH_CHARS = 200
+SEARCH_TIMEOUT_SECONDS = 5.0
 
 
-def _compile(query: str, mode: str, case_sensitive: bool, whole_word: bool) -> re.Pattern:
+def _compile(query: str, mode: str, case_sensitive: bool, whole_word: bool) -> regex.Pattern:
     if mode not in SEARCH_MODES:
         raise ValueError(f"Unknown mode {mode!r}; expected one of {list(SEARCH_MODES)}")
     if not query.strip():
@@ -61,13 +71,13 @@ def _compile(query: str, mode: str, case_sensitive: bool, whole_word: bool) -> r
             "lookarounds) into the pattern yourself"
         )
 
-    pattern = re.escape(query) if mode == "keyword" else query
+    pattern = regex.escape(query) if mode == "keyword" else query
     if whole_word:
         pattern = rf"(?<!\w){pattern}(?!\w)"
-    flags = re.MULTILINE | (0 if case_sensitive else re.IGNORECASE)
+    flags = regex.MULTILINE | (0 if case_sensitive else regex.IGNORECASE)
     try:
-        return re.compile(pattern, flags)
-    except re.error as exc:
+        return regex.compile(pattern, flags)
+    except regex.error as exc:
         raise ValueError(f"Invalid regex {query!r}: {exc}") from exc
 
 
@@ -86,7 +96,10 @@ def _resolve_sections(sections: list[str] | None) -> list[str]:
 
 
 def _snippet(text: str, start: int, end: int) -> str:
-    """Excerpt ``text`` around ``[start, end)``, widened to whole words."""
+    """Excerpt ``text`` around ``[start, end)``, widened to whole words.
+
+    ``end`` should already be clamped to ``start + MAX_MATCH_CHARS``.
+    """
     left = max(0, start - SNIPPET_CONTEXT)
     # Widen only when the cut lands mid-word (non-space on both sides of it).
     floor = max(0, left - SNIPPET_MAX_WIDEN)
@@ -140,8 +153,9 @@ def search_turns(
     Raises
     ------
     ValueError
-        Unknown mode or section, empty query, invalid regex, empty ``sections``, or
-        ``whole_word`` combined with regex mode.
+        Unknown mode or section, empty query, invalid regex, empty ``sections``,
+        ``whole_word`` combined with regex mode, a search exceeding
+        ``SEARCH_TIMEOUT_SECONDS``, or a malformed ``turn_index.json``.
     FileNotFoundError
         If ``turn_index.json`` is missing from ``extraction_dir``.
     """
@@ -150,6 +164,7 @@ def search_turns(
     turn_index = TurnIndex.model_validate(
         _read_json(os.path.join(extraction_dir, "turn_index.json"))
     )
+    deadline = time.monotonic() + SEARCH_TIMEOUT_SECONDS
 
     hits: list[TurnSearchHit] = []
     for turn in sorted(turn_index.turns, key=lambda t: t.number):
@@ -160,16 +175,27 @@ def search_turns(
             if not text:
                 continue
             count = 0
-            for m in pattern.finditer(text):
+            try:
+                matches = list(
+                    pattern.finditer(text, timeout=max(0.0, deadline - time.monotonic()))
+                )
+            except TimeoutError as exc:
+                raise ValueError(
+                    f"Search timed out after {SEARCH_TIMEOUT_SECONDS:g}s — the regex is too "
+                    "expensive (likely nested quantifiers); simplify the pattern"
+                ) from exc
+            for m in matches:
                 if m.start() == m.end():
                     continue
                 count += 1
                 if include_snippets and len(snippets) < MAX_SNIPPETS_PER_TURN:
+                    shown_end = min(m.end(), m.start() + MAX_MATCH_CHARS)
+                    shown = text[m.start() : shown_end]
                     snippets.append(
                         SearchSnippet(
                             section=section,
-                            match=m.group(0),
-                            text=_snippet(text, m.start(), m.end()),
+                            match=shown if shown_end == m.end() else f"{shown}…",
+                            text=_snippet(text, m.start(), shown_end),
                         )
                     )
             if count:

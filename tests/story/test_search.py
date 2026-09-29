@@ -5,9 +5,11 @@ import os
 
 import pytest
 
+from iw_architect.story import search as search_module
 from iw_architect.story.extract import extract_story_data
 from iw_architect.story.models import SearchResult
 from iw_architect.story.search import (
+    MAX_MATCH_CHARS,
     MAX_SNIPPETS_PER_TURN,
     SNIPPET_CONTEXT,
     SNIPPET_MAX_WIDEN,
@@ -211,3 +213,76 @@ class TestErrors:
     def test_missing_turn_index(self, tmp_path):
         with pytest.raises(FileNotFoundError, match="turn_index.json"):
             search_turns(str(tmp_path), "x")
+
+    def test_malformed_turn_index_is_value_error(self, tmp_path):
+        (tmp_path / "turn_index.json").write_text("{not json")
+        with pytest.raises(ValueError):
+            search_turns(str(tmp_path), "x")
+
+    def test_search_exceeding_budget_errors(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(search_module, "SEARCH_TIMEOUT_SECONDS", 0.0)
+        d = _write_turn_index(tmp_path, [{"outcome": "a" * 200_000}])
+        with pytest.raises(ValueError, match="timed out"):
+            search_turns(d, "a")
+
+
+class TestSnippetEdges:
+    """Exact-string pins for where the window lands and where "…" goes."""
+
+    def test_no_leading_ellipsis_when_widening_reaches_section_start(self):
+        text = "a" * 20 + " " + "b" * 40 + "TARGET"
+        start = text.index("TARGET")
+        assert _snippet(text, start, start + 6) == text
+
+    def test_no_trailing_ellipsis_when_widening_reaches_section_end(self):
+        text = "TARGET" + "b" * 40 + " " + "a" * 20
+        assert _snippet(text, 0, 6) == text
+
+    def test_left_cut_on_whitespace_does_not_widen(self):
+        # start - 50 lands exactly on the space after the w-run: no extra word pulled in.
+        text = "w" * 9 + " " + "z" * 48 + " TARGET"
+        start = text.index("TARGET")
+        assert _snippet(text, start, start + 6) == "…" + "z" * 48 + " TARGET"
+
+    def test_right_cut_after_whitespace_does_not_widen(self):
+        # end + 50 lands just after the space before the w-run.
+        text = "TARGET " + "z" * 48 + " " + "w" * 9
+        assert _snippet(text, 0, 6) == "TARGET " + "z" * 48 + "…"
+
+    def test_snippet_window_end_to_end(self, tmp_path):
+        outcome = "lorem " * 25 + "NEEDLE " + "ipsum " * 25
+        d = _write_turn_index(tmp_path, [{"outcome": outcome}])
+        hit = search_turns(d, "needle", include_snippets=True).results[0]
+        assert hit.snippets is not None
+        (snip,) = hit.snippets
+        assert snip.text.startswith("…lorem ") and snip.text.endswith(" ipsum…")
+        assert "NEEDLE" in snip.text
+        assert len(snip.text) < len(outcome.strip())
+
+    def test_long_match_truncated(self, tmp_path):
+        d = _write_turn_index(tmp_path, [{"outcome": "q" * 500}])
+        hit = search_turns(d, "q+", mode="regex", include_snippets=True).results[0]
+        assert hit.match_count == 1
+        assert hit.snippets is not None
+        (snip,) = hit.snippets
+        assert snip.match == "q" * MAX_MATCH_CHARS + "…"
+        assert len(snip.text) <= MAX_MATCH_CHARS + SNIPPET_CONTEXT + SNIPPET_MAX_WIDEN + 2
+
+
+class TestCountingEdges:
+    def test_snippet_cap_spans_sections(self, tmp_path):
+        d = _write_turn_index(tmp_path, [{"action": "cat cat cat", "outcome": "cat cat cat"}])
+        hit = search_turns(d, "cat", include_snippets=True).results[0]
+        assert hit.match_count == 6
+        assert hit.snippets is not None
+        assert [s.section for s in hit.snippets] == ["action"] * 3 + ["outcome"] * 2
+
+    def test_zero_length_matches_skipped_not_terminal(self, tmp_path):
+        d = _write_turn_index(tmp_path, [{"outcome": "axxb"}])
+        result = search_turns(d, r"x*", mode="regex", include_snippets=True)
+        assert result.total_matches == 1
+        assert result.results[0].snippets is not None
+        assert result.results[0].snippets[0].match == "xx"
+
+    def test_whole_word_stays_case_insensitive(self, extracted):
+        assert _turns(search_turns(extracted, "PAINTING", whole_word=True)) == [1, 4]
