@@ -77,6 +77,26 @@ def log(msg: str):
 # ---------------------------------------------------------------- navigation
 
 
+class MenuEntryMissing(RuntimeError):
+    """A menu entry was not found. A RuntimeError, not SystemExit, so callers such as
+    `recover()` (reload fallback) and `open_option()` (legacy-menu fallback) can catch it."""
+
+
+def _visible_entry(pg: Page, name: str, timeout_ms: int = 3000):
+    """First visible menuitem (2026-09 UI) or legacy button matching `name`, polling briefly
+    because the menu can render a beat after it is opened; None if neither appears."""
+    for _ in range(max(1, timeout_ms // 250)):
+        for loc in (
+            pg.get_by_role("menuitem", name=name, exact=False),
+            pg.locator(f'button:has-text("{name}")'),
+        ):
+            v = loc.locator("visible=true")
+            if v.count():
+                return v.first
+        pg.wait_for_timeout(250)
+    return None
+
+
 def open_menu(pg: Page):
     """Expand the top-bar Menu (a toggle — don't click it again if it is already open)."""
     btn = wait_for(pg, 'button:has-text("Menu")')
@@ -94,17 +114,14 @@ def menu_click(pg: Page, *names: str) -> str:
     the new name first and the old one as a fallback.
     """
     open_menu(pg)
-    for name in names:
-        for loc in (
-            pg.get_by_role("menuitem", name=name, exact=False),
-            pg.locator(f'button:has-text("{name}")'),
-        ):
-            v = loc.locator("visible=true")
-            if v.count():
-                v.first.click()
-                pg.wait_for_timeout(800)
-                return name
-    raise SystemExit(f"no menu entry among {names!r}")
+    for i, name in enumerate(names):
+        # Only the first name gets the full render wait; fallbacks are checked quickly.
+        entry = _visible_entry(pg, name, 3000 if i == 0 else 250)
+        if entry is not None:
+            entry.click()
+            pg.wait_for_timeout(800)
+            return name
+    raise MenuEntryMissing(f"no menu entry among {names!r}")
 
 
 def menu_path(pg: Page, *path: str) -> None:
@@ -116,12 +133,10 @@ def menu_path(pg: Page, *path: str) -> None:
     """
     open_menu(pg)
     for name in path:
-        loc = pg.get_by_role("menuitem", name=name, exact=False).locator("visible=true")
-        if not loc.count():
-            loc = pg.locator(f'button:has-text("{name}")').locator("visible=true")
-        if not loc.count():
-            raise SystemExit(f"menu_path: no entry {name!r} (path {path!r})")
-        loc.first.click()
+        entry = _visible_entry(pg, name)
+        if entry is None:
+            raise MenuEntryMissing(f"menu_path: no entry {name!r} (path {path!r})")
+        entry.click()
         pg.wait_for_timeout(800)
 
 

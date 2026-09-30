@@ -15,7 +15,7 @@ with `sessionStorage.iwx = "1"`, so an operator's tab is never touched.
 | `build_probe_c.py <probe-e-scope-q10.json> <out.json>` | Builds `probes/probe-c-pawscript.json` (six malformed-`triggerOnPawScript` cells, the `firedThisTurn` 2×2 over prereqs and blockers, an undeclared-`$name` chance formula, and a character-scoped item with no per-character entry). | No |
 | `play_probe_c.py <outdir> [--resume]` | Same flow again, two `wait` turns — enough to split `firedThisTurn` against a one-shot anchor. | Yes — same rates |
 | `build_probe_f.py <probe-e-imported-2.json> <out.json>` | Builds `probes/probe-f-pawscript-view-mode.json`: two `hidden` rule items, a player-edited `View Mode` item, and one EIB that selects a rule with `choose($view_mode, …)`. No triggers. | No |
-| `play_probe_f.py <outdir> [--manual] [--min-credits N]` | Opening turn, one `wait` turn, then a pause while `View Mode` is edited to `B`. The script makes the edit itself, or with `--manual` records how the operator does it (DOM events, dialogs, websocket frames). Then one more `wait`. It waits for the credit balance to cover each turn and resumes from the on-screen turn number. **Not yet updated for the 2026-09-30 UI** (see below); the Probe F result was played by hand. | Yes — Lynx ran 30–50 per turn in 2026-09 |
+| `play_probe_f.py <outdir> [--manual] [--min-credits N]` | Opening turn, one `wait` turn, then a pause while `View Mode` is edited to `B`. The script makes the edit itself, or with `--manual` records how the operator does it (DOM events, dialogs, websocket frames). Then one more `wait`. It waits for the balance to cover each turn (`--min-credits`, default 50, doubled before turn 2), refuses to spend turn 3 unless `View Mode` really reads `B`, and resumes from the on-screen turn number. **Not yet updated for the 2026-09-30 UI** (see below); the Probe F result was played by hand. | Yes — Lynx ran 30–50 per turn in 2026-09 |
 
 Run with the iw-likeness environment, which already has Playwright installed:
 
@@ -41,18 +41,18 @@ disabled (`dangerouslyDisableSandbox`) or to be run from a plain terminal.
   Sequence: overwrite confirmation first, then (after the OK, up to ~20 s later) the
   "World imported from raw JSON." alert, which intercepts every click until dismissed —
   `import_json` polls for and dismisses both before touching **Save changes and exit**.
-- Play screen: `textarea` + **Take action**; toolbar icons `.fa-database` (inline Tracked
+- *(pre-2026-09)* Play screen: `textarea` + **Take action**; toolbar icons `.fa-database` (inline Tracked
   Items panel) and `.fa-bug` (World debug tools modal with collapsible "Triggers (N)" /
   "PawScript (N)" sections, per-trigger error text and **Open in Sandbox** links).
-- Menu → **AI model** radios (`smilodon`, `lynx`, …) and **Illustration options** radios
+- *(pre-2026-09)* Menu → **AI model** radios (`smilodon`, `lynx`, …) and **Illustration options** radios
   (`always` / `on_change` / `never`). Smilodon with an image ran 33–38 credits per turn; Lynx
   without images 21–26.
 - **2026-09 UI refresh.** The menu is now `role=menuitem` entries: World Browser, Load game,
   AI model, and a **Settings** submenu (Storyteller mode, Illustration options, Keep menu bar
   on screen). `iwdrive.menu_click` / `menu_path` try the menuitem first, then the legacy
   button. Illustration options is now a `<select>`. The credits button's `aria-label` reads
-  `"N credits, X of Y free turns left today"`. Lynx is free for 3 turns a day on the test
-  account.
+  `"N credits, X of Y free turns left today"`. As of 2026-09-30, Lynx gave the test account
+  3 free turns a day and cost 30–50 credits per turn after that.
 - **"World debug tools" only appears (under Settings) while Storyteller mode is on.**
   `play_probe_d.enable_world_debug` does not switch Storyteller mode on yet. Turn it on by hand,
   or the call fails with "no menu entry".

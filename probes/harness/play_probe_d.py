@@ -29,10 +29,13 @@ def body(pg: Page) -> str:
 def credits(pg: Page) -> str:
     """Credit balance from the top bar.
 
-    Reads the 'Credits: N' text (pre-2026-09) or the 'N credits' button."""
-    b = pg.locator('button[aria-label$=" credits"]').locator("visible=true")
+    Reads the 'Credits: N' text (pre-2026-09) or the credits button, whose aria-label is
+    'N credits' or 'N credits, X of Y free turns left today'."""
+    b = pg.locator('button[aria-label*=" credits"]').locator("visible=true")
     if b.count():
-        return (b.first.get_attribute("aria-label") or "?").split()[0]
+        m = re.match(r"\s*([\d.,]+)\s+credits", b.first.get_attribute("aria-label") or "")
+        if m:
+            return m[1]
     m = re.search(r"Credits:\s*([\d.,]+)", body(pg))
     return m[1] if m else "?"
 
@@ -76,7 +79,7 @@ def open_option(pg: Page, menu_item: str) -> None:
     """Open the dialog for a menu option under either menu layout."""
     try:
         d.menu_path(pg, *MENU_PATHS.get(menu_item, (menu_item,)))
-    except SystemExit:
+    except d.MenuEntryMissing:
         d.menu_click(pg, menu_item)  # pre-2026-09 flat button menu
     pg.wait_for_timeout(1200)
 

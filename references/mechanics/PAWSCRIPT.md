@@ -206,26 +206,28 @@ anything that is really a gate, use `triggerOnPawScript`.
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash
 the turn or the game. This makes expressions safe to sprinkle into narrative
-text without defensive guards. The flip side is that a typo fails silently. An
-extra instruction block made entirely of one expression simply disappears from
-the prompt, so check the rendered text in World Debug ("Instructions sent to the
-AI").
+text without defensive guards. The flip side is that a typo leaves no sign in the
+story text. In an extra instruction block, the expression's part would render
+empty or possibly as the literal tag; that is untested outside trigger conditions.
+Check the rendered text in World Debug ("Instructions sent to the AI").
 
 **Expressions in instruction text re-render every turn, from live values.**
-Probe F (2026-09-30, played) put
+Probe F (2026-09-30, played by hand, no World Debug capture) put
 `<<choose($view_mode, "A", $view_a, "B", $view_b, "VIEW MODE UNRECOGNISED")>>` in an
 extra instruction block. `$view_a` and `$view_b` were `hidden` items holding two
 rival rules. When the player edited `View Mode` from `A` to `B` between turns, the
 very next turn obeyed rule B. Two things follow:
 
 - **A player's edit reaches the AI with no lag.** The expression is evaluated when
-  the turn's prompt is built. A trigger watching the same item only sees the edit
-  after that turn is written, so it lags one turn (see
+  the turn's prompt is built. By the documented lifecycle (not probed), a trigger
+  watching the same item only sees the edit after that turn is written, so it
+  lags one turn (see
   [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#the-exception-expressions-render-when-the-prompt-is-built)
   §3).
-- **An expression can hand a `hidden` item's value to the AI.** The item itself is
-  never sent, but its value is spliced into the rendered text. Only the variant the
-  expression selects costs tokens.
+- **An expression can hand a `hidden` item's value to the AI.** The AI obeyed rule
+  text that existed only in `hidden` items. Per the documented `hidden` semantics the
+  items themselves are not sent, so only the variant the expression selects should
+  cost tokens. Neither half has been confirmed from a World Debug capture yet.
 
 The recipe, with a template and pitfalls, is
 [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).

@@ -42,7 +42,6 @@ from playwright.sync_api import Page, sync_playwright
 TITLE = "SCHEMA PROBE F - PawScript view switch in instruction block"
 pd.TITLE = TITLE
 EDIT_WAIT_S = 100 * 60
-MIN_CREDITS = 100
 
 EVENT_TAP = r"""
 () => {
@@ -78,7 +77,9 @@ EVENT_TAP = r"""
   }, extra || {}));
   document.addEventListener('click', e => push('click', e), true);
   document.addEventListener('focusin', e => push('focusin', e), true);
-  const val = (e) => ({value: (e.target.value || '').slice(0, 200)});
+  // Never record what is typed into a password field (e.g. a re-login during the pause).
+  const val = (e) => ({value: e.target.type === 'password'
+    ? '<password redacted>' : (e.target.value || '').slice(0, 200)});
   document.addEventListener('change', e => push('change', e, val(e)), true);
   document.addEventListener('input', e => push('input', e, val(e)), true);
   document.addEventListener('keydown', e => {
@@ -180,20 +181,26 @@ def debug_modal_all(pg: Page) -> str:
     """Open World debug tools (bug icon), expand every collapsible section, return text + aria."""
     pg.locator("button:has(.fa.fa-bug)").locator("visible=true").first.click()
     pg.wait_for_timeout(1500)
-    for _ in range(3):  # headers may reveal nested headers
+    # Headers are toggles, and expanding one can reveal nested ones: click each header text
+    # exactly once, re-querying after every click so indices never go stale.
+    opened: set[str] = set()
+    for _ in range(50):
         hdrs = pg.locator(".modal").locator("visible=true").get_by_text(re.compile(r"\(\d+\)\s*$"))
-        clicked = 0
+        todo = None
         for i in range(hdrs.count()):
             h = hdrs.nth(i)
-            try:
-                if h.is_visible():
-                    h.click(timeout=2000)
-                    clicked += 1
-                    pg.wait_for_timeout(400)
-            except Exception:  # noqa: BLE001
-                pass
-        if not clicked:
+            key = h.inner_text().strip()
+            if key not in opened and h.is_visible():
+                todo = (key, h)
+                break
+        if todo is None:
             break
+        opened.add(todo[0])
+        try:
+            todo[1].click(timeout=2000)
+            pg.wait_for_timeout(400)
+        except Exception as e:  # noqa: BLE001 — log and move on; the text dump still runs
+            print(f"debug header {todo[0]!r} did not expand: {e}")
     text = d.dialog_text(pg)
     ids = d.open_modal_ids(pg)
     aria = pg.locator(f"#{ids[-1]}").aria_snapshot() if ids else ""
@@ -267,6 +274,7 @@ def wait_for_player_edit(pg: Page, out: Path, manual: bool) -> None:
     pd.tracked_items(pg)  # make sure the inline panel is open so the value is on screen
     rec = Recorder(pg, out)
     sentinel = out / "EDIT_DONE"
+    sentinel.unlink(missing_ok=True)  # a leftover from an earlier run must not skip the pause
     if manual:
         print(
             "\n=== PAUSED — over to you ===\n"
@@ -292,10 +300,12 @@ def wait_for_player_edit(pg: Page, out: Path, manual: bool) -> None:
                 break
         else:
             seen_b_at = None
-    else:
-        print("edit wait timed out — panel never showed View Mode: B")
     pg.wait_for_timeout(2000)
     rec.dump()
+    # Never spend turn 3 unless the edit really landed: a PINEAPPLE turn after a failed edit
+    # would read as "turn lag".
+    if not view_mode_is_b(pg):
+        raise SystemExit("View Mode is not B after the edit wait; not spending turn 3")
 
 
 def credits_num(pg: Page) -> float | None:
@@ -339,11 +349,11 @@ def main() -> None:
     out = Path(sys.argv[1])
     out.mkdir(exist_ok=True)
     args = sys.argv[2:]
-    manual = (
-        "--manual" in args
-    )  # a human makes the edit in the harness tab; default: the script does
-    # Per-turn credit floors (Lynx ran 30–50 per turn in 2026-09): opening turn, then the two waits.
-    need_open = float(args[args.index("--min-credits") + 1]) if "--min-credits" in args else 50.0
+    # --manual: a human makes the edit in the harness tab; default: the script does.
+    manual = "--manual" in args
+    # Credit floor per turn (Lynx ran 30–50 per turn in 2026-09). --min-credits sets it for
+    # every turn; before turn 2 the script waits for two turns' worth.
+    need = float(args[args.index("--min-credits") + 1]) if "--min-credits" in args else 50.0
     with sync_playwright() as pw:
         pg = d.our_page(pw.chromium.connect_over_cdp(d.CDP).contexts[0])
         d.settle_dialogs(pg, 1500)
@@ -353,7 +363,7 @@ def main() -> None:
         turn = current_turn(pg)
         print("current Probe F turn on screen:", turn)
         if turn is None:
-            wait_for_credits(pg, need_open)
+            wait_for_credits(pg, need)
             pd.set_option(pg, "AI model", "lynx", select_label=": Lynx")
             pd.set_option(pg, "Illustration options", "never", select_label="Never")
             start_game(pg)
@@ -364,7 +374,7 @@ def main() -> None:
             print(
                 "\n=== opening turn done — waiting until the balance covers two more Lynx turns ==="
             )
-            wait_for_credits(pg, MIN_CREDITS)
+            wait_for_credits(pg, 2 * need)
             ensure_play_screen(pg)
             pd.take_turn(pg, 2, out)
             capture(pg, "2", out)
@@ -375,10 +385,11 @@ def main() -> None:
             else:
                 wait_for_player_edit(pg, out, manual)
                 capture(pg, "2-after-edit", out)
-            wait_for_credits(pg, 50.0)
+            wait_for_credits(pg, need)
             ensure_play_screen(pg)
             pd.take_turn(pg, 3, out)
-        capture(pg, "3", out)
+            turn = 3
+        capture(pg, str(turn), out)
         print("done; credits", pd.credits(pg))
 
 

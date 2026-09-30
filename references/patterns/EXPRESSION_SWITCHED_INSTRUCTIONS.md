@@ -1,8 +1,10 @@
 # Pattern: Expression-Switched Instructions (lag-free mode switch)
 
-> **Provenance:** Probe-confirmed. Probe F (2026-09-30, played) showed that an extra
-> instruction block whose content is a PawScript expression is re-rendered from the
-> tracked items' current values every time a turn's prompt is built. See
+> **Provenance:** Play-observed, on thin evidence: one hand-played run of Probe F
+> (2026-09-30), one turn per mode, and no World Debug capture of the rendered block. The
+> operator saw an extra instruction block built from a PawScript expression follow a
+> tracked item's new value on the very next turn. The result assumes `hidden` item values
+> are not sent to the AI, which is documented but not yet checked at runtime. See
 > [`probes/README.md`](../../probes/README.md#answered-by-probe-f-2026-09-30-played).
 
 ---
@@ -28,7 +30,8 @@ turn (see [`AI_RUNTIME_MECHANICS.md`](../mechanics/AI_RUNTIME_MECHANICS.md#3-tur
 | **Expression in the EIB** (this pattern) | Not applicable: the prompt for turn N+1 is built from the new value | **Turn N+1** |
 | Trigger (`triggerOnPawScript` on the mode item → `effectModifyInstructionBlock`) | Step 9 of turn N+1, after the AI has written that turn | Turn N+2, one turn late |
 
-The trigger row follows from the documented lifecycle. Probe F confirmed the expression row:
+The trigger row follows from the documented lifecycle; Probe F had no trigger arm. Probe F
+observed the expression row:
 the player switched the mode between turns, and the very next turn followed the new
 variant.
 
@@ -37,8 +40,10 @@ The pattern is also simpler. Switching back and forth takes no extra triggers, n
 when a one-shot trigger has already fired.
 
 When the **AI** updates the item instead (via `autoUpdate` and `updateInstructions`), the
-value is written at step 7 of turn N. The expression and a trigger then both reach the AI on
-turn N+1. In that case the gain is simplicity, not timing.
+update is proposed at step 7 and applied at step 9 of turn N. The expression and a trigger
+then both reach the AI on turn N+1, as long as the watching trigger sits after anything that
+changes the item in `triggerEvents` order (otherwise the trigger lands on N+2). In that
+case the gain is simplicity and order-independence, not timing.
 
 ## Template
 
@@ -52,6 +57,7 @@ item, and the EIB selects between them:
     "name": "Narration Mode",
     "variableName": "narration_mode",
     "dataType": "text",
+    "positionInList": 0,
     "visibility": "everyone",
     "autoUpdate": false,
     "initialValue": "Cinematic",
@@ -63,6 +69,7 @@ item, and the EIB selects between them:
     "name": "Narration Cinematic",
     "variableName": "narration_cinematic",
     "dataType": "text",
+    "positionInList": 1,
     "visibility": "hidden",
     "autoUpdate": false,
     "initialValue": "Narrate in long, sensory, cinematic paragraphs with lingering camera-like detail.",
@@ -74,6 +81,7 @@ item, and the EIB selects between them:
     "name": "Narration Terse",
     "variableName": "narration_terse",
     "dataType": "text",
+    "positionInList": 2,
     "visibility": "hidden",
     "autoUpdate": false,
     "initialValue": "Narrate in two or three short, plain paragraphs. No lingering description.",
@@ -90,18 +98,19 @@ item, and the EIB selects between them:
 ]
 ```
 
-(Other tracked-item fields are omitted for brevity. Mint real IDs with `mint_ids`.)
+(Optional tracked-item fields are omitted for brevity; `name`, `positionInList`,
+`dataType`, `visibility` and `autoUpdate` are required. Mint real IDs with `mint_ids`.)
 
 The `Current narration mode: <<…>>` echo line is optional. It shows the live value in the
 rendered block, which makes a failed match easy to spot in World Debug.
 
 ## Why the variants live in `hidden` tracked items
 
-- **The AI only receives the selected variant.** A `hidden` item's value is never sent to
-  the AI directly, but an expression that reads it splices the value into the block. Probe F
-  confirmed this: the variant rule texts existed only in `hidden` items, and the AI obeyed
-  them. With `ai_only` or `everyone` items, the AI would see every variant every turn and pay
-  tokens for all of them.
+- **The AI only receives the selected variant.** Per the documented `hidden` semantics, a
+  hidden item's value is not sent to the AI directly. An expression that reads it delivers
+  the value: in Probe F the variant rule texts existed only in `hidden` items, and the AI
+  obeyed whichever one was selected. With `ai_only` or `everyone` items, the AI would see
+  every variant every turn and pay tokens for all of them.
 - **No nested quoting.** Long instruction text written as string literals inside `choose`
   would need escaping twice, once for PawScript quotes and again for JSON. A tracked item
   holds plain text.
@@ -113,9 +122,10 @@ For short variants, inline literals are fine:
 ## Rules and pitfalls
 
 - **Use the `$variable_name` form inside the expression.** `choose` compares the value to
-  each case with equality. Write `$narration_mode`, not a nested `<<narration_mode>>`:
-  interpolation is substituted as text before parsing and breaks non-numeric comparisons
-  (see [`PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md) §3).
+  each case with equality. Write `$narration_mode`, not a nested `<<narration_mode>>`. In
+  trigger gates, `<<…>>` is substituted as text before parsing and breaks non-numeric
+  comparisons (see [`PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md) §3). That was probed on
+  `triggerOnPawScript`, not inside a `<<choose(…)>>`, but it likely fails the same way.
 - **Always end with a default.** `choose` returns the trailing default when no case matches.
   Make the default a safe instruction, or a message naming the problem, never an empty
   string. A player who types `terse` instead of `Terse` gets the default: whether text
@@ -123,16 +133,23 @@ For short variants, inline literals are fine:
   `description`.
 - **Set `autoUpdate: false` on every item involved.** The switch belongs to the player, and
   the variants are fixed text. Neither should be rewritten by the AI.
-- **The switch item must be player-visible.** The in-game tracked-item editor lists only
-  items the player can see. Probe F used `everyone`. `player_only` should also work and
-  keeps the raw value out of the AI's context, but that is untested.
-- **A broken expression fails silently.** An unknown `$name` makes the expression render
-  nothing, so the block quietly disappears. Check the rendered block in World Debug under
-  "Instructions sent to the AI". The **World debug tools** menu entry only appears while
-  Storyteller mode is on.
-- **Don't test it on the opening turn.** The opening turn almost always ends with the
-  objective line, which overrides any "end the turn with X" style instruction. Judge from
-  the first regular turn onward.
+- **The switch item must be player-visible.** When the harness mapped the in-game
+  tracked-item editor on 2026-09-30, it listed the `everyone` item and did not offer the
+  `hidden` ones. Probe F used `everyone`. `player_only` might also work and would keep the
+  raw value out of the AI's context (drop the echo line too), but that is untested. So is
+  whether the editor needs Storyteller mode;
+  [`TARGET_WORD_COUNT.md`](TARGET_WORD_COUNT.md) assumes the player edits in Storyteller
+  mode.
+- **A broken expression leaves no sign in the story text.** A malformed expression is
+  documented to render nothing (see [`PAWSCRIPT.md`](../mechanics/PAWSCRIPT.md) §3), though
+  it may show as the literal tag; either way the `choose` line stops doing its job. How an
+  unknown `$name` renders in an EIB is untested. Check the rendered block in World Debug
+  under "Instructions sent to the AI" (see
+  [World Debug Tools](../mechanics/PLATFORM_BEHAVIOR_NOTES.md#world-debug-tools) for how to
+  open it).
+- **Don't test it on the opening turn.** In the operator's experience the opening turn
+  almost always ends with the objective line, whatever an "end the turn with X" style
+  instruction says; Probe F's opening turn did. Judge from the first regular turn onward.
 
 ## Variants and neighbours
 
@@ -142,8 +159,8 @@ For short variants, inline literals are fine:
   inside chance formulas, but Probe F only confirmed `choose` inside an EIB, so check the
   rendered block in World Debug.
 - **[`TARGET_WORD_COUNT.md`](TARGET_WORD_COUNT.md)** uses the same mechanism with arithmetic
-  instead of `choose`. A player's edit to the word count reaches the next turn in the same
-  way.
+  instead of `choose`. A player's edit to the word count should reach the next turn in the
+  same way (inferred; Probe F tested `choose` in an EIB).
 - **[`PHASE_ESCALATION.md`](PHASE_ESCALATION.md)** (trigger-driven EIB replacement) is still
   the right tool when the change comes from an AI-judged story beat, or when it must be a
   one-way transition. If the phase is fully determined by a tracked item's value, prefer

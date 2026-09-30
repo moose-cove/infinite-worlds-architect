@@ -86,7 +86,8 @@ confusion stems from misunderstanding this order.
    action, the last 2–8 turns verbatim, and the Summary AI's running
    summary of earlier turns. Any `<<…>>` expressions in the instruction
    text are evaluated **now**, against the tracked items' current values
-   (Probe F, 2026-09-30 — see "The exception" below).
+   (observed for an extra instruction block in Probe F, 2026-09-30; see
+   "The exception" below).
 3. **The AI evaluates the action** against history and instructions
    (producing the `evaluation` field).
 4. **The AI writes `outcomeDescription`** — the main narrative response,
@@ -120,23 +121,29 @@ can react is turn N+1, when it reads the now-updated world state.
 
 ### The exception: expressions render when the prompt is built
 
-A `<<…>>` expression in `instructions` or an extra instruction block is
-not frozen text. It is re-evaluated every time a turn's prompt is built,
-at step 2. So when the **player** edits a tracked item between turns
+A `<<…>>` expression in an extra instruction block is not frozen text. It
+is re-evaluated every time a turn's prompt is built, at step 2. Main
+`instructions` are expected to work the same way, but only an EIB was
+probed. So when the **player** edits a tracked item between turns
 (through the in-game tracked-item editor), the very next turn's
-instructions already reflect the new value. A trigger watching the same
-item would only notice the edit at step 9 of that next turn, after the AI
-has written it, so any instruction change the trigger makes lands one
-turn later. Probe F (2026-09-30, played) confirmed this: an EIB built from
+instructions already reflect the new value. Probe F (2026-09-30, played
+by hand, no World Debug capture) observed this: an EIB built from
 `<<choose($view_mode, "A", $view_a, "B", $view_b, …)>>` followed a
-player's A→B edit on the very next turn. The expression also read two
-`hidden` tracked items, whose values reached the AI only through the
-rendered block.
+player's A→B edit on the very next turn. The two results it chose between
+were `hidden` tracked items, so an expression can deliver a hidden item's
+text to the AI. (This assumes `hidden` values are not otherwise sent,
+which is documented but not yet checked at runtime.) By the lifecycle
+above, not by probe, a trigger watching the same item would only notice
+the edit at step 9 of that next turn, after the AI has written it. Any
+instruction change the trigger makes therefore lands one turn later.
 
-When the change comes from the AI's own `stateVariablesUpdates` (step 7)
-or from a trigger effect (step 9) instead, the expression changes nothing
-about timing. The new value is picked up at step 2 of turn N+1, exactly as
-the trigger route would deliver it. The lag-free win applies to
+When the change comes from the AI's own `stateVariablesUpdates` (proposed
+at step 7, applied at step 9) or from a trigger effect (step 9) instead,
+the expression changes nothing about timing. The new value is picked up at
+step 2 of turn N+1, as the trigger route would deliver it, provided the
+watching trigger sits after the producer in `triggerEvents` order.
+Otherwise the trigger route lands on N+2; the expression doesn't depend on
+trigger order. The lag-free win applies to
 **player-made** edits only. Authoring recipe:
 [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
 
