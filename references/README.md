@@ -52,6 +52,7 @@ Recurring architectural patterns from real IW world builds. Each pattern can be 
 |---|---|
 | `patterns/IMAGE_SYSTEM_PATTERNS.md` | Advanced image consistency techniques: persistent attribute storage, exact-string tables, multi-pass validation, field isolation. Read alongside `fields/IMAGE_STYLE.md`. |
 | `patterns/PHASE_ESCALATION.md` | Pattern: use `effectModifyInstructionBlock` to swap an EIB's content at story beats, driving multi-phase world-state escalation. |
+| `patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md` | Pattern: an EIB whose content is a `<<choose(…)>>` over a tracked item, so a player-controlled mode switch reaches the AI on the very next turn, with no trigger and no one-turn lag (Probe F). |
 | `patterns/SURVIVAL_STATS.md` | Pattern: single `text` TI with holistic numerical update rules for survival stat sets (Hunger, Thirst, Stamina, etc.). |
 | `patterns/TARGET_WORD_COUNT.md` | Pattern: player-adjustable `number` TI driving turn-length control via `<<>>` math expressions in `instructions`. |
 | `patterns/NPC_APPEARANCE_CACHE.md` | Pattern: `ai_only` `text` TI as a rolling cache of NPC visual descriptions for consistent image generation across turns. |
@@ -87,6 +88,7 @@ Use this when the author's request doesn't map obviously to a field name:
 | Illustration style, image generation, LoRAs | `fields/IMAGE_STYLE.md` |
 | Summary AI, description format, advanced mechanics | `fields/MISC_ADVANCED_FEATURES.md` |
 | Phase escalation, swapping world state via EIB replacement | `patterns/PHASE_ESCALATION.md` |
+| Player-selectable modes (narration style, difficulty, POV), instructions that follow a tracked item, avoiding trigger lag | `patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md` |
 | Survival stats, holistic stat tracking in a single TI | `patterns/SURVIVAL_STATS.md` |
 | Word count control, turn length, paragraph count | `patterns/TARGET_WORD_COUNT.md` |
 | NPC appearance caching, consistent image generation across turns | `patterns/NPC_APPEARANCE_CACHE.md` |

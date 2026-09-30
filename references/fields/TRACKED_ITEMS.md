@@ -38,6 +38,15 @@ before writing turn N, X must be in the world before turn N — via
 `instructions`, via a tracked-item value updated on turn N-1, or by a
 trigger that fired on turn N-1.
 
+**Player edits are the fast path.** A value the *player* changes between
+turns, through the in-game tracked-item editor, is already current when
+turn N+1's prompt is built. A `<<…>>` expression in an extra instruction
+block that reads it reflects the edit on that very turn (observed in
+Probe F, 2026-09-30; main `instructions` are expected to behave the same).
+By the lifecycle, a trigger watching the item would only react after turn
+N+1 is written. See
+[`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
+
 ---
 
 ## Choosing `dataType`
@@ -63,7 +72,7 @@ The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`,
 | `ai_only` | AI only (every turn) | Hidden state the AI uses for decisions but the player shouldn't see: internal counters, secret relationship scores, plot flags. |
 | `ai_only_boring` | AI only (every turn) | Equivalent to `ai_only` in current platform behavior — both forms appear in real exports. Accept whichever the input used and preserve it on round-trip. |
 | `player_only` | Player (UI) only | Rare. Used when the player should track something the AI shouldn't reason about. |
-| `hidden` | Nobody automatically | Mechanical state only modified and read by trigger effects. The AI cannot auto-update items it cannot see. |
+| `hidden` | Nobody automatically | Mechanical state only modified and read by trigger effects and PawScript. The AI cannot auto-update items it cannot see, but a `<<…>>` expression in instruction text *can* read a hidden item and deliver its value to the AI. That makes hidden items a good store for instruction variants that an expression selects between (Probe F — see [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md)). |
 
 **v2.1 rename.** Pre-v2.1 worlds used `nobody` for what is now `hidden`. If you encounter `nobody` in a legacy world, treat it as `hidden`. The plugin's validator preserves unrecognized values on round-trip, but new worlds should use the v2.1 enum.
 
