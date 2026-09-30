@@ -19,3 +19,6 @@ htmlcov/
 /.claude/worktrees/
 /.claude/settings.local.json
 .worktreeinclude
+
+# IW test-account credentials for the probe harness (see probes/harness/README.md)
+probes/test-account.env

@@ -49,3 +49,5 @@ show don't tell. Extend scenes and expand connecting scenes if needed.
 | `/40` max paragraphs | 12 | 50 |
 
 > **Note:** Multi-variable equations (e.g. `<<target_word_count*min_word_ratio>>` where `min_word_ratio` is itself a TI variable) are not confirmed to work — don't chain TI references inside math expressions.
+
+> **Timing:** because the `<<…>>` math is evaluated each time a turn's prompt is built, a player's edit to the word count applies to the very next turn, with no trigger lag. This is the same mechanism Probe F confirmed for [`EXPRESSION_SWITCHED_INSTRUCTIONS.md`](EXPRESSION_SWITCHED_INSTRUCTIONS.md) (2026-09-30).

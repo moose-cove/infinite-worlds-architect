@@ -13,9 +13,12 @@ the wiki.
 | `probes/probe-e-scope-q10.json` | P10-followup (entry vs item scope level), `recommendedAIModel` bogus-value control, Q10 (absent `triggerConditions` key) | **Two round trips + played** — see [Answered by Probe E](#answered-by-probe-e-2026-08-28-two-round-trips--played) |
 | `probes/probe-c-pawscript.json` | P14 (malformed `triggerOnPawScript`), P2 (`firedThisTurn` semantics), P15 import rider, per-character auto-create seeding | **Round trip + played** — see [Answered by Probe C](#answered-by-probe-c-2026-08-29-round-trip--played) |
 
-All five have been run, and their `-imported.json` counterparts are committed as evidence.
+| `probes/probe-f-pawscript-view-mode.json` | Does an extra instruction block built from a PawScript `choose(…)` expression pick up a player's tracked-item edit on the very next turn? | **Round trip + played** — see [Answered by Probe F](#answered-by-probe-f-2026-09-30-played) |
+
+All six have been run, and their `-imported.json` counterparts are committed as evidence.
 Probes D, E and C were driven end-to-end (import, export, play, World Debug) by the Playwright
-harness in [`harness/`](harness/README.md); use it for the next round rather than clicking.
+harness in [`harness/`](harness/README.md). Probe F was imported and opened by the harness,
+then played by hand. Use the harness for the next round rather than clicking.
 The A, B, E and C source files **now fail validation** — see
 [Expected validator output](#expected-validator-output), which explains why that is the
 correct end state rather than a regression.
@@ -414,6 +417,50 @@ That explains Probe E's `""` result — its item's `initialValue` was empty — 
 `TRACKED_ITEMS.md`'s "drop the entry and set the value on the item" from a hedged suggestion
 to a confirmed fix.
 
+### Answered by Probe F (2026-09-30, played)
+
+Built by [`harness/build_probe_f.py`](harness/build_probe_f.py) from `probe-e-imported-2.json`.
+It has no triggers at all, so nothing but the player can move a value. There are three text
+tracked items, all with `autoUpdate: false`:
+
+- `View A` and `View B` are `hidden` and static. Each holds one unmistakable rule: end every
+  outcome with PINEAPPLE (A) or with WALRUS (B).
+- `View Mode` is `everyone`, starts at `"A"`, and only the player edits it.
+
+The one extra instruction block is
+`Current view mode: <<view_mode>>.` followed by
+`<<choose($view_mode, "A", $view_a, "B", $view_b, "VIEW MODE UNRECOGNISED")>>`. The round trip
+was byte-clean: `compare_worlds` reports 0 changes against `probe-f-imported.json`, and both
+files validate with 0 errors and 0 warnings. The harness imported the world into the test
+account and played the opening turn. The operator then played by hand on Lynx: a regular turn
+under mode A (PINEAPPLE), an edit of `View Mode` from `A` to `B` in the in-game tracked-item
+editor, and then the next turn.
+
+**An EIB expression re-renders from live tracked-item values when each turn's prompt is
+built, so a player's edit reaches the AI on the very next turn.** The turn after the edit
+obeyed rule B. A trigger-driven swap of the same block (a `triggerOnPawScript` gate on
+`$view_mode` plus `effectModifyInstructionBlock`) would have seen the edit only at step 9 of
+that turn and changed the block one turn later. The expression route has no such lag. Two
+further results follow from the same run:
+
+- **An expression can splice a `hidden` item's value into the prompt.** The rule texts
+  existed only in `hidden` items, which the AI cannot read directly, yet the AI obeyed
+  whichever one was selected.
+- **The opening turn is not a valid test turn for end-of-turn instructions.** The opening
+  narration ended with the platform's objective line and no PINEAPPLE. That turn almost
+  always ends on the objective line, whatever the instructions say, so judge end-of-turn
+  markers from the first regular turn onward.
+
+The run was driven by hand, so no World Debug transcripts were captured. The evidence is the
+operator's observation of the turn text. Folded into
+[`PAWSCRIPT.md`](../references/mechanics/PAWSCRIPT.md) §3,
+[`AI_RUNTIME_MECHANICS.md`](../references/mechanics/AI_RUNTIME_MECHANICS.md#the-exception-expressions-render-when-the-prompt-is-built)
+§3, and the new
+[`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../references/patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
+
+Not tested: whether `choose` text equality ignores case, whether a `player_only` switch item
+is editable in the in-game editor, and `if(…)` rather than `choose(…)` inside an EIB.
+
 ### Still open — all runtime-only
 
 P4's editor-UI read, P7 enforcement recursion, P8 YAML coercion, P9 image precedence, P11
@@ -611,6 +658,9 @@ absent `triggerOnPawScript` data, v0.23.0). Warnings: P14d and the P15 rider (un
 `$name`), P14e (bare handle) and P14f (`<<…>>` interpolation). `probe-c-imported.json` reports
 0 errors / 6 warnings — the two errored cells come back as conditionless triggers, which the
 v0.21.0 warning names, and the four kept-but-broken cells still warn.
+
+`probes/probe-f-pawscript-view-mode.json` — 0 errors, 0 warnings, and so is
+`probe-f-imported.json`. Probe F carries nothing destructive; it tests a runtime behaviour.
 
 The useful invariant is the inverse one, and it *almost* holds: **every `-imported.json` file
 validates with zero errors**, because IW already deleted everything the validator now objects

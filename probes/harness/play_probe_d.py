@@ -27,6 +27,12 @@ def body(pg: Page) -> str:
 
 
 def credits(pg: Page) -> str:
+    """Credit balance from the top bar.
+
+    Reads the 'Credits: N' text (pre-2026-09) or the 'N credits' button."""
+    b = pg.locator('button[aria-label$=" credits"]').locator("visible=true")
+    if b.count():
+        return (b.first.get_attribute("aria-label") or "?").split()[0]
     m = re.search(r"Credits:\s*([\d.,]+)", body(pg))
     return m[1] if m else "?"
 
@@ -58,25 +64,62 @@ def debug_modal(pg: Page) -> str:
     return t
 
 
-def set_option(pg: Page, menu_item: str, radio_value: str) -> None:
-    """Menu → <menu_item> → pick the radio with value=<radio_value> → OK."""
-    d.open_menu(pg)
-    pg.locator(f'button:has-text("{menu_item}")').locator("visible=true").first.click()
+MENU_PATHS = {
+    # 2026-09 UI: "AI model" is a top-level menuitem; the rest moved under "Settings".
+    "AI model": ("AI model",),
+    "Illustration options": ("Settings", "Illustration options"),
+    "World debug tools": ("Settings", "World debug tools"),
+}
+
+
+def open_option(pg: Page, menu_item: str) -> None:
+    """Open the dialog for a menu option under either menu layout."""
+    try:
+        d.menu_path(pg, *MENU_PATHS.get(menu_item, (menu_item,)))
+    except SystemExit:
+        d.menu_click(pg, menu_item)  # pre-2026-09 flat button menu
     pg.wait_for_timeout(1200)
-    pg.locator(f".modal input[type=radio][value={radio_value}]").first.check(force=True)
+
+
+def set_option(pg: Page, menu_item: str, radio_value: str, select_label: str | None = None) -> None:
+    """Menu → <menu_item> → pick radio value=<radio_value> (or, when the dialog uses a
+    <select>, the option whose label is <select_label>) → OK."""
+    open_option(pg, menu_item)
+    radio = pg.locator(f".modal input[type=radio][value={radio_value}]")
+    if radio.count():
+        radio.first.check(force=True)
+    elif select_label and pg.locator(".modal select").locator("visible=true").count():
+        pg.locator(".modal select").locator("visible=true").first.select_option(label=select_label)
+    elif select_label:  # radios labelled ": Lynx" etc. without a usable value attribute
+        pg.locator(f'.modal :text("{select_label}")').locator("visible=true").first.click()
+    else:
+        raise SystemExit(f"{menu_item}: no radio {radio_value!r} and no select label given")
     pg.locator('.modal button:has-text("OK")').locator("visible=true").last.click()
     d.settle_dialogs(pg, 2000)
 
 
-def enable_world_debug(pg: Page) -> None:
-    d.open_menu(pg)
-    pg.locator('button:has-text("World debug tools")').locator("visible=true").first.click()
-    pg.wait_for_timeout(1200)
-    for label in ("Trigger status", "PawScript (scripts"):
-        cb = pg.locator(f'.modal :text("{label}")').locator("visible=true").first
-        inp = cb.locator("xpath=preceding::input[@type='checkbox'][1]")
-        if not inp.is_checked():
-            cb.click()
+WORLD_DEBUG_DEFAULT = ("Trigger status", "PawScript (scripts")
+
+
+def enable_world_debug(
+    pg: Page, labels=WORLD_DEBUG_DEFAULT, log_options: Path | None = None
+) -> None:
+    """Tick the given World debug tools checkboxes (by label text). `labels="all"` ticks
+    every checkbox in the dialog; `log_options` saves the dialog text (the option list)."""
+    open_option(pg, "World debug tools")
+    if log_options:
+        log_options.write_text(d.dialog_text(pg))
+    boxes = pg.locator(".modal input[type=checkbox]").locator("visible=true")
+    if labels == "all":
+        for i in range(boxes.count()):
+            if not boxes.nth(i).is_checked():
+                boxes.nth(i).check(force=True)
+    else:
+        for label in labels:
+            cb = pg.locator(f'.modal :text("{label}")').locator("visible=true").first
+            inp = cb.locator("xpath=preceding::input[@type='checkbox'][1]")
+            if not inp.is_checked():
+                cb.click()
     pg.locator('.modal button:has-text("OK")').locator("visible=true").last.click()
     d.settle_dialogs(pg, 1500)
 

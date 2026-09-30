@@ -90,6 +90,8 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── probe-e-scope-q10.json          # Entry-vs-item scope, recommendedAIModel control, absent conditions key
 ├── probe-e-imported.json           # Probe E after round trip 1 — evidence, do not edit
 ├── probe-e-imported-2.json         # Probe E after round trip 2 (re-import of round 1) — evidence, do not edit
+├── probe-f-pawscript-view-mode.json # Live EIB expression switch: choose() over a player-edited tracked item
+├── probe-f-imported.json           # Probe F after import/export — evidence, do not edit
 └── harness/                # Playwright/CDP scripts that drive live IW, plus committed World Debug transcripts
 
 .claude-plugin/
