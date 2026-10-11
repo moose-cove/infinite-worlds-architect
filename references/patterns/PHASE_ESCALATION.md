@@ -36,3 +36,5 @@ At the escalation trigger:
 **Chaining phases:** Use `triggerPrereqs` on the Phase 3 trigger (require Phase 2 to have fired) to ensure the escalation chain fires in order even if timing conditions overlap.
 
 **Naming convention:** Give the phase EIB a stable ID (e.g. `EibPhase1`) and a descriptive name (e.g. `"World State"`). Use `effectModifyInstructionBlock` to replace only its `content` — the `id` and `name` remain constant across all phases.
+
+**When not to use a trigger:** if the phase is fully determined by a tracked item's value, especially one the player sets, don't swap the EIB by trigger. Make its content a `<<choose(…)>>` over that item instead. It re-renders every turn, picks up a player's edit on the very next turn rather than one turn late, and switches back just as easily. See [`EXPRESSION_SWITCHED_INSTRUCTIONS.md`](EXPRESSION_SWITCHED_INSTRUCTIONS.md). Keep trigger replacement for AI-judged story beats and one-way transitions.

@@ -1,0 +1,148 @@
+{
+  "favorite": false,
+  "title": "SCHEMA PROBE F - PawScript view switch in instruction block",
+  "description": "Probe world: does an extra instruction block built from a PawScript expression pick up a player's tracked-item edit on the very next turn?",
+  "background": "A featureless white room containing twelve numbered doors. Nothing happens here unless a trigger makes it happen.",
+  "instructions": "This is a schema probe world. Keep every response to one short sentence. Do not invent events, characters, or scenery. Obey every extra instruction block exactly.",
+  "authorStyle": "Terse and clinical.",
+  "recommendedAIModel": "lynx",
+  "firstInput": "I count the doors.",
+  "objective": "Advance turns so the probe triggers fire.",
+  "imageModel": "manticore",
+  "imageStyle": "photo_1",
+  "illustrationStyleNonCharacterLowPriority": "",
+  "illustrationStyleNonCharacterHighPriority": "",
+  "illustrationStyleCharacterLowPriority": "",
+  "illustrationStyleCharacterHighPriority": "",
+  "imageStyleCharacterPre": "",
+  "imageStyleCharacterPost": "",
+  "imageStyleNonCharacterPre": "",
+  "imageStyleNonCharacterPost": "",
+  "mature": false,
+  "nsfw": false,
+  "contentWarnings": "",
+  "enableAISpecificInstructionBlocks": false,
+  "previewImage": "",
+  "fullSizePreviewImage": "",
+  "previewImageOptions": [],
+  "fullSizePreviewImageOptions": [],
+  "currentPreviewImageIndex": 0,
+  "imagePromptDetails": {
+    "illustrGenre": "",
+    "illustrClothes": "",
+    "illustrSetting": "",
+    "illustrSubject": "",
+    "illustrAppearance": "",
+    "illustrIsCharacter": false,
+    "illustrExpressionPosition": ""
+  },
+  "permissionsOnceShared": {
+    "sharing": false,
+    "editing": false
+  },
+  "allowChangeCharacterName": true,
+  "allowChangeCharacterDescription": true,
+  "allowChangeCharacterSkills": true,
+  "allowChangeCharacterItemValues": true,
+  "allowChangeCharacterPortrait": true,
+  "allowChangeCharacterNewPortrait": true,
+  "conditions": [],
+  "schemaVersion": 2.4,
+  "charSelectText": "Pick the probe character.",
+  "skills": [
+    "Observation",
+    "Patience"
+  ],
+  "possibleCharacters": [
+    {
+      "name": "Probe Subject",
+      "description": "A plain figure in a grey coat who exists only so the world has a player character.",
+      "portrait": "",
+      "portraitPromptDetails": {},
+      "fullSizePortrait": "",
+      "portraitOptions": [],
+      "fullSizePortraitOptions": [],
+      "currentPortraitIndex": 0,
+      "characterId": "PrbSubj2",
+      "skills": {
+        "Patience": 3,
+        "Observation": 3
+      },
+      "initialTrackedItemValues": []
+    }
+  ],
+  "triggerEvents": [],
+  "victoryCondition": {
+    "condition": "The player types the word VICTORY.",
+    "text": "Probe complete.",
+    "alreadyFired": false
+  },
+  "defeatCondition": {
+    "condition": "The player types the word DEFEAT.",
+    "text": "Probe aborted.",
+    "alreadyFired": false
+  },
+  "trackedItems": [
+    {
+      "id": "PrbFViewA",
+      "name": "View A",
+      "positionInList": 0,
+      "dataType": "text",
+      "visibility": "hidden",
+      "description": "PROBE: static rule text for view A. Never changes.",
+      "updateInstructions": "Never change this value.",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "PROBE RULE A: End every outcome with the single capitalised word PINEAPPLE as its final word. Never mention walruses.",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "view_a",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbFViewB",
+      "name": "View B",
+      "positionInList": 1,
+      "dataType": "text",
+      "visibility": "hidden",
+      "description": "PROBE: static rule text for view B. Never changes.",
+      "updateInstructions": "Never change this value.",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "PROBE RULE B: End every outcome with the single capitalised word WALRUS as its final word. Never mention pineapples.",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "view_b",
+      "driftAcknowledgedForName": null
+    },
+    {
+      "id": "PrbFMode1",
+      "name": "View Mode",
+      "positionInList": 2,
+      "dataType": "text",
+      "visibility": "everyone",
+      "description": "Either A or B. Only the player changes this, via the tracked-item editor.",
+      "updateInstructions": "Never change this value. Only the player edits it.",
+      "formatExample": "",
+      "enforceFormat": false,
+      "formatSchema": "",
+      "initialValue": "A",
+      "initialValueBasedOnPC": "same",
+      "autoUpdate": false,
+      "variableName": "view_mode",
+      "driftAcknowledgedForName": null
+    }
+  ],
+  "autoAdvanceVersion": false,
+  "version": "1.00",
+  "designNotes": "SCHEMA PROBE F. Three tracked items (View A / View B hidden and static, View Mode player-edited) and one extra instruction block whose content is a PawScript choose() over $view_mode. See probes/README.md in the infinite-worlds-architect repo.",
+  "instructionBlocks": [
+    {
+      "id": "PrbFVwIns",
+      "name": "View Instructions",
+      "content": "Current view mode: <<view_mode>>.\n<<choose($view_mode, \"A\", $view_a, \"B\", $view_b, \"VIEW MODE UNRECOGNISED\")>>"
+    }
+  ]
+}

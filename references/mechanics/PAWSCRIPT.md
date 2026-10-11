@@ -206,7 +206,31 @@ anything that is really a gate, use `triggerOnPawScript`.
 **Errors are harmless.** If an expression references something that doesn't
 exist or is otherwise malformed, it simply renders nothing — it does not crash
 the turn or the game. This makes expressions safe to sprinkle into narrative
-text without defensive guards.
+text without defensive guards. The flip side is that a typo leaves no sign in the
+story text. In an extra instruction block, the expression's part would render
+empty or possibly as the literal tag; that is untested outside trigger conditions.
+Check the rendered text in World Debug ("Instructions sent to the AI").
+
+**Expressions in instruction text re-render every turn, from live values.**
+Probe F (2026-09-30, played by hand, no World Debug capture) put
+`<<choose($view_mode, "A", $view_a, "B", $view_b, "VIEW MODE UNRECOGNISED")>>` in an
+extra instruction block. `$view_a` and `$view_b` were `hidden` items holding two
+rival rules. When the player edited `View Mode` from `A` to `B` between turns, the
+very next turn obeyed rule B. Two things follow:
+
+- **A player's edit reaches the AI with no lag.** The expression is evaluated when
+  the turn's prompt is built. By the documented lifecycle (not probed), a trigger
+  watching the same item only sees the edit after that turn is written, so it
+  lags one turn (see
+  [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#the-exception-expressions-render-when-the-prompt-is-built)
+  §3).
+- **An expression can hand a `hidden` item's value to the AI.** The AI obeyed rule
+  text that existed only in `hidden` items. Per the documented `hidden` semantics the
+  items themselves are not sent, so only the variant the expression selects should
+  cost tokens. Neither half has been confirmed from a World Debug capture yet.
+
+The recipe, with a template and pitfalls, is
+[`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
 
 **Legacy bare-word expressions remain valid.** The older interpolation
 forms — `<<player_name>>`, `<<health>>`, `<<skill_charm>>` — are still fully
@@ -407,7 +431,7 @@ literally named `count`. This distinction is easy to get wrong.
 | `.append(entry)` | Adds an entry to a list (mutation — scripts only) |
 | `.remove(entry)` | Removes a matching entry from a list/map (mutation — scripts only) |
 | `.constrain(min, max)` | Clamps a number into the `[min, max]` range |
-| `choose(value, case1, result1, case2, result2, …, default)` | Top-level switch: returns the `result` paired with the first `case` equal to `value`, else the trailing `default`. Variadic, as documented on the IW wiki PawScript page (`<<choose($value_to_switch_on, 1, "Instructions 1", 2, "Instructions 2", "Default instructions")>>`). The 4-arg form `choose($probe.n, 3, 100, 0)` is verified inside a `triggerOnRandomChance` formula (2026-08-22). |
+| `choose(value, case1, result1, case2, result2, …, default)` | Top-level switch: returns the `result` paired with the first `case` equal to `value`, else the trailing `default`. Variadic, as documented on the IW wiki PawScript page (`<<choose($value_to_switch_on, 1, "Instructions 1", 2, "Instructions 2", "Default instructions")>>`). The 4-arg form `choose($probe.n, 3, 100, 0)` is verified inside a `triggerOnRandomChance` formula (2026-08-22). The 6-arg text form, with tracked-item reads as results, is verified inside an extra instruction block (Probe F, 2026-09-30). |
 | `log(value)` | Writes a value to World Debug for diagnostics (scripts) |
 | `round(x)` | Top-level rounding (and similar top-level math) |
 | `range(n)` | Top-level: the sequence `0 … n-1` — the bounded source for `for each` |
@@ -459,3 +483,5 @@ when in doubt:
   §9 for the legacy `<<…>>` interpolation vocabulary.
 - **Turn lifecycle** — [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
   §3 for when a script's writes take effect.
+- **Lag-free instruction switching** — [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md)
+  for an EIB built from a `choose` expression over a player-edited tracked item.

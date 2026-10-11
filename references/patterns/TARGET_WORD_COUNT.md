@@ -48,4 +48,6 @@ show don't tell. Extend scenes and expand connecting scenes if needed.
 | `/50` min paragraphs | 10 | 40 |
 | `/40` max paragraphs | 12 | 50 |
 
-> **Note:** Multi-variable equations (e.g. `<<target_word_count*min_word_ratio>>` where `min_word_ratio` is itself a TI variable) are not confirmed to work — don't chain TI references inside math expressions.
+> **Note:** Several `$name` reads in one expression do resolve: Probe F's `choose` read three tracked items in one expression (2026-09-30). What remains unconfirmed is arithmetic across several tracked items, especially with legacy bare-word names (e.g. `<<target_word_count*min_word_ratio>>`, where `min_word_ratio` is itself a TI variable). If you need two items in one formula, prefer the `$` form (`<<round($target_word_count*$min_word_ratio)>>`) and check the rendered text in World Debug.
+
+> **Timing:** Probe F (2026-09-30) observed a `choose` expression in an extra instruction block re-render from live values each turn; see [`EXPRESSION_SWITCHED_INSTRUCTIONS.md`](EXPRESSION_SWITCHED_INSTRUCTIONS.md). If `<<…>>` math in `instructions` works the same way, as expected but not tested, a player's edit to the word count applies to the very next turn, with no trigger lag.
