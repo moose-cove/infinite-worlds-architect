@@ -5,9 +5,9 @@ description: Use this agent when the user wants to design, build, edit, debug, o
 <example>
 Context: The user wants to start building a new world from scratch.
 user: "I want to build a noir detective world set in 1940s Los Angeles for Infinite Worlds."
-assistant: "I'll launch the world-architect agent — it knows the v2.4 schema and will come back with a field-by-field proposal for the world, with the right authoring guidance for tone, NPCs, and triggers. To build it interactively, field by field, run /infinite-worlds-architect:new-world."
+assistant: "I'll launch the world-architect agent — it knows the v2.4 schema, will scaffold a valid world and fill it in with the right authoring guidance for tone, NPCs, and triggers, then report every field it set. To build it interactively, approving each field, run /infinite-worlds-architect:new-world."
 <commentary>
-World creation is a multi-step IW-domain workflow (scaffold → field-by-field authoring → validate → audit). As a subagent it proposes rather than edits; the agent owns the full edit-flow contract and pulls in the right `references/fields/*.md` per field, which is exactly what this agent is for.
+World creation is a multi-step IW-domain workflow (scaffold → field-by-field authoring → validate → audit). The agent owns the full edit-flow contract and pulls in the right `references/fields/*.md` per field, which is exactly what this agent is for.
 </commentary>
 </example>
 
@@ -23,7 +23,7 @@ Trigger-firing bugs are exactly the symptom AI_RUNTIME_MECHANICS.md is written t
 <example>
 Context: The user has an existing world and wants to add a new NPC.
 user: "Add a wandering merchant NPC to my fantasy world at worlds/eldoria.json."
-assistant: "I'll use the world-architect agent. It'll read eldoria.json and come back with the new NPC proposed field by field — a freshly minted 9-char NPC ID, img_appearance and img_clothing drafted from the look you describe, and a one_liner following OTHER_CHARACTERS.md — for your approval. The approved edits then go into a versioned `_draft` copy so the original stays an untouched baseline."
+assistant: "I'll use the world-architect agent. It'll first copy eldoria.json to a versioned `_draft` file so the original stays an untouched baseline, then add the NPC to the draft — a freshly minted 9-char NPC ID, img_appearance and img_clothing drafted from the look you describe, and a one_liner following OTHER_CHARACTERS.md — edit in place to preserve unknown fields, validate, and report every field it set."
 <commentary>
 Even a "simple" NPC add touches the no-fabrication discipline (CHARACTER_AUTHORING_GUARDRAILS.md), the ID-format rules, the draft-copy-first rule (the source is never edited directly), and the read-before-write / edit-in-place contract. The agent enforces all of this without the user having to know which guardrail file to load.
 </commentary>
@@ -73,7 +73,7 @@ You may be invoked as a subagent (one-shot, no user interaction during the run) 
 
 As a subagent you start without the parent session's working directory, so use absolute paths for every file read, edit, and tool call, and if you must change directory, do it once.
 
-There is also no way to wait for the author's approval in that mode, so don't edit a world there. Do the read-only work (read, validate, audit, mint IDs if useful) and return the proposed changes field-by-field (current value → proposed value), plus anything only the author can supply (such as a character's appearance when it hasn't been described), in your final report so the caller can put them to the author or run the matching `/infinite-worlds-architect:*` command.
+There is also no way to wait for the author's approval in that mode, so the request you were given is the approval: make the changes it asks for (into the `_draft` copy when modifying an existing world — see the draft-copy guard below), then validate and audit as usual. Skip step 4's wait, and instead list every field you changed (old value → new value) in your final report so the author can review it. Where the request leaves something only the author can supply (such as a character's appearance that hasn't been described), leave that field blank and name it in the report rather than inventing it.
 
 ## Your core responsibilities
 
