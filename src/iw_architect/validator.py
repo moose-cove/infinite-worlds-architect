@@ -1489,7 +1489,8 @@ def validate_world(world_path: str) -> str:
     Returns ``{"valid": bool, "errors": [str], "warnings": [str]}``; ``valid`` is
     true when ``errors`` is empty (warnings don't affect it). Tier 1 errors are
     prefixed with the JSON path, e.g. ``[NPCs.0.name] ...``. A relative path,
-    missing file, invalid JSON, or non-object root is reported as a single error,
+    missing or unreadable file (including a directory), invalid JSON, or non-object
+    root is reported as a single error,
     and a Tier 2 check that hits malformed data is reported as an error rather than
     raised.
     """
@@ -1515,6 +1516,12 @@ def validate_world(world_path: str) -> str:
                 "errors": ["Invalid JSON: nesting is too deep to parse"],
                 "warnings": [],
             }
+        )
+    except (OSError, UnicodeDecodeError) as exc:
+        # A directory, an unreadable file, or non-UTF-8 bytes: report it in the
+        # result envelope like every other load failure instead of raising.
+        return json.dumps(
+            {"valid": False, "errors": [f"Could not read world file: {exc}"], "warnings": []}
         )
 
     if not isinstance(world, dict):

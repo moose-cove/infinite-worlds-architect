@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
 from typing import Any
 
 from iw_architect.paths import require_absolute
@@ -305,7 +304,9 @@ def format_world_for_review(world_path: str) -> str:
 
     try:
         markdown = _render_world_markdown(world)
-        output_path = Path(world_path).resolve().with_suffix(".review.md")
+        # Same normalization _load_world applied (expands a leading ``~``), so the
+        # review lands next to the world that was actually read.
+        output_path = require_absolute(world_path).resolve().with_suffix(".review.md")
         output_path.write_text(markdown, encoding="utf-8")
     except OSError as exc:
         return json.dumps({"error": f"Failed to write review file: {exc}"})

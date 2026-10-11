@@ -1,4 +1,5 @@
 """Pure-Python story-export extraction package.
 
-No MCP imports. No external dependencies beyond stdlib.
+No MCP imports. Third-party dependencies: ``pydantic`` (models) and ``regex``
+(search).
 """

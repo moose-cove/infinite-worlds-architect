@@ -1241,6 +1241,26 @@ def test_confirm_path_tilde_is_absolute(tmp_path, monkeypatch):
     assert result["resolved_path"] == str(tmp_path / "probe_world.json")
 
 
+def test_validate_world_directory_path_reported_not_raised(tmp_path):
+    """A path that exists but isn't a readable file comes back as an error in the
+    result envelope instead of raising out of the tool."""
+    from iw_architect.validator import validate_world
+
+    result = json.loads(validate_world(str(tmp_path)))
+    assert result["valid"] is False
+    assert any("Could not read world file" in e for e in result["errors"])
+
+
+def test_validate_world_non_utf8_reported_not_raised(tmp_path):
+    from iw_architect.validator import validate_world
+
+    bad = tmp_path / "latin1.json"
+    bad.write_bytes(b'{"title": "caf\xe9"}')
+    result = json.loads(validate_world(str(bad)))
+    assert result["valid"] is False
+    assert any("Could not read world file" in e for e in result["errors"])
+
+
 def test_validate_world_relative_rejected():
     """The same absolute-path guard applies to validate_world, not just confirm_path."""
     from iw_architect.validator import validate_world

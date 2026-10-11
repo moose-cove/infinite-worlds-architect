@@ -205,6 +205,24 @@ def test_format_world_for_review_missing_file(tmp_path):
     assert "success" not in result
 
 
+def test_format_world_for_review_tilde_path_writes_next_to_world(tmp_path, monkeypatch):
+    """A ``~/`` world path writes the review beside the world it read, not under a
+    literal ``~`` directory in the server's working directory."""
+    from iw_architect.tools.inspection import format_world_for_review
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    cwd = tmp_path / "server_cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    (tmp_path / "world.json").write_text(FIXTURE_PATH.read_text())
+
+    result = json.loads(format_world_for_review("~/world.json"))
+    assert "error" not in result, result
+    assert Path(result["success"]) == tmp_path / "world.review.md"
+    assert (tmp_path / "world.review.md").exists()
+    assert not (cwd / "~").exists()
+
+
 def test_format_world_for_review_invalid_json(tmp_path):
     """Invalid JSON in the world file returns an error envelope."""
     from iw_architect.tools.inspection import format_world_for_review
