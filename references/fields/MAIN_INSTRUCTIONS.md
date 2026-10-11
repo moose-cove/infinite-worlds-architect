@@ -34,9 +34,9 @@ When `instructions` exceeds ~2000 words, profile the content: which lines are re
 ### Prompt engineering tips
 
 - **Use dense, robotic logic over conversational prose.** Strip filler words. "When the player rolls below 3, the action fails" beats "If the player happens to roll a value that is less than 3, then the action should be considered to have failed."
-- **Use rigid exclusive language for constraints.** "MUST ONLY contain X", "Exclude all others", "Skip remaining rules". LLMs handle explicit constraints better than implied ones.
+- **State constraints explicitly and exclusively.** "outcomeDescription contains only X" beats an implied boundary — LLMs handle explicit constraints better than implied ones.
 - **Make exclusions explicit.** LLMs struggle with implied negative constraints. "Do not narrate beyond the immediate scene" is reliable; "stay focused" is not.
-- **Capitalize unconditional rules.** Patterns like "ALWAYS print whereWhen at the start of outcomeDescription" are more reliably followed than lowercased equivalents.
+- **Save capitals for a rule playtesting shows is being skipped.** Current storyteller models follow plain instructions closely, and blanket capitals make them apply rules rigidly where they don't fit. If one unconditional rule keeps getting missed (e.g. printing `whereWhen` at the start of `outcomeDescription`), capitalizing that one rule is a reasonable targeted fix.
 
 ---
 

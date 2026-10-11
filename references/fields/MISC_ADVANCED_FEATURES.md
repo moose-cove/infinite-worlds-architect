@@ -53,7 +53,7 @@ Directs the Summary AI regarding what to focus on, how to handle character recor
 
 - **First summary: turn 8.** Until turn 8, no summarization happens.
 - **Subsequently: every 6 turns** (turn 14, 20, 26, …).
-- **Once summarization begins, the storyteller AI's context shifts.** From turn 8 onward, the storyteller no longer sees `background` directly — it sees recent turns of history (typically 2–6) plus the Summary AI's output. This is why `background` is best treated as initial-premise framing only; after turn 8 it's been absorbed into summaries.
+- **Once summarization begins, the storyteller AI's context shifts.** From turn 8 onward, the storyteller no longer sees `background` directly — it sees recent turns of history (typically 2–8) plus the Summary AI's output. This is why `background` is best treated as initial-premise framing only; after turn 8 it's been absorbed into summaries.
 
 ### Summary structure
 

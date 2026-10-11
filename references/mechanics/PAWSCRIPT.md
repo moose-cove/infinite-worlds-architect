@@ -31,12 +31,12 @@ from a script (impossible).
 
 | | **Expressions** `<<…>>` | **Scripts** |
 |---|---|---|
-| Where they live | Anywhere adventure text is typed: narrative `instructions`, tracked-item `initialValue` / `description`, trigger conditions, AI prompt fields | **Only** inside the `effectRunScript` trigger effect |
+| Where they live | Anywhere adventure text is typed: narrative `instructions`, tracked-item `initialValue` / `description`, AI prompt fields. (A `triggerOnPawScript` condition takes a bare expression with no `<< >>` — see §3.) | **Only** inside the `effectRunScript` trigger effect |
 | Brackets | Wrapped in `<< >>` | No brackets — the whole effect body is the script |
 | Can read state | Yes | Yes |
 | Can change state | **No — read-only** | **Yes — but only tracked items** |
 | Can show messages / talk to the AI / write native fields | No | **No** |
-| On error | Harmless — renders nothing | Transactional rollback — nothing changes, logged to World Debug |
+| On error | Never stops the turn. In text it renders empty (or possibly the literal tag — untested); as a trigger condition the gate errors every turn and never fires (§3) | Transactional rollback — nothing changes, logged to World Debug |
 | Loops / branches | No — a single expression | Yes — `for each`, `if` / `else if` / `else` |
 
 **The "if the editor lets you type it" rule of thumb.** If the IW editor lets
@@ -71,8 +71,8 @@ is your tracked items.
 - Inside a script, `$<variableName>` is an **assignment target**:
   `$player_gold += 10` writes the new value back (transactionally).
 
-> **Expressions and the legacy `<<…>>` syntax.** In narrative text you still
-> reference tracked items and skills the classic way — `<<health>>`,
+> **Bare-name `<<…>>` interpolation.** In narrative text you reference
+> tracked items and skills by bare name — `<<health>>`,
 > `<<skill_charm>>`, `<<turn_number>>` — the interpolation vocabulary in
 > [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system)
 > §9. The `$`-prefixed native form is the PawScript-native way to reach the
@@ -112,7 +112,7 @@ expression, written in the `$variableName` form with *no* `<<…>>` brackets:
 The platform evaluates it each turn against live tracked-item values and fires
 the trigger when it is truthy. It is deterministic — no AI judgment, so it is
 presumed not to count toward the ten-event `triggerOnEvent` cap (unverified).
-Compound tests go inside the one expression (`$gold >= 50 and $puppies.count > 2`)
+Compound tests go inside the one expression (`$gold >= 50 and $puppies.count() > 2`)
 rather than across several conditions under a `logic` node, and it can reach into
 YAML sub-fields with the same dot paths scripts use (§5). `and` / `or` / `not` all
 work; **`or` short-circuits left-to-right**, so a branch that may not exist goes on the
@@ -203,9 +203,10 @@ byte-identical (re-export diffed), so this is a runtime-dead shape, not a deleti
 For conditional odds use `if(cond, a, b)` or `choose(…)`, which return numbers; for
 anything that is really a gate, use `triggerOnPawScript`.
 
-**Errors are harmless.** If an expression references something that doesn't
-exist or is otherwise malformed, it simply renders nothing — it does not crash
-the turn or the game. This makes expressions safe to sprinkle into narrative
+**Errors in text are harmless.** If an expression in narrative text references
+something that doesn't exist or is otherwise malformed, it does not crash the turn
+or the game. (In a trigger condition the same mistake leaves the gate dead — see
+the table above.) This makes expressions safe to sprinkle into narrative
 text without defensive guards. The flip side is that a typo leaves no sign in the
 story text. In an extra instruction block, the expression's part would render
 empty or possibly as the literal tag; that is untested outside trigger conditions.
@@ -232,10 +233,7 @@ very next turn obeyed rule B. Two things follow:
 The recipe, with a template and pitfalls, is
 [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
 
-**Legacy bare-word expressions remain valid.** The older interpolation
-forms — `<<player_name>>`, `<<health>>`, `<<skill_charm>>` — are still fully
-supported. You do not need to rewrite existing worlds to a `$`-prefixed style.
-New authoring can use either; both resolve against the same underlying state.
+**Bare-name and `$` forms both resolve.** `<<player_name>>`, `<<health>>`, `<<skill_charm>>` and the `$`-prefixed forms read the same underlying state; use either in narrative text.
 
 ```
 Your dog is <<puppy_tracking_yaml_format_tracked_items.count()>> strong and growing.
@@ -480,7 +478,7 @@ when in doubt:
 - **Trigger effects** — [`fields/TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md)
   for `effectRunScript` and the other effect types a script can't replace.
 - **Template variables** — [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system)
-  §9 for the legacy `<<…>>` interpolation vocabulary.
+  §9 for the bare-name `<<…>>` interpolation vocabulary.
 - **Turn lifecycle** — [`AI_RUNTIME_MECHANICS.md`](./AI_RUNTIME_MECHANICS.md#3-turn-lifecycle-the-order-matters)
   §3 for when a script's writes take effect.
 - **Lag-free instruction switching** — [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md)

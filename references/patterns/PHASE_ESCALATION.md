@@ -4,7 +4,7 @@
 
 ---
 
-## Pattern 1 — Phase Escalation via EIB Replacement
+## Phase Escalation via EIB Replacement
 
 Use an `instructionBlock` (EIB) as a **mutable world-state container**. The EIB starts with phase-1 content; triggers fire at key story beats and use `effectModifyInstructionBlock` to replace the entire EIB content with the next phase. Each phase can describe different world conditions, faction states, NPC behaviours, or stakes.
 

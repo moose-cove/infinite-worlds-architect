@@ -1044,9 +1044,10 @@ def _check_event_conditions_registered(world: dict, errors: list[str], warnings:
     event and still carrying an unused declared one. IW neither regenerated nor reconciled it.
     So the "platform-maintained index of events in use" reading this docstring used to offer
     is dead, and with it the theory that registry regeneration is how the ten-event cap gets
-    enforced (probe P11 separately imported twelve events untruncated). The live reading is
-    that it drives selectability in the editor's trigger UI. The sync guidance is unchanged —
-    a desync costs editor selectability, not correctness, which is why this stays a warning.
+    enforced (probe P11 separately imported twelve events untruncated). What it drives —
+    editor-UI selectability versus runtime matching — is still open (probes P3/P4). Keep the
+    two in sync either way; this stays a warning because no world is known to break from a
+    desync.
 
     Matching is exact after `strip()`. Case, internal whitespace and trailing punctuation are
     all significant — no normalization is applied, because the platform's own matching rule is
@@ -1473,8 +1474,24 @@ def _check_unknown_top_level_keys(world: dict, errors: list[str], warnings: list
 
 
 def validate_world(world_path: str) -> str:
-    """Strict schema check. Reports every error that would cause the platform to
-    reject or misinterpret the world. Returns JSON with 'valid', 'errors', and 'warnings'.
+    """Check a world JSON for errors the IW platform would reject or misread.
+
+    Runs Tier 1 (JSON Schema structural validation against
+    references/world_v2.4.schema.json) and Tier 2 (semantic checks: duplicate and
+    dangling IDs, cross-references, tracked-item and effect shapes, PawScript,
+    YAML items, named-event registry, and more). Unknown top-level keys, unknown
+    effect/condition types, and newer schemaVersions are warnings, not errors.
+    For quality findings (token budgets, trigger cycles, redundancy) use
+    audit_world instead.
+
+    world_path: absolute path to the world JSON (a leading ``~`` is expanded).
+
+    Returns ``{"valid": bool, "errors": [str], "warnings": [str]}``; ``valid`` is
+    true when ``errors`` is empty (warnings don't affect it). Tier 1 errors are
+    prefixed with the JSON path, e.g. ``[NPCs.0.name] ...``. A relative path,
+    missing file, invalid JSON, or non-object root is reported as a single error,
+    and a Tier 2 check that hits malformed data is reported as an error rather than
+    raised.
     """
     try:
         path = require_absolute(world_path)

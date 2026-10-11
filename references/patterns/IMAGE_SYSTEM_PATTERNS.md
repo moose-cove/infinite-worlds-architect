@@ -147,7 +147,7 @@ These four patterns compose additively:
 
 | What you want | Apply |
 |---|---|
-| Basic structure and word limits | See `IMAGE_STYLE.md` (Xyphrax Director or Thyr templates) |
+| Basic structure and word limits | See [`IMAGE_STYLE.md`](../fields/IMAGE_STYLE.md) (wrapper fields, word-limit awareness) |
 | Consistent appearance for recurring characters | Add Pattern 1 (persistent storage) |
 | Eliminate description drift over many turns | Add Pattern 2 (exact string tables) |
 | Catch generation errors before they compound | Add Pattern 3 (multi-pass validation) |

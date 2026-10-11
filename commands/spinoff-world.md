@@ -35,17 +35,9 @@ If `$ARGUMENTS` contains two paths (source then target, space-separated), use th
 
 Then call `validate_world(target_path)` to confirm the copy is clean.
 
-## Step 3 — Suggest variant directions
+## Step 3 — Settle the variant's direction
 
-Offer the author 3–5 concrete directions the variant could take. For example:
-
-- **Different setting** — same characters, different world or era
-- **Different protagonist** — same world, new lead character with a contrasting background
-- **Tonal shift** — e.g., a cozy version of a grim world, or vice versa
-- **Different mechanics** — changed tracked items, new skill system, altered trigger logic
-- **Story fork** — begins at a pivotal moment from the source world and takes a different path
-
-Let the author choose or describe their own direction.
+If the author hasn't already said what makes the variant different, offer a few concrete directions grounded in this source world — for instance a different setting, protagonist, tone, or mechanics, or a fork from a pivotal moment — and let them choose or describe their own.
 
 ## Step 4 — Iterate changes on the copy
 

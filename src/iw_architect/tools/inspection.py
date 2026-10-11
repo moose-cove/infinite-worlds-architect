@@ -81,14 +81,22 @@ def _resolve_path(world: dict, path: str) -> Any:
 
 
 def read_world_field(world_path: str, path: str) -> str:
-    """Read a single field from a world JSON by path.
+    """Read one value from a world JSON by path, without loading the whole world into context.
 
-    Path syntax examples:
-      background
-      imagePromptDetails.illustrGenre
-      NPCs[name=Finnegan Mosswood].location
-      triggerEvents[0].name
-      possibleCharacters[characterId=0TBwVqX9].skills
+    world_path: absolute path to the world JSON (a leading ``~`` is expanded).
+    path: dot/bracket path — ``key``, ``a.b`` (nested key), ``list[0]`` (index), and
+        ``list[field=value]`` (first entry whose ``field`` equals ``value``, compared as
+        strings). Examples:
+          background
+          imagePromptDetails.illustrGenre
+          NPCs[name=Finnegan Mosswood].location
+          triggerEvents[0].name
+          possibleCharacters[characterId=0TBwVqX9].skills
+
+    Returns ``{"path": str, "value": <any JSON value>}``. On failure returns
+    ``{"error": "..."}`` (relative path, missing file, invalid JSON) or
+    ``{"error": "...", "path": str}`` (missing key, index out of range, no matching
+    entry, an unparseable path, or a step applied to the wrong type). Read-only.
     """
     try:
         world = _load_world(world_path)
@@ -306,5 +314,13 @@ def format_world_for_review(world_path: str) -> str:
 
 
 def get_schema_summary() -> str:
-    """Return the canonical schema as structured JSON — entity types, fields, enums, etc."""
+    """Return a compact JSON summary derived from references/world_v2.4.schema.json.
+
+    Keys: ``schemaVersion``; ``topLevelFields`` and ``entityTypes`` (per field: type,
+    required, category, enum, note, default, description; per entity: description, ID
+    field, ID format, and its fields); ``conditionTypes``; ``effectTypes``;
+    ``templateVariables``. Use it to check which fields and effect/condition types
+    exist; read the schema file or the canonical fixture for full detail. Takes no
+    arguments; read-only.
+    """
     return json.dumps(SCHEMA_SUMMARY, indent=2)

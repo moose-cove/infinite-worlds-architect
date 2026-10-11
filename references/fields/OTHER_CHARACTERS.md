@@ -29,7 +29,7 @@ Every other NPC field — `detail`, `appearance`, `location`, `secret_info` — 
   - `"Veteran detective, cynical but fair, short-cropped grey hair. The player's reluctant partner."`
   - `"The café owner who knows everyone's secrets — warm on the surface, calculating underneath."`
 
-**Length guidance.** Keep it under 100 words. `one_liner` is injected every turn once the character has appeared, so treat it like the NPC-equivalent of `instructions` — every word costs tokens forever.
+**Length guidance.** Keep it under 100 words. `one_liner` is sent every turn, before the character appears as well as after, so treat it like the NPC-equivalent of `instructions` — every word costs tokens forever.
 
 ### `detail` (Character Detail)
 
@@ -80,7 +80,7 @@ These feed the image generation system's character portrait prompts. Since image
 - `img_appearance`: Physical description formatted for image generation (age, hair, eyes, skin tone, build). Concrete visual descriptors, comma-separated tags, LoRA-friendly phrasing.
 - `img_clothing`: Current clothing description (exclude footwear by standard image generation convention).
 
-**These fields typically require author input and must not be invented.** If the source material doesn't describe the character's appearance, prompt the user to confirm or supply these values. See [`CHARACTER_AUTHORING_GUARDRAILS.md`](../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance) §2.
+**Ground these in the character's described appearance, never genre defaults.** Draft them from the author's description or the `appearance` field and confirm them with the user; if the appearance hasn't been described, ask for it or leave them blank. See [`CHARACTER_AUTHORING_GUARDRAILS.md`](../guidance/CHARACTER_AUTHORING_GUARDRAILS.md#2-identity-and-appearance) §2.
 
 ---
 
@@ -89,6 +89,6 @@ These feed the image generation system's character portrait prompts. Since image
 - [ ] `one_liner` is dense, high-signal, and under 100 words — it's the only thing the AI sees until the character appears.
 - [ ] `names` includes all name variants to prevent character identity fragmentation.
 - [ ] Critical appearance details are in `one_liner` (not just `appearance`) if narrative consistency matters.
-- [ ] `img_appearance` and `img_clothing` are confirmed by the author, not invented.
+- [ ] `img_appearance` and `img_clothing` are grounded in the author's description (or `appearance`) and confirmed, not genre defaults.
 - [ ] `detail` contains the full backstory and personality — this can be rich and expansive.
 - [ ] `secret_info` is left blank when there are no actual secrets (don't fabricate to fill the field).

@@ -43,12 +43,17 @@ def _random_short_id(length: int) -> str:
 
 
 def mint_ids(kind: str, count: int = 1) -> str:
-    """Generate IDs in the format the platform expects for the given entity kind.
+    """Generate fresh random IDs in the format IW expects for an entity kind.
 
-    kind: one of character, npc, trackedItem, triggerEvent, triggerStep,
-        instructionBlock, loreBookEntry
-    count: how many IDs to generate (default 1)
-    Returns a JSON array of ID strings.
+    kind: one of ``character`` (8 chars), ``npc`` (9), ``trackedItem`` (9),
+        ``triggerEvent`` (8), ``instructionBlock`` (9), ``loreBookEntry`` (9) — all
+        alphanumeric [A-Za-z0-9] — or ``triggerStep`` (a UUID4, used for trigger
+        condition and effect IDs).
+    count: how many IDs to generate, 1-100 (default 1).
+
+    Returns ``{"kind": str, "ids": [str, ...]}``. On failure returns
+    ``{"error": "..."}`` (unknown kind, or count not an integer in 1-100). IDs are
+    random and not checked against any world for collisions; writes nothing.
     """
     if kind not in _ENTITY_ID_LENGTHS:
         return json.dumps(
@@ -140,12 +145,21 @@ def create_new_world_json(
     title: str = "Untitled World",
     nsfw: bool = False,
 ) -> str:
-    """Create a fresh world JSON at the given path with sane defaults.
+    """Write a new, minimal world JSON scaffold that passes validate_world with zero errors.
 
-    The resulting file passes validate_world with zero errors.
-    output_path: absolute path where the world JSON will be written
-    title: initial title for the world
-    nsfw: if true, sets both nsfw and mature to true
+    The scaffold holds the core top-level fields with empty or default values
+    (current schemaVersion, version "1.00", skills ["General"], empty entity arrays).
+    Use it to start a world from scratch; use make_draft_world to start from an
+    existing world.
+
+    output_path: absolute path for the new file (a leading ``~`` is expanded). Its
+        parent directory must already exist. An existing file at this path is
+        overwritten without warning — check with confirm_path first.
+    title: initial title for the world (default "Untitled World").
+    nsfw: if true, sets both ``nsfw`` and ``mature`` to true.
+
+    Returns ``{"status": "created", "path": str, "message": str}``. On failure returns
+    ``{"error": "..."}`` (relative path or missing parent directory).
     """
     try:
         path = require_absolute(output_path)
@@ -296,6 +310,14 @@ def make_draft_world(source_path: str, draft_path: str | None = None) -> str:
 
     If the source has no string ``version`` field (or a non-numeric one), it is copied
     unchanged: no key is bumped, moved, or injected.
+
+    Returns ``{"status", "source_path", "draft_path", "version", "message"}``:
+    ``status`` is ``"drafted"`` (``version`` is ``{"from", "to"}`` — equal when the value
+    couldn't be bumped — or null when the source has no string ``version``) or
+    ``"copied"`` when the source isn't valid JSON (``version`` null). On failure
+    returns ``{"error": "..."}``: relative path, missing source, draft path equal to
+    the source, missing parent directory, or a draft path that already exists (it
+    never overwrites).
     """
     try:
         source = require_absolute(source_path)

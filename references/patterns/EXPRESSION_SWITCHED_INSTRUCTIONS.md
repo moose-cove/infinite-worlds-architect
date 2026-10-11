@@ -99,7 +99,8 @@ item, and the EIB selects between them:
 ```
 
 (Optional tracked-item fields are omitted for brevity; `name`, `positionInList`,
-`dataType`, `visibility` and `autoUpdate` are required. Mint real IDs with `mint_ids`.)
+`dataType`, `visibility` and `autoUpdate` are schema-required, and `validate_world` also
+errors on a missing `description` key. Mint real IDs with `mint_ids`.)
 
 The `Current narration mode: <<…>>` echo line is optional. It shows the live value in the
 rendered block, which makes a failed match easy to spot in World Debug.

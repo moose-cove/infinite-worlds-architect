@@ -26,7 +26,7 @@ The AI never sees this. Don't put spoilers or mechanics here.
 
 ## `background`
 
-**Shown to the player as initial framing. Sent to the storyteller AI every turn — but its effective reach changes after turn 8.**
+**Shown to the player as initial framing. Sent to the storyteller AI for the first 8 turns; from turn 8 the Summary AI's running summary replaces it.**
 
 The initial situation and premise of the story. This field is powerful but **time-limited**: once the Summary AI runs for the first time (turn 8), `background` is absorbed into summaries and the storyteller AI begins seeing the Summary AI's output instead of `background` directly. From turn 8 onward, content that hasn't been re-stated elsewhere is effectively gone from the storyteller's working context.
 
@@ -42,7 +42,7 @@ The initial situation and premise of the story. This field is powerful but **tim
 
 **Authoring tactic.** Write `background` strictly as the situation *at the very beginning* of the story. `background` should remain "evergreen" — sensible reading at turn 50 as much as turn 1.
 
-**Important: `effectChangeBackground` is Start-of-Game (SoG) only.** Confirmed by IW import testing (May 2026): in a regular (mid-game) trigger, IW silently ignores `effectChangeBackground` at runtime. Even if IW allowed it, the effect would be inert mid-game — `background` is only sent to the storyteller AI at turn 0; after ~turn 8 it is superseded by the Summary AI's running summary and the storyteller no longer sees raw `background` text. To change context or setting framing mid-game, use `effectChangeMainInstructions` (replaces the `instructions` block) or restate framing via `summaryRequest`.
+**Important: `effectChangeBackground` is Start-of-Game (SoG) only.** KB-empirical (KB v2.8; not probed in this repo): in a regular (mid-game) trigger, IW silently ignores `effectChangeBackground` at runtime. Even if IW allowed it, the change would be short-lived — `background` only reaches the storyteller AI for the first 8 turns; from turn 8 the Summary AI's running summary replaces it and the storyteller no longer sees raw `background` text. To change context or setting framing mid-game, use `effectChangeMainInstructions` (replaces the `instructions` block) or restate framing via `summaryRequest`.
 
 For the deeper rule against packing `background` with content that belongs elsewhere, see [`FIELD_ALLOCATION_STRATEGY.md`](../guidance/FIELD_ALLOCATION_STRATEGY.md#anti-patterns).
 

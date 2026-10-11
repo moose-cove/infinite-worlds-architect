@@ -2,13 +2,13 @@
 
 > **Provenance:** KB-empirical — these templates come from real IW world builds shared by the community (KB v2.8, May 2026). They are not schema-governed. Each template is a ready-to-use EIB (`instructionBlock`) content block; copy and adapt for your world.
 >
-> **Placement:** These belong in `instructionBlocks` (EIBs), not in `instructions` (Main Instructions). EIBs load alongside MI every turn and are easier to manage and replace individually. See `MAIN_INSTRUCTIONS.md` for EIB vs MI placement guidance.
+> **Placement:** These belong in `instructionBlocks` (EIBs), not in `instructions` (Main Instructions). EIBs load alongside MI every turn and are easier to manage and replace individually. See [`fields/MAIN_INSTRUCTIONS.md`](../fields/MAIN_INSTRUCTIONS.md) for EIB vs MI placement guidance.
 
 ---
 
 ## Claude Bugfixes EIB (Lighter Variant)
 
-A lighter version for Claude-family models. Addresses overuse of `secretInfo` for conspiracies and psychobabble. Previously called "Lion Bugfixes".
+A lighter version for Claude-family models. Addresses overuse of `secretInfo` for conspiracies and psychobabble. Written against the retired Lion (Claude Sonnet 3.7) as "Lion Bugfixes" and carried forward under a new name; whether each line still fixes a failure on current Claude storytellers is untested — keep the lines whose failure you see in playtesting.
 
 ```
 The secret information section should not be used for secrets, conspiracies or secret plots. It should instead be used for world building, character backgrounds and motivations.

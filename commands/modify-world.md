@@ -62,7 +62,7 @@ For **each individual change** (all edits target the **draft**, never the source
 
 ## Step 6 — Validate after each batch
 
-After every 3–5 related edits (or immediately after any structural change like adding an entity):
+After every 3–5 related edits (or immediately after any structural change like adding an entity, or any `effectRunScript` edit):
 
 1. Call `validate_world(draft_path)`
 2. If there are errors, fix them before continuing and re-validate
@@ -83,7 +83,7 @@ Once the author's requested changes are complete:
 
 ### Adding a new NPC
 
-> Reference: [`references/fields/OTHER_CHARACTERS.md`](../references/fields/OTHER_CHARACTERS.md) — especially the `one_liner` rule and the `img_appearance`/`img_clothing` author-input requirement.
+> Reference: [`references/fields/OTHER_CHARACTERS.md`](../references/fields/OTHER_CHARACTERS.md) — especially the `one_liner` rule and the `img_appearance`/`img_clothing` grounding rule.
 
 ```
 1. mint_ids("npc", 1)           → get the new ID

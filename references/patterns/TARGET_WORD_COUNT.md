@@ -4,7 +4,7 @@
 
 ---
 
-## Pattern 3 — Target Word Count TI Pattern
+## Target Word Count TI Pattern
 
 A player-adjustable `number` TI that controls turn length. The TI is visible to everyone and is not auto-updated — the player edits it directly in Storyteller Mode. Its variable is then used in `instructions` or `descriptionRequest` with IW's `<<>>` math expressions.
 
@@ -32,7 +32,7 @@ The length of outcomeDescription must always be between <<round(target_word_coun
 **Full instruction block with paragraph control:**
 
 ```
-Critically and extremely important, overriding any previous or future instructions:
+Length rule for outcomeDescription:
 outcomeDescription must be a minimum of <<round(target_word_count*0.8)>> words and
 <<round(target_word_count/50)>> paragraphs and a maximum of <<round(target_word_count*1.2)>>
 words and <<round(target_word_count/40)>> paragraphs. Never summarize or be concise —

@@ -73,10 +73,11 @@ The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`,
 | `ai_only_boring` | AI only (every turn) | Equivalent to `ai_only` in current platform behavior — both forms appear in real exports. Accept whichever the input used and preserve it on round-trip. |
 | `player_only` | Player (UI) only | Rare. Used when the player should track something the AI shouldn't reason about. |
 | `hidden` | Nobody automatically | Mechanical state only modified and read by trigger effects and PawScript. The AI cannot auto-update items it cannot see, but a `<<…>>` expression in instruction text *can* read a hidden item and deliver its value to the AI. That makes hidden items a good store for instruction variants that an expression selects between (Probe F — see [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md)). |
+| `hidden_boring` | Nobody automatically | Same AI readability as `hidden` (developer-confirmed; survives import — Probe A P5). Accept and preserve it on round-trip. |
 
-**v2.1 rename.** Pre-v2.1 worlds used `nobody` for what is now `hidden`. If you encounter `nobody` in a legacy world, treat it as `hidden`. The plugin's validator preserves unrecognized values on round-trip, but new worlds should use the v2.1 enum.
+**v2.1 rename.** Pre-v2.1 worlds used `nobody` for what is now `hidden`. If you encounter `nobody` in a legacy world, treat it as `hidden`. `validate_world` reports `nobody` as an enum error, so propose renaming it to `hidden` when you edit such a world.
 
-**The visibility trap.** Items with visibility `player_only` or `hidden` are **invisible to the AI**, which means the AI cannot auto-update them via `updateInstructions`. They can only be modified by trigger effects (`effectSetTrackedItemValue`). If you set `visibility: "hidden"` and then write detailed `updateInstructions`, those instructions are a no-op.
+**The visibility trap.** Items with visibility `player_only` or `hidden` are **invisible to the AI**, which means the AI cannot auto-update them via `updateInstructions`. They can only be modified by trigger effects (`effectSetTrackedItemValue`, or a PawScript `effectRunScript`). If you set `visibility: "hidden"` and then write detailed `updateInstructions`, those instructions are a no-op.
 
 ---
 
@@ -86,7 +87,7 @@ The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`,
 
 **Good patterns:**
 - `"Update whenever the player gains, earns, spends, or loses gold."` — clear trigger conditions, exhaustive verb list.
-- `"ALWAYS increase this counter by 1 every turn."` — uppercase emphasis for unconditional rules.
+- `"Increase this counter by 1 every turn."` — an unconditional rule stated plainly. (A pure counter is more reliable as an `effectRunScript` trigger; see [`TRIGGER_EVENTS.md`](./TRIGGER_EVENTS.md#tracked-item-effects).)
 - `"Set to the current location at the end of each turn."` — declarative, no ambiguity.
 - `"Add items when picked up, remove items when used or dropped. Format: comma-separated list."` — both the action and the storage format.
 
@@ -117,7 +118,7 @@ The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`,
 **Visibility strategy:**
 - Player-visible items create a visible HUD — use for resources and statuses the player should actively monitor.
 - AI-only items let you track state the player shouldn't see but the AI needs (hidden plot flags, internal counters).
-- `hidden` items are only useful when trigger effects both set and read them — purely mechanical state.
+- `hidden` items hold mechanical state that triggers and scripts set and read, or instruction text that a `<<…>>` expression delivers to the AI (see [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md)).
 
 **Cross-reference for trigger interaction.** Tracked items pair tightly with `triggerOnTrackedItem` conditions (for gating) and `effectSetTrackedItemValue` / `effectModifyTrackedItemDetails` effects (for modification). When designing a tracked item, consider what conditions will read it and what effects will write it — if neither exists, the item is dead weight.
 

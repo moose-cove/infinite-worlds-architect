@@ -251,7 +251,7 @@
       "description": "Named-event registry (schema v2.4). Each string is a natural-language event the AI watches for; a `triggerOnEvent` condition is matched to an entry by exact text. Keep the two in sync.",
       "x-iw-category": "editable",
       "default": [],
-      "x-iw-note": "New in v2.4. Absent entirely in pre-v2.4 worlds. Exact-text keying is well-supported: the fixture's single entry matches its single triggerOnEvent `data` byte-for-byte, and no ID or index links them, so text is the only available key. CONFIRMED 2026-08-06: the registry is AUTHOR-MAINTAINED, not platform-derived. A round trip returned it byte-identical — still missing an event a triggerOnEvent used but had not declared, still holding a declared entry nothing used. The platform does not regenerate it, which also rules out regeneration as the mechanism enforcing the ten-event cap (a separate round trip kept all twelve entries, so the cap is not applied at import either). Keep `conditions` in sync with your triggerOnEvent strings. Tier 2 warns on drift in both directions, never errors, because a desync costs editor selectability rather than correctness."
+      "x-iw-note": "New in v2.4. Absent entirely in pre-v2.4 worlds. Exact-text keying is well-supported: the fixture's single entry matches its single triggerOnEvent `data` byte-for-byte, and no ID or index links them, so text is the only available key. CONFIRMED 2026-08-06: the registry is AUTHOR-MAINTAINED, not platform-derived. A round trip returned it byte-identical — still missing an event a triggerOnEvent used but had not declared, still holding a declared entry nothing used. The platform does not regenerate it, which also rules out regeneration as the mechanism enforcing the ten-event cap (a separate round trip kept all twelve entries, so the cap is not applied at import either). Keep `conditions` in sync with your triggerOnEvent strings. Tier 2 warns on drift in both directions, never errors; what a desync affects (editor-UI selectability versus runtime matching) is still open."
     },
     "permissionsOnceShared": {
       "type": "object",
@@ -404,7 +404,7 @@
         "positionInList": { "type": "number", "description": "Ordering position in the NPC list." },
         "name": { "type": "string", "description": "NPC name." },
         "detail": { "type": "string", "description": "Detailed description sent to the AI." },
-        "one_liner": { "type": "string", "description": "One-line summary for UI display." },
+        "one_liner": { "type": "string", "description": "Short NPC summary sent to the storyteller AI — the only NPC field it sees before the character (or their location) is first mentioned." },
         "appearance": { "type": "string", "description": "Physical appearance description." },
         "location": { "type": "string", "description": "NPC's typical location in the world." },
         "secret_info": { "type": "string", "description": "Information the NPC keeps secret from the player." },

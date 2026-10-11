@@ -57,7 +57,7 @@ After the rename, IW did **not** remap references: the 8 trigger conditions and 
 
 **IDs at risk:** `trackedItems[].id` values containing any non-alphanumeric character (`+`, `/`, `-`, `_`, spaces, etc.). The observed renames involved `+` and `/`; the broader pattern (any non-alnum char) is the safer rule to follow.
 
-**As of v0.10.0, `mint_ids` emits alphanumeric-only IDs (`A-Za-z0-9`) for all entity kinds**, eliminating this hazard for machine-minted IDs. The `validate_world` tool now warns when a tracked-item ID contains non-alphanumeric characters.
+**`mint_ids` emits alphanumeric-only IDs (`A-Za-z0-9`) for all entity kinds**, so machine-minted IDs avoid this hazard, and `validate_world` warns when a tracked-item ID contains non-alphanumeric characters.
 
 **Why this is dangerous:** All trigger references to the renamed tracked-item ID break silently. The trigger appears valid in the world editor but never fires because it references an ID that no longer exists.
 
@@ -142,9 +142,9 @@ Two consequences worth internalising:
    intact. Only a re-export diff is.
 2. **The damage erases its own evidence.** Because the offending construct is gone, a
    re-exported world validates *strictly more cleanly* than the file that went in:
-   `probe-a-core.json` reports 4 errors / 4 warnings, `probe-a-imported.json` 0 errors /
-   4 warnings at the time (7 since v0.21.0 began warning on the dead, conditionless triggers
-   the deletion leaves behind) — while being semantically broken. Never treat a clean
+   `probe-a-core.json` reports 4 errors, `probe-a-imported.json` 0 errors (its remaining
+   warnings include the dead, conditionless triggers the deletion leaves behind) — while
+   being semantically broken. Never treat a clean
    post-import validation as confirmation.
 
 The practical rule: **validate before importing, not after.** `validate_world` is the only
@@ -187,9 +187,9 @@ source?" check will report a false positive on any world.
 ## Other Import Findings
 
 **Empty-field stripping is field-specific — do not generalize it.** `hideSkillSystem: false`
-is stripped on import; only include it when `true` *(KB-sourced, not re-tested — neither probe
-carried `hideSkillSystem`)*. But the broader claim this note used to
-make — that IW strips any optional boolean set to its default — is **too broad**. In both
+is stripped on import; only include it when `true` *(KB-sourced, not re-tested — no probe
+has carried `hideSkillSystem`)*. IW does **not** strip every optional field set to its
+default. In both
 2026-08-06 probe round trips, `descriptionRequest`, `evaluationRequest`, `summaryRequest`,
 `instructionBlocks`, `loreBookEntries` and `NPCs` were dropped when empty, while
 `contentWarnings: ""`, `previewImage: ""`, `previewImageOptions: []`, `mature: false`,
@@ -247,10 +247,10 @@ Accessible via the Storyteller option menu (Storyteller must be enabled first). 
 
 > **"Extra-hidden"** is IW's official term for the boring modifier (`ai_only_boring` / `hidden_boring`). The `_boring` suffix in the JSON maps to the "Extra-hidden" UI concept.
 
-> **Status of `hidden_boring` / `ai_only_boring` as `visibility` values — split as of 2026-08-06.** These are newly-added `visibility` enum values (added to the schema's `visibility` enum).
+> **Status of `hidden_boring` / `ai_only_boring` as `visibility` values.**
 >
 > - **`hidden_boring` — CONFIRMED.** Probe A (`probes/probe-a-core.json`, item `PrbHidBor`) round-tripped it through an IW import byte-identical. It survives import and is safe to author.
-> - **`ai_only_boring` — still `[PENDING TEST]`.** Neither probe exercised it. Authorable, but round-trip survival is assumed from its sibling rather than observed.
+> - **`ai_only_boring` — `[PENDING TEST]`.** No probe has exercised it. Authorable, but round-trip survival is assumed from its sibling rather than observed.
 >
 > Read-visibility semantics for both remain KB-sourced and untested at runtime: `hidden_boring` is **AI-cannot-read** — the storyteller AI cannot see its value (same read-visibility as `hidden`); the `_boring` modifier additionally hides it from the standard "Hidden tracked items" view unless "Extra-hidden" is checked. Import survival is what the probe settled; what the AI can actually read is not.
 

@@ -43,8 +43,7 @@ fields, or you want to iterate/filter entries from PawScript.
 is no flat-key restriction and no "one level of records" limit. If it is legal YAML,
 it is a legal tracked-item value.
 
-This is worth stating outright because the examples in this guide used to be flat, and
-flat examples get read as a flat *ceiling*. They aren't. The authoritative author-facing
+Flat examples can read as a flat ceiling; there isn't one. The authoritative author-facing
 reference is **<https://infiniteworlds.app/yaml-guide>**, and everything it teaches is
 usable here:
 
@@ -120,7 +119,7 @@ item from PawScript as `$<variableName>` (e.g. `variableName: "player_gold"` →
 
 - `field: text` or `field: number` — declares a field and its type.
 - `field:` with **nothing after the colon and no children** — declares a field
-  with **no type constraint** (any scalar). This is how the fixture (1.09) declares
+  with **no type constraint** (any scalar). This is how the canonical fixture declares
   its boolean field: `has_scent:` in the schema, `has_scent: true` / `false` in the
   example. `text` and `number` are the only named types the fixture uses; there is
   no `boolean` keyword, so leave the type blank for booleans (and for anything else

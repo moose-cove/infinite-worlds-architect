@@ -4,7 +4,7 @@
 
 ---
 
-## Pattern 4 — NPC Appearance Cache TI
+## NPC Appearance Cache TI
 
 An `ai_only` `text` TI that the AI maintains as a rolling cache of recently-seen NPC appearances. Keeps image generation consistent for recurring NPCs without relying on context window memory (which degrades over long games).
 
@@ -14,10 +14,12 @@ An `ai_only` `text` TI that the AI maintains as a rolling cache of recently-seen
 {
   "id": "AppCache",
   "name": "Appearance tracking",
+  "positionInList": 0,
   "dataType": "text",
   "visibility": "ai_only",
   "autoUpdate": true,
   "updateInstructions": "Add or update entries for all NPCs met this turn. Remove NPCs not mentioned in the last 7 turns. MAX 100 words total. Per NPC: age, ethnicity, height, build, hair, eyes, notable features only.",
+  "description": "",
   "initialValue": ""
 }
 ```
