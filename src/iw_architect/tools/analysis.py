@@ -6,14 +6,14 @@ import json
 from collections.abc import Iterator
 from typing import Any
 
-from iw_architect.paths import require_absolute
+from iw_architect.paths import read_world_text, require_absolute
 
 
 def _load_world(world_path: str) -> dict:
     path = require_absolute(world_path)
     if not path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
-    return json.loads(path.read_text())
+    return json.loads(read_world_text(path, world_path))
 
 
 def _token_estimate(text: str) -> int:
@@ -196,7 +196,7 @@ def audit_world(world_path: str) -> str:
     Returns ``{"findings": [{"type", "severity", "summary", ...}]}`` where ``severity``
     is ``info``, ``warning``, ``error`` (trigger cycles only) or ``ok``; most findings
     add a ``suggestion`` and type-specific detail keys. On failure returns
-    ``{"error": "..."}`` (relative path, missing file, invalid JSON). Read-only.
+    ``{"error": "..."}`` (relative path, missing or unreadable file, invalid JSON). Read-only.
     """
     try:
         world = _load_world(world_path)
@@ -295,7 +295,7 @@ def audit_world(world_path: str) -> str:
             }
         )
 
-    # Triggers without any conditions (always fires unless triggerOnStartOfGame)
+    # Triggers without any conditions (never fire unless triggerOnStartOfGame)
     unconditioned = []
     for te in world.get("triggerEvents", []):
         conds = te.get("triggerConditions", [])
@@ -306,11 +306,13 @@ def audit_world(world_path: str) -> str:
             {
                 "type": "unconditioned_triggers",
                 "severity": "warning",
-                "summary": "Triggers with no conditions (fires every eligible turn)",
+                "summary": "Triggers with no conditions (never fire)",
                 "triggers": unconditioned,
                 "suggestion": (
-                    "Add conditions to limit when these triggers fire, "
-                    "or verify this is intentional."
+                    "A trigger with no conditions never fires. Add the condition it was "
+                    "meant to have (for every turn, one always-true condition plus "
+                    "canTriggerMoreThanOnce), set triggerOnStartOfGame if it is setup, "
+                    "or remove it."
                 ),
             }
         )

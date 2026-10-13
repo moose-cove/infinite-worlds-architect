@@ -1504,7 +1504,7 @@ def validate_world(world_path: str) -> str:
         )
 
     try:
-        world = json.loads(path.read_text())
+        world = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return json.dumps({"valid": False, "errors": [f"Invalid JSON: {exc}"], "warnings": []})
     except RecursionError:

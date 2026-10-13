@@ -159,7 +159,8 @@ def create_new_world_json(
     nsfw: if true, sets both ``nsfw`` and ``mature`` to true.
 
     Returns ``{"status": "created", "path": str, "message": str}``. On failure returns
-    ``{"error": "..."}`` (relative path or missing parent directory).
+    ``{"error": "..."}`` (relative path, missing parent directory, or a path that is a
+    directory).
     """
     try:
         path = require_absolute(output_path)
@@ -167,6 +168,8 @@ def create_new_world_json(
         return json.dumps({"error": str(exc)})
     if not path.parent.exists():
         return json.dumps({"error": f"Parent directory does not exist: {path.parent}"})
+    if path.is_dir():
+        return json.dumps({"error": f"Output path is a directory, not a file: {path}"})
 
     # deepcopy, not dict(): _DEFAULT_SCAFFOLD holds nested mutable containers
     # (lists, the permissions dict) that a shallow copy would alias back to the
@@ -315,9 +318,9 @@ def make_draft_world(source_path: str, draft_path: str | None = None) -> str:
     ``status`` is ``"drafted"`` (``version`` is ``{"from", "to"}`` — equal when the value
     couldn't be bumped — or null when the source has no string ``version``) or
     ``"copied"`` when the source isn't valid JSON (``version`` null). On failure
-    returns ``{"error": "..."}``: relative path, missing source, draft path equal to
-    the source, missing parent directory, or a draft path that already exists (it
-    never overwrites).
+    returns ``{"error": "..."}``: relative path, missing or unreadable (non-UTF-8)
+    source, draft path equal to the source, missing parent directory, or a draft path
+    that already exists (it never overwrites). No draft is written on failure.
     """
     try:
         source = require_absolute(source_path)
@@ -347,8 +350,13 @@ def make_draft_world(source_path: str, draft_path: str | None = None) -> str:
             }
         )
 
+    # Decode before copying so an unreadable source leaves no stray draft behind.
+    try:
+        text = source.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return json.dumps({"error": f"Could not read source world {source}: {exc}"})
+
     shutil.copy2(source, dest)
-    text = dest.read_text()
 
     try:
         data = json.loads(text)

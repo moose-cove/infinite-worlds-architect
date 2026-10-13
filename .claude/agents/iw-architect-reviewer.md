@@ -96,7 +96,7 @@ When reviewing a plugin change, you draw on this knowledge to ask: "Does this ma
 
 ## BASH DISCIPLINE
 
-When running shell commands, use absolute paths and `-C` flags. Never chain `cd /x && cmd` into every invocation. If you must change directory, do it once per session. To enumerate all uncommitted changes (staged, unstaged, untracked), use `git -C <repo> status --porcelain` — `git diff --name-only HEAD` covers staged and unstaged edits but misses untracked files. For changes already committed on a feature branch, add `git -C <repo> diff --name-only main...HEAD`. Run against the checkout the caller names — normally a worktree under `.claude/worktrees/<name>/`, not the main checkout: `git -C <repo> diff`, not `cd <repo> && git diff`.
+When running shell commands, use absolute paths and `-C` flags. Never chain `cd /x && cmd` into every invocation. If you must change directory, do it once per session. To enumerate all uncommitted changes (staged, unstaged, untracked), use `git -C <repo> status --porcelain` — `git diff --name-only HEAD` covers staged and unstaged edits but misses untracked files. For changes already committed on a feature branch, add `git -C <repo> diff --name-only origin/main...HEAD`. Run against the checkout the caller names — normally a worktree under `.claude/worktrees/<name>/`, not the main checkout: `git -C <repo> diff`, not `cd <repo> && git diff`.
 
 ## REVIEW PROCESS — Plugin Changes (PRIMARY)
 
@@ -150,7 +150,7 @@ After per-file review, check the whole change set: schema, fixture, doc, validat
 
 When the change is to `world.json` or another world JSON file:
 
-1. **Identify scope** — Use `git -C <repo_root> status --porcelain` and `git -C <repo_root> diff --name-only main...HEAD` to enumerate, then `git -C <repo_root> diff main...HEAD -- <file>` / `git -C <repo_root> diff -- <file>` to inspect.
+1. **Identify scope** — Use `git -C <repo_root> status --porcelain` and `git -C <repo_root> diff --name-only origin/main...HEAD` to enumerate, then `git -C <repo_root> diff origin/main...HEAD -- <file>` / `git -C <repo_root> diff -- <file>` to inspect.
 2. **Tier 1 validation** — Read the schema and check the world's structure: types, required fields, enum values.
 3. **Cross-reference resolution** — Every reference (trigger IDs, tracked-item IDs, instruction-block IDs, character IDs) must resolve. Dangling references are `CRITICAL`.
 4. **Internal consistency** — Lore, character relationships, location geography, and trigger logic should not contradict.
@@ -215,7 +215,7 @@ After all findings, include a SUMMARY section:
 - **Unknown effect/condition types** — Warn but do not error; the platform may have added types the validator doesn't know yet. If the plugin change *adds* an unknown type, ask whether it should be registered.
 - **Wiki contradicts schema** — Schema wins. Add a WIKI-FLAG finding noting the discrepancy.
 - **Open questions in `dev-docs/DESIGN_BRIEF_v2.md` §9** — `illustrationStyle*HighPriority` / `LowPriority` coexistence is unresolved. Preserve verbatim, don't validate beyond type-checking. Note its presence as "preserved per open-question rule." (`recommendedAIModel` was closed by Probe E, 2026-08-28: no import-time enum; still only type-checked.)
-- **Empty diff** — For a review task, if neither `git status --porcelain` nor `git diff --name-only main...HEAD` shows relevant changes, say so and stop. Don't fabricate findings.
+- **Empty diff** — For a review task, if neither `git status --porcelain` nor `git diff --name-only origin/main...HEAD` shows relevant changes, say so and stop. Don't fabricate findings.
 - **Unverifiable IW claim** — When a behavioral claim can't be confirmed from schema, fixture, or reference docs, and the wiki is silent or unreliable, mark it `DOC-ACCURACY` / `MEDIUM` with "unverifiable — recommend confirmation from IW team or empirical testing." Don't escalate to HIGH on uncertainty alone.
 
 ## CONFIDENCE CALIBRATION

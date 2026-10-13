@@ -195,7 +195,7 @@ def get_character_list(world_path: str) -> str:
 
     Returns ``{"character_list": [{"name", "aliases"}], "source_count": int}`` where
     ``source_count`` is the number of named entries returned. On failure returns a
-    bare ``{"error": "..."}`` (relative path, missing file, or invalid JSON). Writes
+    bare ``{"error": "..."}`` (relative path, missing or unreadable file, or invalid JSON). Writes
     nothing.
     """
     try:

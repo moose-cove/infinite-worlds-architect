@@ -76,7 +76,7 @@ is your tracked items.
 > `<<skill_charm>>`, `<<turn_number>>` — the interpolation vocabulary in
 > [`WORLD_JSON_SCHEMA_v2.4.md`](../WORLD_JSON_SCHEMA_v2.4.md#9-template-variable-system)
 > §9. The `$`-prefixed native form is the PawScript-native way to reach the
-> same state; see §6 for how the two coexist.
+> same state; see §3 for how the two coexist.
 
 ---
 

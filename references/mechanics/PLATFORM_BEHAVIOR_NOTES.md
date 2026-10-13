@@ -57,7 +57,7 @@ After the rename, IW did **not** remap references: the 8 trigger conditions and 
 
 **IDs at risk:** `trackedItems[].id` values containing any non-alphanumeric character (`+`, `/`, `-`, `_`, spaces, etc.). The observed renames involved `+` and `/`; the broader pattern (any non-alnum char) is the safer rule to follow.
 
-**`mint_ids` emits alphanumeric-only IDs (`A-Za-z0-9`) for all entity kinds**, so machine-minted IDs avoid this hazard, and `validate_world` warns when a tracked-item ID contains non-alphanumeric characters.
+**`mint_ids` emits alphanumeric-only IDs (`A-Za-z0-9`) for every entity kind except `triggerStep`** (a UUID4 for condition/effect IDs, which IW does not rename), so machine-minted IDs avoid this hazard, and `validate_world` warns when a tracked-item ID contains non-alphanumeric characters.
 
 **Why this is dangerous:** All trigger references to the renamed tracked-item ID break silently. The trigger appears valid in the world editor but never fires because it references an ID that no longer exists.
 

@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from iw_architect.paths import require_absolute
+from iw_architect.paths import read_world_text, require_absolute
 from iw_architect.schema_model import SCHEMA_SUMMARY
 
 
@@ -14,7 +14,7 @@ def _load_world(world_path: str) -> dict:
     path = require_absolute(world_path)
     if not path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
-    return json.loads(path.read_text())
+    return json.loads(read_world_text(path, world_path))
 
 
 def _resolve_path(world: dict, path: str) -> Any:
@@ -93,7 +93,7 @@ def read_world_field(world_path: str, path: str) -> str:
           possibleCharacters[characterId=0TBwVqX9].skills
 
     Returns ``{"path": str, "value": <any JSON value>}``. On failure returns
-    ``{"error": "..."}`` (relative path, missing file, invalid JSON) or
+    ``{"error": "..."}`` (relative path, missing or unreadable file, invalid JSON) or
     ``{"error": "...", "path": str}`` (missing key, index out of range, no matching
     entry, an unparseable path, or a step applied to the wrong type). Read-only.
     """
@@ -291,7 +291,7 @@ def format_world_for_review(world_path: str) -> str:
 
     Returns a JSON envelope:
       {"success": "<absolute path to .review.md>"} on success
-      {"error": "<details>"} on failure (missing file, invalid JSON, write error)
+      {"error": "<details>"} on failure (missing or unreadable file, invalid JSON, write error)
     """
     try:
         world = _load_world(world_path)

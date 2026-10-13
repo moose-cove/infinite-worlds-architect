@@ -14,6 +14,8 @@ A player-adjustable `number` TI that controls turn length. The TI is visible to 
 {
   "id": "TgtWrdCnt",
   "name": "Target Word Count",
+  "variableName": "target_word_count",
+  "positionInList": 0,
   "dataType": "number",
   "visibility": "everyone",
   "autoUpdate": false,

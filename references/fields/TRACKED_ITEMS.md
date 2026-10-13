@@ -87,7 +87,7 @@ The v2.4 enum: `everyone`, `ai_only`, `ai_only_boring`, `player_only`, `hidden`,
 
 **Good patterns:**
 - `"Update whenever the player gains, earns, spends, or loses gold."` — clear trigger conditions, exhaustive verb list.
-- `"Increase this counter by 1 every turn."` — an unconditional rule stated plainly. (A pure counter is more reliable as an `effectRunScript` trigger; see [`TRIGGER_EVENTS.md`](./TRIGGER_EVENTS.md#tracked-item-effects).)
+- `"Increase this counter by 1 every turn."` — an unconditional rule stated plainly. (A pure counter is more reliable as a trigger: an `effectSetTrackedItemValue` `add` on a `canTriggerMoreThanOnce` trigger gated on an always-true condition — a trigger with no conditions never fires. See [`TRIGGER_EVENTS.md`](./TRIGGER_EVENTS.md#how-triggers-work) and [Tracked-item effects](./TRIGGER_EVENTS.md#tracked-item-effects).)
 - `"Set to the current location at the end of each turn."` — declarative, no ambiguity.
 - `"Add items when picked up, remove items when used or dropped. Format: comma-separated list."` — both the action and the storage format.
 

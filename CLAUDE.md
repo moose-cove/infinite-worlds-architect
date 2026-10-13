@@ -46,6 +46,8 @@ tests/
 ├── test_analysis.py             # Tests for audit_world, compare_worlds, get_diff_summary
 ├── test_story_tools.py          # MCP wrappers for the story tools
 ├── story/                       # Unit tests for the story package
+├── fixtures/                    # Story-export text fixtures for the story tests
+├── conftest.py                  # Shared pytest fixtures
 ├── test_citation_gate.py        # Stop-hook citation gate
 ├── test_doc_links.py            # Relative-link integrity across live Markdown docs
 └── test_agent_tool_allowlist.py # Every MCP tool the agent body names is in its tools: allowlist

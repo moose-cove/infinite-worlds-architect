@@ -13,7 +13,7 @@ This plugin assists an author who is building or editing such a world by talking
 - Audits quality (token budgets, trigger cycles, redundancy detection)
 - Provides one `world-architect` agent and five guided slash commands (`/new-world`, `/modify-world`, `/spinoff-world`, `/sequel-world`, `/analyze`)
 
-The plugin has **no write tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write`. The plugin is the validator, analyst, and helper; the agent is the author.
+The plugin has **no entity-editing tools** — Claude edits world JSON directly using its built-in `Read`/`Edit`/`Write` (a few helper tools write files: scaffolds, drafts, review renders, story extractions). The plugin is the validator, analyst, and helper; the agent is the author.
 
 ## Install
 

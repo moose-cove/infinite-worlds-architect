@@ -1,4 +1,4 @@
-# Agents
+# Agent invocation modes
 
 The plugin ships one agent: `agents/world-architect.md`.
 

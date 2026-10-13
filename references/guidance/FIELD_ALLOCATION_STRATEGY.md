@@ -14,7 +14,7 @@ Every text field in the world JSON has a different *injection profile* — when,
 
 - **Always-on fields** (`instructions`, `objective`, `authorStyle`, `descriptionRequest`) are sent to the AI **every single turn**. Token cost is paid every turn, forever. Content here had better deserve that cost. (`background` is sent every turn for the first 8 turns, until the Summary AI's running summary replaces it; `firstInput` is sent only on turn 0.)
 - **Per-character fields** (`possibleCharacters[*].description`, skill list) are sent every turn for the active PC, but only the active PC.
-- **NPC dossiers** (`NPCs[*]`) are typically referenced when the NPC is in the scene — they don't all get injected every turn by default.
+- **NPC dossiers** (`NPCs[*]`) are typically referenced when the NPC is in the scene — they don't all get injected every turn by default, except `one_liner`, which is sent every turn for every NPC.
 - **Keyword instruction blocks** (`loreBookEntries[*]`) only inject for 3 turns after a matching keyword appears in recent narrative. Effectively free when irrelevant, present when needed.
 - **Extra instruction blocks** (`instructionBlocks[*]`) are always-on like `instructions`, but separable (and modifiable via `effectModifyInstructionBlock`). Use when you want a chunk of always-on text you can swap out by trigger, or by a `<<choose(…)>>` expression over a tracked item. The expression route picks up a player's edit on the very next turn; see [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
 - **Trigger-gated content** (`triggerEvents[*].triggerEffects[*]`) only injects when the trigger's conditions fire. The most surgical option for state-dependent content.
@@ -58,7 +58,7 @@ Populate these for the *minimum* framing every turn needs.
 
 ### NPC dossiers (Tier 3)
 
-NPCs are not always-on — they enter the AI's context when relevant to the scene. Map content to the NPC schema fields:
+NPCs are not always-on — they enter the AI's context when relevant to the scene. The exception is `one_liner`, which is sent every turn for every NPC, so keep it short. Map content to the NPC schema fields:
 
 | NPC field | What belongs here | Notes |
 |---|---|---|
@@ -95,7 +95,7 @@ For content that is only relevant in specific game phases, or that needs to swap
 
 - **`instructionBlocks[*]`** — Extra always-on blocks. Use when you want a separable chunk of always-on instruction you can later modify via `effectModifyInstructionBlock` (e.g., "Chapter 2 narration rules" replacing "Chapter 1 narration rules").
 - **`triggerEvents`** — Conditional logic that fires effects. Use for:
-  - Plot-phase transitions (`effectChangeObjective`, `effectChangeMainInstructions`). For mid-game context or setting changes, use `effectChangeMainInstructions` — not `effectChangeBackground`, which is Start-of-Game (SoG) only and silently ignored in regular triggers (confirmed by IW import testing, May 2026).
+  - Plot-phase transitions (`effectChangeObjective`, `effectChangeMainInstructions`). For mid-game context or setting changes, use `effectChangeMainInstructions` — not `effectChangeBackground`, which is Start-of-Game (SoG) only and silently ignored in regular triggers (KB-empirical; not probed in this repo).
   - State-dependent AI guidance (`effectTellAIWhatToDo` — one-turn directive, the most reliable steering effect).
   - Hidden information surfacing (`effectGiveInfo` — appended to `secretInfo`, suggestive rather than directive).
   - Tracked item changes (`effectSetTrackedItemValue`).

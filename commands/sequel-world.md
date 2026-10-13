@@ -160,7 +160,7 @@ Propose **one field per message** by default: one block, then wait for approval.
 - **Extra Instruction Block** (`instructionBlocks[*]`): `name`, `content` — one message.
 - **Player character** (`possibleCharacters[*]`): (1) `name`, `description`, `skills`; (2) `portraitPromptDetails`, `initialTrackedItemValues`.
 - **NPC** (`NPCs[*]`): (1) `name`, `names`, `location`, `one_liner`; (2) `detail`, `secret_info`; (3) `appearance` plus the portrait prompts `img_appearance` / `img_clothing`.
-- **Trigger event** (`triggerEvents[*]`): (1) `name`, `triggerConditions` (may be empty only when `triggerOnStartOfGame` is true — any other trigger with no conditions never fires; only `triggerEffects` is schema-required); (2) `triggerEffects`.
+- **Trigger event** (`triggerEvents[*]`): (1) `name`, `triggerOnStartOfGame`, `triggerConditions` (may be empty only when `triggerOnStartOfGame` is true — any other trigger with no conditions never fires; only `triggerEffects` is schema-required); (2) `triggerEffects`.
 
 > **Structural fields (set mechanically, not cited).** Every *new* entity also needs an `id` — mint it with `mint_ids`, never hand-write — and a `positionInList` (its ordinal index in its list). The schema requires these, but they aren't evidence-backed values, so set them when you create the entity rather than proposing them; carried-forward entities already have both. For the complete required-field set of any entity, see `references/WORLD_JSON_SCHEMA_v2.4.md` or `references/world_v2.4.schema.json`.
 

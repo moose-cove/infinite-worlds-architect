@@ -45,6 +45,9 @@ The one piece that genuinely is mechanical bookkeeping is the "remove
 NPCs not mentioned in the last 7 turns" clause — that's pure turn-count
 arithmetic once you know which NPCs were touched this turn. If you adopt
 the YAML structure above, an `effectRunScript` trigger firing every turn
+(`canTriggerMoreThanOnce: true` plus one always-true condition — a trigger
+with no conditions never fires; see
+[`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#how-triggers-work))
 can increment each entry's `lastSeenTurn` gap and prune entries past the
 threshold deterministically, leaving the AI responsible only for adding/
 updating entries it actually observed — not for correctly counting turns
