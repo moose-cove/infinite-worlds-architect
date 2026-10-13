@@ -103,15 +103,22 @@ Four fields work together to define and enforce a YAML item's shape.
 
 ### `variableName` — the PawScript symbol
 
-`variableName` is the stable, snake_case, **unique** handle used to address the
+`variableName` is the snake_case, **unique** handle used to address the
 item from PawScript as `$<variableName>` (e.g. `variableName: "player_gold"` →
 `$player_gold`). Keep it:
 
 - **snake_case** — lowercase words joined by underscores.
 - **unique** across the world — it's a symbol; collisions are ambiguous.
-- **derived from the item's name** but stable — renaming the display `name`
-  shouldn't force a `variableName` change, because scripts reference the handle,
-  not the display name.
+- **derived from the item's name** — and it is *not* stable across a rename (see
+  below), so treat a rename as a handle change.
+
+**Renaming an item regenerates its handle** — *owner-observed, not
+probe-verified:* renaming a tracked item in the Edit World editor re-derives
+`variableName` from the new Name. Every `$old_handle` in an `effectRunScript`, a
+`triggerOnPawScript` gate or a `triggerOnRandomChance` formula then points at
+nothing unless it is updated too. After a rename, grep the world for the old
+handle; `validate_world` warns on a `$name` in those three places that is no
+longer any item's `variableName`.
 
 **It is JSON-only.** The Edit World screen does not show `variableName` at all
 (observed by the repo owner, and absent from the 2026-09-30 screen survey), so an
@@ -163,8 +170,9 @@ at all (which leaves an empty handle). Then adjust the handle by hand. It is the
   warning).
 - **Collisions.** Two items whose names derive the same handle: does IW suffix
   one, or emit a duplicate? `validate_world` warns on duplicates either way.
-- **Renaming.** Does renaming an item in the editor regenerate its handle,
-  breaking scripts that use the old one? The platform-managed
+- **What a rename touches.** A rename regenerates the handle (above), but does IW
+  also rewrite scripts and expressions that use the old one, and does it overwrite
+  a handle that was hand-authored in the JSON? The platform-managed
   `driftAcknowledgedForName` field (only ever `null` in the fixture) may relate
   to this, but that is a guess.
 
