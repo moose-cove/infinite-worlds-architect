@@ -26,8 +26,8 @@ functions (`.count()`, `.where(…)`, `for each`, …) are designed to walk. See
 
 | `dataType` | Use for | Notes |
 |---|---|---|
-| `text` | Inventory lists, location names, qualitative states, comma-separated tags | Most flexible scalar. Supports `contains` comparison in `triggerOnTrackedItem`. |
-| `number` | Health, gold, counters, skill scores, meters | Required for arithmetic and the `at_least` / `is_exactly` / `at_most` operators. |
+| `text` | Inventory lists, location names, qualitative states, comma-separated tags | Most flexible scalar. Supports the `contains` / `does_not_contain` comparisons in `triggerOnTrackedItem`. |
+| `number` | Health, gold, counters, skill scores, meters | Required for arithmetic and the `at_least` / `is_exactly` / `at_most` / `not_equal` operators. |
 | `yaml` | **Structured state** — lists of records, maps of stats, mini-databases | **Recommended** structured format. Walkable by PawScript collection functions. |
 | `xml` | Legacy structured state | **DEPRECATED.** Older worlds used `xml` for structured state. Preserve it on round-trip, but author new structured items as `yaml`. |
 

@@ -99,6 +99,8 @@ No v2.3 fixture reached this plugin, so the deltas above are measured 2.2 → 2.
 | `autoAdvanceVersion` | boolean | Editable | Whether the platform auto-bumps version on edits |
 | `showPawScriptButtons` | boolean | Editable | New in v2.2. Fixture value `true`. Presumed to control whether the platform surfaces PawScript-related UI affordances (e.g., a button exposing script/debug output) to the player or author. Exact UI semantics are unconfirmed — **open question**; the validator should type-check only (accept any boolean) and preserve the value verbatim on round-trip. |
 
+> **Open question: Video prompt instructions.** As of 2026-09-30 the Edit World screen's *Specialist instructions* section has a fourth sub-section, **Video prompt instructions**, with three text boxes (seen in the editor on the IW test account; nothing was saved). Their JSON keys were **not captured** and no export containing them has reached this plugin, so the schema does not list them. Plausible names such as `videoPlan` / `videoImagePosition` / `videoPrompt` are guesses from the box labels — do not emit them. If a world arrives carrying unfamiliar top-level keys for these boxes, `validate_world` reports them as unknown-key warnings (never errors) and edits must preserve them verbatim.
+
 ## 2 `possibleCharacters[*]` (player characters)
 
 | Key | Type | Category | Notes |
@@ -241,16 +243,25 @@ For `category: "condition"`, the condition has a `type`:
 
 > **`firedThisTurn` picks the window — confirmed in play (Probe C, 2026-08-29).** `false` (the fixture's only value, and the default to emit) means "the listed trigger fired at any point in the past"; `true` narrows the match to the current turn, making the pair a **same-turn interlock** on both condition types. The cell-by-cell 2×2, and the ordering caveat (pass order is list order, so place a `firedThisTurn: true` consumer *after* its anchor), are in [`TRIGGER_EVENTS.md`](./fields/TRIGGER_EVENTS.md).
 
+> **`triggerOnTrackedItem` comparisons, as the Edit World editor writes them** (observed 2026-09-30 in the editor's raw-JSON view on the IW test account; every change discarded). The condition card's comparison control depends on the target item's `dataType`:
+>
+> | Target | UI choices | JSON |
+> |---|---|---|
+> | number item | Is exactly / Is not exactly / Greater than or equal to / Less than or equal to | `inequality`: `is_exactly` / `not_equal` / `at_least` / `at_most` |
+> | text item | Contains / Does not contain | `textComparison`: `contains` / `does_not_contain` |
+>
+> For a text item set to *Does not contain*, the editor wrote `{"trackedItemID": "…", "inequality": "at_least", "requiredValue": "…", "textComparison": "does_not_contain"}` — `inequality` is still present (as `at_least`) alongside the text comparison. **`does_not_contain` is editor-emitted but not probed:** whether it survives an import round trip, and that it fires exactly when `contains` would not, are inferred from the label only. `validate_world` accepts it (it checks only that `textComparison` is a non-empty string).
+
 For `category: "logic"`:
 
 | Field | Type | Notes |
 |---|---|---|
 | `category` | `"logic"` | Marker |
-| `operator` | `"and"` \| `"or"` | Combinator for the sub-conditions |
+| `operator` | `"and"` \| `"or"` \| `"none_of"` | Combinator for the sub-conditions. The editor's *Add logic block* offers **And / Or / None Of**, exported as `and` / `or` / `none_of` (observed 2026-09-30 in the editor's raw-JSON view). The fixture carries only `or`. `none_of`'s import survival and runtime semantics are **unprobed** — "fires when none of the sub-conditions is true" is read off the label. |
 | `data` | object[] | Array of sub-conditions (recursive — sub-conditions are themselves condition objects) |
 | `id` | string (UUID) | (same as regular condition) |
 
-Logic conditions only render when `advancedLogic: true` is set on the trigger. The default trigger semantics outside logic is AND across all conditions.
+Logic conditions only render when `advancedLogic: true` is set on the trigger. The default trigger semantics outside logic is AND across all conditions. An empty logic block (no sub-conditions) is not exported by the editor at all (observed 2026-09-30).
 
 ### `triggerEffects[*]` — canonical list from v2.4 fixture
 
@@ -275,12 +286,26 @@ Every effect has `id` (UUID), `type`, and `data`. Some have additional top-level
 | `effectEndsGame` | boolean | — | End the game. `data: true` allows player continuation (victory-style); `data: false` ends with no continuation (defeat-style). |
 | `effectModifyInstructionBlock` | `{id, content}` | — | Modifies an Extra Instruction Block by ID |
 | `effectModifyKeywordBlock` | `{id, content, keywords}` | — | Modifies a Keyword Instruction Block by ID — replaces both content AND keywords |
-| `effectSetTrackedItemValue` | `{action, newValue, replaceWith, trackedItemID}` | `trackedItemID` | `action` one of: `set`, `add` (append), `subtract` (remove if present), `replace` (string-replace). **`replaceWith` must be present in `data` for all actions** (use `""` when unused); it is only *consumed* by the `replace` action (KB-empirical import requirement; Source: iw_knowledge_base_v2_8.md). Both the data object AND the effect object carry `trackedItemID`. |
+| `effectSetTrackedItemValue` | `{action, newValue, replaceWith, trackedItemID}` | `trackedItemID` | `action` one of: `set`, `add` (append), `subtract` (remove if present), `replace` (string-replace). **`replaceWith` must be present in `data` for all actions** (use `""` when unused); it is only *consumed* by the `replace` action (KB-empirical import requirement; Source: iw_knowledge_base_v2_8.md). Both the data object AND the effect object carry `trackedItemID`. The editor also writes four keys the fixture lacks — `path`, `updateMode`, `listExpression`, `targetExpression` — see the note below the table. |
 | `effectModifyTrackedItemDetails` | `{trackedItemID, override flags, new field values}` | `trackedItemID` | Modify the tracked item itself, not its value. The complete set of override flags (as of v2.4) is: `overrideName`, `overrideDescription`, `overrideUpdateInstructions`, `overrideVisibility`, `overrideAutoUpdate`. When a flag is true, the corresponding new value is applied. Whether this effect also gains override flags for the new v2.2 tracked-item fields (`formatExample`, `enforceFormat`, `formatSchema`, `variableName`) is unconfirmed by the fixture — treat as unsupported until a fixture shows otherwise. |
-| `effectPresentChoice` | `{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId}` | — | Present a choice to the player. `choices` is newline-separated. `selectionMode`: `"single"` or `"multiple"`. `valueDelimiter`: `"newline"` or `"comma"` (how multi-selections are stored). `updateMode`: only `"replace"` is currently defined; the validator should warn (not error) on other values in case the platform adds new modes. `min/maxSelections`: integers or null. Result is written to `targetTrackedItemId`. Blocking — the game pauses until the player chooses. |
-| `effectRequestInput` | `{inputMode, requestText, requiresInput, targetTrackedItemId}` | — | Request free-text input from the player. `inputMode`: `"multi"` (multiline) or presumably `"single"`. `requiresInput`: boolean. Result is written to `targetTrackedItemId`. Blocking, same as `effectPresentChoice`. |
+| `effectPresentChoice` | `{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId}` | — | Present a choice to the player. `choices` is newline-separated. `selectionMode`: `"single"` or `"multiple"`. `valueDelimiter`: `"newline"` or `"comma"` (how multi-selections are stored). `updateMode`: only `"replace"` is currently defined; the validator should warn (not error) on other values in case the platform adds new modes. `min/maxSelections`: integers or null. Result is written to `targetTrackedItemId`. Blocking — the game pauses until the player chooses. The editor also writes `path: ""` (not in the fixture) — see the note below the table. |
+| `effectRequestInput` | `{inputMode, requestText, requiresInput, targetTrackedItemId}` | — | Request free-text input from the player. `inputMode`: `"single"` (UI *Single line* — editor-confirmed 2026-09-30) or `"multi"` (the fixture's value; presumed to be UI *Multi line*, but the editor's JSON for that choice was not captured). `requiresInput`: boolean (UI *Input is required before proceeding*). Result is written to `targetTrackedItemId`. Blocking, same as `effectPresentChoice`. The editor also writes `path` (not in the fixture) — see the note below the table. |
 | `effectFireRandomTrigger` | null or omitted | — | Fire a random trigger (selection pool/weighting unconfirmed). **Confirmed working in real worlds** (KB-empirical; Source: iw_knowledge_base_v2_8.md 'Import Test Results'). **Stripped in Start-of-Game triggers** — use only in regular triggers. |
 | `effectRunScript` | string | — | **New in v2.2.** Runs a PawScript script (the effect's `data` is the raw script source) when this trigger fires. The script can **only mutate tracked items** — it cannot touch instructions, character fields, or other world state. Execution is **transactional**: if the script raises any error, none of its changes are applied, the error is logged to World Debug, and the game continues normally (the turn is not blocked). Scripts must not contain unbounded loops — `for each` over a tracked item's entries is the supported iteration form (see the fixture's example, which does `for each $puppy in $puppy_tracking_yaml_format_tracked_items` / `$puppy.friendliness += 1`). A tracked item's `variableName` is the `$handle` a script uses to reference it. See [`mechanics/AI_RUNTIME_MECHANICS.md`](mechanics/AI_RUNTIME_MECHANICS.md) and `mechanics/PAWSCRIPT.md` for the full scripting model; reference docs: https://infiniteworlds.app/pawscript-script-guide, https://infiniteworlds.app/pawscript-reference, https://infiniteworlds.app/pawscript-expressions-guide, https://infiniteworlds.app/yaml-guide. |
+
+> **Effect keys the Edit World editor writes beyond the fixture** (observed 2026-09-30 in the editor's raw-JSON view on the IW test account; every change discarded; the `E…` values are markers the prober typed):
+>
+> ```jsonc
+> {"type": "effectSetTrackedItemValue", "data": {"trackedItemID": "…", "action": "set", "newValue": "E4", "replaceWith": "", "path": "", "updateMode": "path", "listExpression": "", "targetExpression": ""}}
+> {"type": "effectPresentChoice", "data": {"message": "E21", "choices": "E22", "targetTrackedItemId": "…", "selectionMode": "single", "updateMode": "replace", "minSelections": null, "maxSelections": null, "valueDelimiter": "newline", "path": ""}}
+> {"type": "effectRequestInput", "data": {"requestText": "E23", "targetTrackedItemId": "…", "inputMode": "single", "requiresInput": true, "path": "E25"}}
+> ```
+>
+> - **`effectSetTrackedItemValue`** gains `path`, `updateMode`, `listExpression` and `targetExpression`. The values above are the editor's defaults for a freshly added effect; no UI control for them was mapped. **Unknown:** what other `updateMode` values exist (this `updateMode` is a different key from `effectPresentChoice`'s, whose only known value is `"replace"`), what `path` addresses, and what `listExpression` / `targetExpression` evaluate — the names suggest expressions, but nothing ties them to PawScript yet.
+> - **`effectPresentChoice`** gains `path`, empty by default. Semantics unprobed.
+> - **`effectRequestInput`** gains `path`. The card shows a *Path* box for YAML target items, and the marker typed there (`E25`) came back as `path`, so this is that box's key. That it addresses a location inside the YAML value is presumed from the label; what the platform writes there is unprobed.
+>
+> None of these keys is in the canonical fixture — itself an IW export, so the platform does not always emit them. No probe has imported these effects with or without the new keys, so whether an authored effect lacking them behaves any differently from one the editor created is untested. `validate_world` accepts them and does not require them. Preserve them verbatim when editing a world that has them; don't author non-default values until a probe pins down what they do.
 
 **PawScript expressions vs. scripts.** `effectRunScript`'s `data` holds a full PawScript *script* (statements, mutation). Distinct from PawScript *expressions* (`<<…>>` read-only interpolations), which remain legal anywhere adventure text is typed (`instructions`, `descriptionRequest`, tracked-item `description`, etc.) — see §9.
 
