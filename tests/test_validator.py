@@ -2662,3 +2662,223 @@ def test_random_chance_non_string_data_warns(data):
         for w in result["warnings"]
     ), result["warnings"]
     assert not any("triggerOnRandomChance" in e for e in result["errors"])
+
+
+# ── Edit World editor raw-JSON shapes (live probe, 2026-09-30) ───────────────
+#
+# Each shape below was written by IW's own Edit World editor (Misc advanced features → Show
+# raw JSON) for a freshly added item. A validator that rejects or warns on what the platform
+# itself writes is wrong, so these pin acceptance. None of them has been import-probed, so the
+# tests assert "accepted", nothing about runtime behaviour.
+
+
+def _editor_logic_world(operator: str) -> dict:
+    """World whose one trigger gates on a logic block wrapping a tracked-item comparison."""
+    world = _trigger_world_with_condition(
+        {
+            "trackedItemID": "ITEM00001",
+            "inequality": "at_least",
+            "requiredValue": "QC1",
+            "textComparison": "contains",
+        }
+    )
+    trigger = world["triggerEvents"][0]
+    trigger["advancedLogic"] = True
+    trigger["triggerConditions"] = [
+        {
+            "id": "ddac5aa8-13cc-cc5a-f032-2016af92a391",
+            "category": "logic",
+            "operator": operator,
+            "data": trigger["triggerConditions"],
+        }
+    ]
+    return world
+
+
+def test_none_of_logic_operator_is_accepted():
+    # The editor's "Add logic block" offers And / Or / None Of → operator "none_of". Tier 1's
+    # enum used to stop at and/or, so an editor-made None Of block failed validation outright.
+    result = _validate(_editor_logic_world("none_of"))
+    assert result["valid"], result["errors"]
+    assert not any("operator" in e for e in result["errors"]), result["errors"]
+
+
+def test_unknown_logic_operator_still_errors():
+    # Widening the enum must not switch it off: a value the editor never offers stays an error.
+    result = _validate(_editor_logic_world("xor"))
+    assert not result["valid"]
+    # Exactly once: Tier 1 reports the top-level operator, so Tier 2's nested check must not.
+    hits = [e for e in result["errors"] if "xor" in e]
+    assert len(hits) == 1 and "operator" in hits[0], result["errors"]
+
+
+def _nest_logic_world(inner_operator: str) -> dict:
+    """An OR block whose only child is a logic block with ``inner_operator``."""
+    world = _editor_logic_world(inner_operator)
+    trigger = world["triggerEvents"][0]
+    trigger["triggerConditions"] = [
+        {
+            "id": "eeac5aa8-13cc-cc5a-f032-2016af92a391",
+            "category": "logic",
+            "operator": "or",
+            "data": trigger["triggerConditions"],
+        }
+    ]
+    return world
+
+
+def test_nested_none_of_is_accepted():
+    result = _validate(_nest_logic_world("none_of"))
+    assert result["valid"], result["errors"]
+
+
+def test_nested_unknown_operator_errors_once():
+    # Tier 1 cannot see below the top level (`data` is unconstrained), so Tier 2 re-checks
+    # nested blocks against the same enum. Before, a nested "xor" validated clean.
+    result = _validate(_nest_logic_world("xor"))
+    assert not result["valid"]
+    hits = [e for e in result["errors"] if "xor" in e]
+    assert len(hits) == 1 and "nested logic condition" in hits[0], result["errors"]
+
+
+def test_nested_tracked_item_condition_missing_text_comparison_errors():
+    # The textComparison rule used to read only top-level conditions, so the leaves of every
+    # editor-made And / Or / None Of block escaped it.
+    world = _editor_logic_world("none_of")
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]["data"][0]
+    del leaf["data"]["textComparison"]
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("textComparison" in e and "missing" in e for e in result["errors"]), result["errors"]
+
+
+def test_nested_tracked_item_condition_non_string_required_value_errors():
+    world = _editor_logic_world("or")
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]["data"][0]
+    leaf["data"]["requiredValue"] = 3
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("requiredValue must be a string" in e for e in result["errors"]), result["errors"]
+
+
+def test_nested_tracked_item_condition_empty_inequality_warns():
+    world = _editor_logic_world("and")
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]["data"][0]
+    leaf["data"]["inequality"] = ""
+    result = _validate(world)
+    assert any("inequality is empty string" in w for w in result["warnings"]), result["warnings"]
+
+
+def test_does_not_contain_text_comparison_is_accepted():
+    # Editor export for a text item set to "Does not contain" — inequality is still written
+    # (as at_least) alongside the text comparison.
+    world = _trigger_world_with_condition(
+        {
+            "trackedItemID": "ITEM00001",
+            "inequality": "at_least",
+            "requiredValue": "QC1",
+            "textComparison": "does_not_contain",
+        }
+    )
+    world["trackedItems"][0]["dataType"] = "text"
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    assert not any("textComparison" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize(
+    ("tc", "warns"),
+    [("contains", False), ("does_not_contain", False), ("not_contains", True)],
+)
+def test_unknown_text_comparison_value_warns(tc, warns):
+    # Known values come from the schema registry; anything else is probably a typo. Warn,
+    # don't error — the platform may carry values the 2026-09-30 editor survey missed.
+    world = _trigger_world_with_condition(
+        {
+            "trackedItemID": "ITEM00001",
+            "inequality": "at_least",
+            "requiredValue": "x",
+            "textComparison": tc,
+        }
+    )
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    hit = any("not a known value" in w and tc in w for w in result["warnings"])
+    assert hit == warns, result["warnings"]
+
+
+def test_logic_registry_matches_tier1_operator_enum():
+    # The LLM-facing registry (x-iw-condition-types.logic.operator) and the Tier 1 enum are
+    # two spellings of one list; drift between them is how none_of went missing.
+    from iw_architect.validator import _get_schema
+
+    cond = _get_schema()["$defs"]["triggerCondition"]
+    enum = set(cond["properties"]["operator"]["enum"])
+    registry = set(cond["x-iw-condition-types"]["logic"]["operator"].split("|"))
+    assert enum == registry
+    assert "none_of" in enum
+
+
+def _editor_effect_world(effect_type: str, data: dict) -> dict:
+    world = _trigger_world_with_effect(effect_type, data)
+    world["trackedItems"] = [
+        {
+            "id": "ITEM00001",
+            "name": "Mode",
+            "positionInList": 0,
+            "dataType": "text",
+            "description": "",
+            "visibility": "everyone",
+            "autoUpdate": False,
+        }
+    ]
+    return world
+
+
+_EDITOR_EFFECT_SHAPES = [
+    (
+        "effectSetTrackedItemValue",
+        {"trackedItemID": "ITEM00001", "action": "set", "newValue": "E4", "replaceWith": ""},
+        {"path": "", "updateMode": "path", "listExpression": "", "targetExpression": ""},
+    ),
+    (
+        "effectPresentChoice",
+        {
+            "message": "E21",
+            "choices": "E22",
+            "targetTrackedItemId": "ITEM00001",
+            "selectionMode": "single",
+            "updateMode": "replace",
+            "minSelections": None,
+            "maxSelections": None,
+            "valueDelimiter": "newline",
+        },
+        {"path": ""},
+    ),
+    (
+        "effectRequestInput",
+        {
+            "requestText": "E23",
+            "targetTrackedItemId": "ITEM00001",
+            "inputMode": "single",
+            "requiresInput": True,
+        },
+        {"path": "E25"},
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("effect_type", "fixture_keys", "editor_keys"),
+    _EDITOR_EFFECT_SHAPES,
+    ids=[shape[0] for shape in _EDITOR_EFFECT_SHAPES],
+)
+def test_editor_effect_keys_beyond_fixture_are_accepted(effect_type, fixture_keys, editor_keys):
+    # The editor writes keys the fixture lacks (path, updateMode, listExpression,
+    # targetExpression). Their semantics are unknown, so the contract is narrow: adding them
+    # to a fixture-shaped effect changes nothing — no new error, no new warning.
+    without = _validate(_editor_effect_world(effect_type, dict(fixture_keys)))
+    with_keys = _validate(_editor_effect_world(effect_type, {**fixture_keys, **editor_keys}))
+    assert without["valid"], without["errors"]
+    assert with_keys["valid"], with_keys["errors"]
+    assert with_keys["warnings"] == without["warnings"]

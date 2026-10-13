@@ -26,8 +26,8 @@ functions (`.count()`, `.where(…)`, `for each`, …) are designed to walk. See
 
 | `dataType` | Use for | Notes |
 |---|---|---|
-| `text` | Inventory lists, location names, qualitative states, comma-separated tags | Most flexible scalar. Supports `contains` comparison in `triggerOnTrackedItem`. |
-| `number` | Health, gold, counters, skill scores, meters | Required for arithmetic and the `at_least` / `is_exactly` / `at_most` operators. |
+| `text` | Inventory lists, location names, qualitative states, comma-separated tags | Most flexible scalar. Supports the `contains` / `does_not_contain` comparisons in `triggerOnTrackedItem` (`does_not_contain` editor-observed 2026-09-30, import unprobed). |
+| `number` | Health, gold, counters, skill scores, meters | Required for arithmetic and the `at_least` / `is_exactly` / `at_most` / `not_equal` operators. |
 | `yaml` | **Structured state** — lists of records, maps of stats, mini-databases | **Recommended** structured format. Walkable by PawScript collection functions. |
 | `xml` | Legacy structured state | **DEPRECATED.** Older worlds used `xml` for structured state. Preserve it on round-trip, but author new structured items as `yaml`. |
 
@@ -103,15 +103,78 @@ Four fields work together to define and enforce a YAML item's shape.
 
 ### `variableName` — the PawScript symbol
 
-`variableName` is the stable, snake_case, **unique** handle used to address the
+`variableName` is the snake_case, **unique** handle used to address the
 item from PawScript as `$<variableName>` (e.g. `variableName: "player_gold"` →
 `$player_gold`). Keep it:
 
 - **snake_case** — lowercase words joined by underscores.
 - **unique** across the world — it's a symbol; collisions are ambiguous.
-- **derived from the item's name** but stable — renaming the display `name`
-  shouldn't force a `variableName` change, because scripts reference the handle,
-  not the display name.
+- **derived from the item's name** — and it is *not* stable across a rename (see
+  below), so treat a rename as a handle change.
+
+**Renaming an item regenerates its handle** — *owner-observed, not
+probe-verified:* renaming a tracked item in the Edit World editor re-derives
+`variableName` from the new Name. Every `$old_handle` in an `effectRunScript`, a
+`triggerOnPawScript` gate or a `triggerOnRandomChance` formula then points at
+nothing unless it is updated too. After a rename, grep the world for the old
+handle; `validate_world` warns on a `$name` in those three places that is no
+longer any item's `variableName`.
+
+**It is JSON-only.** The Edit World screen does not show `variableName` at all
+(observed by the repo owner, and absent from the 2026-09-30 screen survey), so an
+author can set or change it only in the world JSON.
+
+**How IW derives it from `name`** — *owner-observed, not probe-verified:* IW
+generates the handle from the tracked item's Name by lowercasing it and replacing
+whitespace and special characters with underscores. An item named
+`Elena's Private Read` gets `elena_s_private_read`, addressed in PawScript as
+`$elena_s_private_read`. The six tracked items in the canonical fixture fit
+that rule only if each *run* of whitespace and special characters becomes a
+single underscore: `Number of Non-Human Friends` → `number_of_non_human_friends`
+is consistent either way, but `Puppy Tracking - YAML Format Tracked Items` →
+`puppy_tracking_yaml_format_tracked_items` has one `_` where a character-by-character
+replacement of ` - ` would give three. The fixture can't show whether those handles
+were generated or typed, so it doesn't settle what IW does with runs.
+
+**An authored value is kept on import, not re-derived.** Probe C imported an item
+named `PC Flavor` with `variableName: "probe_flavor"`, and the export came back
+with `probe_flavor` unchanged (`probes/probe-c-pawscript.json` vs
+`probes/probe-c-imported.json`, 2026-08-29), and `$probe_flavor` resolved at runtime (Probe C P14a fired every turn). Probe E's `PE1 Item-Player Entry-Character` → `pe1_item_player` likewise survived two round trips. So when you write a world by hand,
+the handle you write is the handle scripts must use, even if it differs from what
+the name would derive.
+
+**Plugin convention when authoring a handle:** lowercase the name, turn each run of
+whitespace and special characters into **one** `_`, and drop any leading or trailing
+`_`. That reproduces all six fixture handles and the owner's example, and it always
+satisfies the validator's `^[a-z][a-z0-9_]*$` check, except when the name starts
+with a digit or has non-ASCII letters (see below), or has no ASCII letters or digits
+at all (which leaves an empty handle). Then adjust the handle by hand. It is the plugin's choice, not a verified copy of IW's algorithm.
+
+**Still unverified** (don't rely on any of these until probed):
+
+- **Absent `variableName`.** Does import generate a handle for an item that has
+  none? Every fixture and probe tracked item carries one, so this has never been
+  observed. Always author it.
+- **Runs of special characters.** Does IW turn `A - B` into `a_b` or `a___b`? The
+  fixture's `Puppy Tracking - YAML …` → `puppy_tracking_yaml_…` is the one
+  data point, and it points to collapsing, but the fixture can't show whether IW
+  generated it.
+- **Leading and trailing underscores.** Does a name ending in `?` or `'` leave a
+  trailing `_`, or one starting with `'` a leading `_`? The validator warns on a
+  leading `_`.
+- **Digits, and a leading digit in particular.** `validate_world` warns on any
+  handle that doesn't match `^[a-z][a-z0-9_]*$`, so a generated `2nd_wind` would
+  be flagged. Whether IW ever generates one is unknown.
+- **Non-ASCII letters** (`Café`, `Ñandú`): transliterated, kept, or replaced? A
+  kept non-ASCII letter would fail the validator's `^[a-z][a-z0-9_]*$` check (a
+  warning).
+- **Collisions.** Two items whose names derive the same handle: does IW suffix
+  one, or emit a duplicate? `validate_world` warns on duplicates either way.
+- **What a rename touches.** A rename regenerates the handle (above), but does IW
+  also rewrite scripts and expressions that use the old one, and does it overwrite
+  a handle that was hand-authored in the JSON? The platform-managed
+  `driftAcknowledgedForName` field (only ever `null` in the fixture) may relate
+  to this, but that is a guess.
 
 ### `formatSchema` syntax
 

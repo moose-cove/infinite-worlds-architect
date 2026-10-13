@@ -451,7 +451,8 @@
         "variableName": {
           "type": "string",
           "description": "snake_case identifier for this item (schema v2.2). PawScript references the item as $<variableName> (e.g. 'puppy_tracking' → $puppy_tracking). Should match ^[a-z][a-z0-9_]*$.",
-          "x-iw-category": "editable"
+          "x-iw-category": "hybrid",
+          "x-iw-note": "JSON-only: the Edit World screen does not show it, so it can be set or changed only in the world JSON. OWNER-OBSERVED, not probe-verified: IW generates it from the item's `name` by lowercasing and replacing whitespace and special characters with underscores ('Elena's Private Read' → elena_s_private_read). The six fixture items fit only if each RUN of such characters becomes one underscore ('Puppy Tracking - YAML Format Tracked Items' → puppy_tracking_yaml_format_tracked_items). Plugin convention when authoring: lowercase, each run → one '_', strip leading/trailing '_'. An authored value is kept verbatim on import, not re-derived: Probe C imported 'PC Flavor' with variableName probe_flavor and exported it unchanged (2026-08-29). OWNER-OBSERVED: renaming the item in the editor regenerates the handle from the new name, so references to the old $handle must be updated. OPEN: how runs of special characters collapse, leading/trailing underscores, digits (especially a leading digit, which Tier 2 warns on), non-ASCII letters, two items deriving the same handle, whether a rename also rewrites scripts and expressions that use the old handle, and whether it overwrites a hand-authored handle (driftAcknowledgedForName may relate). See references/fields/YAML_TRACKED_ITEMS.md."
         },
         "enforceFormat": {
           "type": "boolean",
@@ -486,7 +487,7 @@
         "id": { "type": "string", "description": "Platform-assigned trigger ID.", "x-iw-category": "platform" },
         "name": { "type": "string", "description": "Trigger name for author readability." },
         "canTriggerMoreThanOnce": { "type": "boolean", "description": "Whether the trigger can fire more than once." },
-        "advancedLogic": { "type": "boolean", "description": "Enables logic conditions (and/or combinators)." },
+        "advancedLogic": { "type": "boolean", "description": "Enables logic conditions (and / or / none_of combinators)." },
         "triggerOnStartOfGame": { "type": "boolean", "description": "Fire immediately at game start." },
         "triggerConditions": {
           "type": "array",
@@ -508,7 +509,11 @@
         "id": { "type": "string" },
         "category": { "type": "string", "enum": ["condition", "logic"] },
         "type": { "type": "string" },
-        "operator": { "type": "string", "enum": ["and", "or"] },
+        "operator": {
+          "type": "string",
+          "enum": ["and", "or", "none_of"],
+          "description": "Logic-block combinator (category: \"logic\" only). See x-iw-condition-types.logic."
+        },
         "inequality": { "type": "string" },
         "trackedItemID": { "type": "string" },
         "data": {
@@ -525,7 +530,8 @@
           "data": "{inequality, requiredValue, trackedItemID, textComparison}",
           "description": "Fires based on tracked item or skill value comparison",
           "inequalities": ["at_least", "is_exactly", "at_most", "contains", "not_equal"],
-          "x-iw-note": "not_equal: UI label 'is not exactly'; maps to JSON value 'not_equal'. Import survival CONFIRMED 2026-08-06 — it round-tripped byte-identical, clearing the [PENDING TEST] the KB carried as of May 2026. The same probe found the real hazard is elsewhere: a triggerOnTrackedItem whose `textComparison` is ABSENT or an EMPTY STRING has its entire condition deleted on import, whatever the inequality (fixture-proven `at_least` died for lacking the key). Always set textComparison. Source: iw_knowledge_base_v2_8.md."
+          "textComparisons": ["contains", "does_not_contain"],
+          "x-iw-note": "not_equal: UI label 'is not exactly'; maps to JSON value 'not_equal'. Import survival CONFIRMED 2026-08-06 — it round-tripped byte-identical, clearing the [PENDING TEST] the KB carried as of May 2026. The same probe found the real hazard is elsewhere: a triggerOnTrackedItem whose `textComparison` is ABSENT or an EMPTY STRING has its entire condition deleted on import, whatever the inequality (fixture-proven `at_least` died for lacking the key). Always set textComparison. Source: iw_knowledge_base_v2_8.md. EDIT WORLD EDITOR (observed 2026-09-30 in the editor's raw-JSON view, test account, change discarded): the condition card's UI depends on the target item's dataType. A number item offers 'Is exactly' / 'Is not exactly' / 'Greater than or equal to' / 'Less than or equal to' → `inequality` is_exactly / not_equal / at_least / at_most. A text item offers 'Contains' / 'Does not contain' → `textComparison` contains / does_not_contain; for that text item the editor still wrote an `inequality` PLACEHOLDER alongside it (`{trackedItemID, inequality: \"at_least\", requiredValue, textComparison: \"does_not_contain\"}`). The KB records `is_exactly` in the same slot, and neither value has been probed. Both keys belong on every condition: number conditions still need `textComparison` (the fixture uses \"contains\"). `does_not_contain` is editor-emitted but its import survival and runtime semantics are NOT probed — the label is the only evidence that it is the negation of `contains`. The KB has carried it as [PENDING TEST] since May 2026. Tier 2 errors when textComparison is absent or empty, and warns on any value not listed in `textComparisons`. `contains` in `inequalities` above predates this observation and is not something the editor writes as an `inequality` (its four inequality choices map to the other values, and the text comparison lives in `textComparison`); preserve it where found, but author the comparison in `textComparison`."
         },
         "triggerOnRandomChance": {
           "data": "string (formula: a number or arithmetic expression, e.g. '30' for 30%, '15+round(turn_number%random)', or '$number_of_non_human_friends+round(turn_number%random)' — tracked items are referenced as $variableName)",
@@ -557,9 +563,10 @@
           "x-iw-note": "Observed in the v2.4 fixture (world version 1.09, 2026-08): one condition, `data` a bare expression string comparing a tracked item's `$variableName` to a literal. Malformed input fails without any import-time or editor-level error, though every runtime failure is named in World Debug's PawScript panel (CONFIRMED, Probe C 2026-08-29). An absent `data` key leaves no condition in the export and no World Debug entry, so the gate does nothing; a blank string is likewise absent from the export yet still evaluated every turn, where it errors. (The export cannot distinguish deletion-at-import from kept-but-never-logged for the absent-key case; the authoring consequence is the same.) An undeclared `$name`, a bare `$handle` (a value, never true/false) and a `<<name>>` interpolation are all kept verbatim and then fail at runtime — `<<name>>` is substituted textually before parsing, so `<<flavor>>` holding Lemon becomes the expression `Lemon = \"Lemon\"` and errors on the unknown name. Tier 2 errors on absent/blank `data` and warns on the other three, plus on any `$name` that is not a tracked item's `variableName` (natives `$player`/`$game` and PawScript keywords excepted). OPEN QUESTION (probe): whether it counts toward the ten-event AI-evaluation cap (presumed not — no AI evaluation involved)."
         },
         "logic": {
-          "operator": "and|or",
+          "operator": "and|or|none_of",
           "data": "object[] (sub-conditions, recursive)",
-          "description": "Combinator — requires advancedLogic: true on the trigger"
+          "description": "Combinator — requires advancedLogic: true on the trigger",
+          "x-iw-note": "`none_of` observed 2026-09-30 in the Edit World editor's raw-JSON view (test account, change discarded): with 'Use advanced logic' on, 'Add logic block' offers And / Or / None Of, written to that view as `{category: \"logic\", operator: \"and\" | \"or\" | \"none_of\"}`. An empty logic block (no sub-conditions) does not appear in that view at all. The canonical fixture only carries `or`. `none_of` is editor-emitted, but its import survival and runtime semantics are NOT probed — the label 'None Of' is the only evidence that it fires when no sub-condition is true. Preserve it; until it is probed, negate equality and numeric tests in a triggerOnPawScript with `not` (a None Of over triggerOnEvent leaves has no PawScript equivalent). Tier 1 checks the operator only on top-level conditions, and Tier 2 re-checks nested logic blocks against the same enum."
         }
       }
     },
@@ -612,10 +619,11 @@
           "description": "Modify a lore book entry by ID (replaces both content and keywords)"
         },
         "effectSetTrackedItemValue": {
-          "data": "{action, newValue, replaceWith, trackedItemID}",
+          "data": "{action, newValue, replaceWith, trackedItemID, path?, updateMode?, listExpression?, targetExpression?}",
           "topLevelFields": ["trackedItemID"],
           "actions": ["set", "add", "subtract", "replace"],
-          "description": "Set or modify a tracked item's value"
+          "description": "Set or modify a tracked item's value",
+          "x-iw-note": "The four optional keys are not in the canonical fixture. Observed 2026-09-30 in the Edit World editor's raw-JSON view (test account, change discarded): a freshly added 'Set the value of a tracked item' effect exported `{trackedItemID, action: \"set\", newValue, replaceWith: \"\", path: \"\", updateMode: \"path\", listExpression: \"\", targetExpression: \"\"}`. Those are the editor's defaults, and no UI control for them was mapped. The cards were only seen with TEXT target items: the probe world had no YAML item, and the names look YAML-oriented. Their semantics are UNKNOWN — what other `updateMode` values exist, what `path` addresses (presumably a YAML path, unconfirmed), and what `listExpression` / `targetExpression` evaluate. Preserve them verbatim; do not author non-default values. Fixture-shaped effects without them still validate."
         },
         "effectModifyTrackedItemDetails": {
           "data": "{trackedItemID, overrideName, overrideDescription, overrideUpdateInstructions, overrideVisibility, overrideAutoUpdate, name?, description?, updateInstructions?, visibility?, autoUpdate?}",
@@ -623,12 +631,14 @@
           "description": "Modify tracked item metadata (not its value)"
         },
         "effectPresentChoice": {
-          "data": "{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId}",
-          "description": "Present player a choice; result saved to tracked item (blocking)"
+          "data": "{choices, message, updateMode, maxSelections, minSelections, selectionMode, valueDelimiter, targetTrackedItemId, path?}",
+          "description": "Present player a choice; result saved to tracked item (blocking)",
+          "x-iw-note": "`path` is not in the canonical fixture. Observed 2026-09-30 in the Edit World editor's raw-JSON view (test account, change discarded): a freshly added choice effect exported `path: \"\"` next to the eight fixture keys. Semantics unprobed; preserve it verbatim."
         },
         "effectRequestInput": {
-          "data": "{inputMode, requestText, requiresInput, targetTrackedItemId}",
-          "description": "Request free-text input from player (blocking)"
+          "data": "{inputMode, requestText, requiresInput, targetTrackedItemId, path?}",
+          "description": "Request free-text input from player (blocking)",
+          "x-iw-note": "Observed 2026-09-30 in the Edit World editor's raw-JSON view (test account, change discarded): the card shows Request text, Target tracked item, a box labelled 'Path (YAML items)', Input mode 'Single line' / 'Multi line', and 'Input is required before proceeding'. A fresh effect exported `{requestText, targetTrackedItemId, inputMode: \"single\", requiresInput: true, path}` — `path` held the marker text typed into the Path box, so `path` is that box's key; the captured target (PrbFViewA) was a TEXT item, so whether the box is YAML-only and what `path` does for a text target are unprobed; that it names a location inside a YAML value is presumed from the label. 'Single line' → `\"single\"` is the editor's default for a fresh effect (import unprobed); the canonical fixture carries `\"multi\"`, but the JSON written for 'Multi line' was not captured, so that label-to-value mapping is unverified. `path` is not in the fixture."
         },
         "effectFireRandomTrigger": {
           "data": "null or omitted",

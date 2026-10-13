@@ -6,6 +6,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 FIXTURE_PATH = Path(__file__).parent.parent / "example-world-schema-v2.4.json"
 
 
@@ -252,7 +254,12 @@ def test_audit_missing_per_character_overrides(tmp_path):
 
 
 def _menu_world(
-    initial_pc_value, *, nest_in_logic: bool = False, top_level_id: bool = True
+    initial_pc_value,
+    *,
+    nest_in_logic: bool = False,
+    top_level_id: bool = True,
+    text_comparison: str = "contains",
+    operator: str = "and",
 ) -> dict:
     """Build a world with one tracked item, one character override carrying
     ``initial_pc_value``, and a triggerOnTrackedItem condition on that item.
@@ -270,7 +277,7 @@ def _menu_world(
             "inequality": "is_exactly",
             "requiredValue": "Basic Images",
             "trackedItemID": "ITEM00001",
-            "textComparison": "contains",
+            "textComparison": text_comparison,
         },
     }
     if top_level_id:
@@ -280,7 +287,7 @@ def _menu_world(
             {
                 "id": "cond-uuid-9999-9999-9999-999999999999",
                 "category": "logic",
-                "operator": "and",
+                "operator": operator,
                 "data": [leaf],
             }
         ]
@@ -1011,3 +1018,107 @@ def test_audit_per_character_overrides_present_ok(tmp_path):
         assert missing == []
     finally:
         Path(path).unlink(missing_ok=True)
+
+
+def _menu_detail(world: dict) -> str:
+    from iw_architect.tools.analysis import audit_world
+
+    path = _write(world)
+    try:
+        result = json.loads(audit_world(path))
+    finally:
+        Path(path).unlink(missing_ok=True)
+    menu = [f for f in result["findings"] if f["type"] == "menu_backed_condition"]
+    assert len(menu) == 1, result["findings"]
+    return menu[0]["detail"]
+
+
+def test_audit_menu_backed_plain_condition_fires_only_on_match():
+    detail = _menu_detail(_menu_world(["Basic Images", "Premium Advanced Images"]))
+    assert "fires ONLY for players whose choice matches" in detail
+    assert "other branches" not in detail
+
+
+def test_audit_menu_backed_does_not_contain_is_inverted():
+    # does_not_contain (the editor's "Does not contain") is satisfied by the players whose
+    # choice does NOT match — the finding used to say the opposite.
+    detail = _menu_detail(
+        _menu_world(["Basic Images", "Premium Advanced Images"], text_comparison="does_not_contain")
+    )
+    assert "fires ONLY for players whose choice does NOT match" in detail
+
+
+@pytest.mark.parametrize("operator", ["or", "none_of"])
+def test_audit_menu_backed_leaf_under_or_or_none_of_is_hedged(operator):
+    # Under OR the leaf alone is not required; under NONE OF the trigger needs it FALSE.
+    # Neither may be reported as "fires ONLY for players whose choice matches".
+    detail = _menu_detail(
+        _menu_world(
+            ["Basic Images", "Premium Advanced Images"], nest_in_logic=True, operator=operator
+        )
+    )
+    assert "fires ONLY" not in detail
+    assert "other branches" in detail
+    assert ("needs this test to be FALSE" in detail) == (operator == "none_of")
+
+
+@pytest.mark.parametrize(
+    ("outer", "inner", "expected"),
+    [
+        # NONE OF(NONE OF(a, ...)) = a OR ...: the negations cancel, and the leaf is optional.
+        ("none_of", "none_of", "helps the trigger fire when it is TRUE, but is not required"),
+        # OR(NONE OF(a), ...): FALSE helps, but another OR branch can fire the trigger.
+        ("or", "none_of", "helps the trigger fire when it is FALSE, but is not required"),
+        # NONE OF(OR(a, ...)) = AND(NOT a, ...): every OR branch must be FALSE.
+        ("none_of", "or", "the trigger needs this test to be FALSE"),
+        # NONE OF(AND(a, ...)): any false AND child satisfies it, so FALSE only helps.
+        ("none_of", "and", "helps the trigger fire when it is FALSE, but is not required"),
+    ],
+)
+def test_audit_menu_backed_nested_logic_polarity(outer, inner, expected):
+    world = _menu_world(
+        ["Basic Images", "Premium Advanced Images"], nest_in_logic=True, operator=inner
+    )
+    trigger = world["triggerEvents"][0]
+    trigger["triggerConditions"] = [
+        {
+            "id": "cond-uuid-8888-8888-8888-8888-888888888888",
+            "category": "logic",
+            "operator": outer,
+            "data": trigger["triggerConditions"],
+        }
+    ]
+    detail = _menu_detail(world)
+    assert f"{outer.upper()} > {inner.upper()}" in detail
+    assert expected in detail
+    assert "fires ONLY" not in detail
+
+
+def test_audit_menu_backed_leaf_under_operatorless_block_is_hedged():
+    # IW's handling of a logic block with no operator is undocumented, so it is not read as AND.
+    world = _menu_world(["Basic Images", "Premium Advanced Images"], nest_in_logic=True)
+    del world["triggerEvents"][0]["triggerConditions"][0]["operator"]
+    detail = _menu_detail(world)
+    assert "fires ONLY" not in detail
+    assert "inside a ? logic block" in detail
+    assert "but is not required" in detail
+
+
+def test_audit_menu_backed_flat_does_not_contain_is_inverted():
+    # A flat-shaped condition (payload on the condition, no `data` object) must still have
+    # its textComparison read, or does_not_contain gets the un-inverted wording.
+    world = _menu_world(
+        ["Basic Images", "Premium Advanced Images"], text_comparison="does_not_contain"
+    )
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]
+    leaf.update(leaf.pop("data"))
+    detail = _menu_detail(world)
+    assert "fires ONLY for players whose choice does NOT match" in detail
+    assert "does_not_contain 'Basic Images'" in detail
+
+
+def test_audit_menu_backed_leaf_under_and_is_unhedged():
+    detail = _menu_detail(
+        _menu_world(["Basic Images", "Premium Advanced Images"], nest_in_logic=True)
+    )
+    assert "fires ONLY for players whose choice matches" in detail
