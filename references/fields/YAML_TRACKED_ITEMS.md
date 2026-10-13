@@ -113,6 +113,46 @@ item from PawScript as `$<variableName>` (e.g. `variableName: "player_gold"` →
   shouldn't force a `variableName` change, because scripts reference the handle,
   not the display name.
 
+**It is JSON-only.** The Edit World screen does not show `variableName` at all
+(observed by the repo owner, and absent from the 2026-09-30 screen survey), so an
+author can set or change it only in the world JSON.
+
+**How IW derives it from `name`** — *owner-observed, not probe-verified:* IW
+generates the handle from the tracked item's Name by lowercasing it and replacing
+whitespace and special characters with underscores. An item named
+`Elena's Private Read` gets `elena_s_private_read`, addressed in PawScript as
+`$elena_s_private_read`. All six tracked items in the canonical fixture are
+consistent with that rule (`Number of Non-Human Friends` →
+`number_of_non_human_friends`, `Puppy Tracking - YAML Format Tracked Items` →
+`puppy_tracking_yaml_format_tracked_items`), though the fixture cannot show
+whether those handles were generated or typed.
+
+**An authored value is kept on import, not re-derived.** Probe C imported an item
+named `PC Flavor` with `variableName: "probe_flavor"`, and the export came back
+with `probe_flavor` unchanged (`probes/probe-c-pawscript.json` vs
+`probes/probe-c-imported.json`, 2026-08-29). So when you write a world by hand,
+the handle you write is the handle scripts must use, even if it differs from what
+the name would derive. The plugin's convention is still to derive it from the
+name, so the handle reads the way IW would have generated it.
+
+**Still unverified** (don't rely on any of these until probed):
+
+- **Runs of special characters.** Does `A - B` become `a_b` or `a___b`? The
+  fixture's `Puppy Tracking - YAML …` → `puppy_tracking_yaml_…` is one
+  single-underscore data point, but the fixture can't show whether IW generated it.
+- **Leading and trailing underscores.** Does a name ending in `?` or `'` leave a
+  trailing `_`?
+- **Digits, and a leading digit in particular.** `validate_world` warns on any
+  handle that doesn't match `^[a-z][a-z0-9_]*$`, so a generated `2nd_wind` would
+  be flagged. Whether IW ever generates one is unknown.
+- **Non-ASCII letters** (`Café`, `Ñandú`): transliterated, kept, or replaced?
+- **Collisions.** Two items whose names derive the same handle: does IW suffix
+  one, or emit a duplicate? `validate_world` warns on duplicates either way.
+- **Renaming.** Does renaming an item in the editor regenerate its handle,
+  breaking scripts that use the old one? The platform-managed
+  `driftAcknowledgedForName` field (only ever `null` in the fixture) may relate
+  to this, but that is a guess.
+
 ### `formatSchema` syntax
 
 `formatSchema` is a lightweight pseudo-schema, one field per line:

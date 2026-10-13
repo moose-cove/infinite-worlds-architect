@@ -451,7 +451,8 @@
         "variableName": {
           "type": "string",
           "description": "snake_case identifier for this item (schema v2.2). PawScript references the item as $<variableName> (e.g. 'puppy_tracking' → $puppy_tracking). Should match ^[a-z][a-z0-9_]*$.",
-          "x-iw-category": "editable"
+          "x-iw-category": "editable",
+          "x-iw-note": "JSON-only: the Edit World screen does not show it, so it can be set or changed only in the world JSON. OWNER-OBSERVED, not probe-verified: IW generates it from the item's `name` by lowercasing and replacing whitespace and special characters with underscores ('Elena's Private Read' → elena_s_private_read). All six fixture items are consistent with that rule. An authored value is kept verbatim on import, not re-derived: Probe C imported 'PC Flavor' with variableName probe_flavor and exported it unchanged (2026-08-29). OPEN: how runs of special characters collapse, leading/trailing underscores, digits (especially a leading digit, which Tier 2 warns on), non-ASCII letters, two items deriving the same handle, and whether renaming an item regenerates it (driftAcknowledgedForName may relate). See references/fields/YAML_TRACKED_ITEMS.md."
         },
         "enforceFormat": {
           "type": "boolean",

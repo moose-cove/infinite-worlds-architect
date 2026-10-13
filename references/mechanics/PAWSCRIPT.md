@@ -66,8 +66,13 @@ is your tracked items.
   and scripts. You cannot assign to `$player.name` or `$game.turn_number`.
 - **Tracked items are addressed by their `variableName`** — the snake_case,
   unique handle set on each tracked item (see
-  [`fields/YAML_TRACKED_ITEMS.md`](../fields/YAML_TRACKED_ITEMS.md)). A tracked
+  [`fields/YAML_TRACKED_ITEMS.md`](../fields/YAML_TRACKED_ITEMS.md#variablename--the-pawscript-symbol)). A tracked
   item whose `variableName` is `player_gold` is `$player_gold` in PawScript.
+  The handle is not the display name. IW generates it from the name
+  (owner-observed: lowercased, whitespace and special characters → `_`), so
+  `Elena's Private Read` is `$elena_s_private_read`. The Edit World screen
+  doesn't show it, so read it from the world JSON rather than guessing it from
+  the name.
 - Inside a script, `$<variableName>` is an **assignment target**:
   `$player_gold += 10` writes the new value back (transactionally).
 
