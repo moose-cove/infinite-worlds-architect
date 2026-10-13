@@ -60,9 +60,9 @@ Either field may be set to `null` to disable that ending type. The platform won'
 
 **Many authors disable victory/defeat conditions entirely** because the engine's evaluation can fire too aggressively or at unintended moments. The defaults in particular have a reputation for over-firing — defeat can trigger on dark narrative content the author didn't intend as a death event.
 
-**When you do use them, write explicit `condition` text.** Vague language causes unreliable evaluation. Common technique: use ALL CAPS for emphasis and multiple restatements.
+**When you do use them, write explicit `condition` text.** Vague language causes unreliable evaluation. Spell out exactly what counts and what doesn't.
 
-> "ONLY trigger victory if the player has EXPLICITLY and COMPLETELY achieved escape from the island AND has been confirmed safe in the rescue boat. Do not trigger for partial success. Do not trigger for implied success."
+> Trigger victory only if the player has escaped the island and is confirmed safe in the rescue boat. Partial or implied success does not count.
 
 ---
 

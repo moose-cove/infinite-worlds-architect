@@ -7,7 +7,7 @@ argument-hint: "[source_world_path] [story_export_path...] [target_path]"
 
 @${CLAUDE_PLUGIN_ROOT}/agents/world-architect.md
 
-You are helping an author create a **sequel** to an existing Infinite Worlds world — a new world file that begins where the story export left off, informed by what actually happened in play. This command carries its own citation and no-fabrication discipline inline (see "The proposal contract" below); there is no separate citation reference to load.
+You are helping an author create a **sequel** to an existing Infinite Worlds world — a new world file that begins where the story export left off, informed by what actually happened in play. This command carries its own citation and no-fabrication discipline inline (see "The proposal contract" below).
 
 **Before you start, also read:**
 
@@ -116,7 +116,7 @@ The second command uses `CLAUDE_CODE_SESSION_ID` (not `CLAUDE_SESSION_ID`) — t
 
 **Turning it off later.** If the author asks to turn the gate off at any point, disarm it immediately — see Step 7. You can re-arm it the same way if they change their mind.
 
-> The gate mechanism is flow-agnostic (it keys on the per-session marker file, not on "sequel"). This command is the only one that arms it today; if another command ever needs the same evidence discipline, lift the proposal contract below into a shared reference at that point.
+<!-- The gate mechanism is flow-agnostic (it keys on the per-session marker file, not on "sequel"). This command is the only one that arms it today; if another command ever needs the same evidence discipline, lift the proposal contract below into a shared reference at that point. -->
 
 ---
 
@@ -160,7 +160,7 @@ Propose **one field per message** by default: one block, then wait for approval.
 - **Extra Instruction Block** (`instructionBlocks[*]`): `name`, `content` — one message.
 - **Player character** (`possibleCharacters[*]`): (1) `name`, `description`, `skills`; (2) `portraitPromptDetails`, `initialTrackedItemValues`.
 - **NPC** (`NPCs[*]`): (1) `name`, `names`, `location`, `one_liner`; (2) `detail`, `secret_info`; (3) `appearance` plus the portrait prompts `img_appearance` / `img_clothing`.
-- **Trigger event** (`triggerEvents[*]`): (1) `name`, `triggerConditions` (may be empty for a start-of-game / always-fire trigger — only `triggerEffects` is schema-required); (2) `triggerEffects`.
+- **Trigger event** (`triggerEvents[*]`): (1) `name`, `triggerOnStartOfGame`, `triggerConditions` (may be empty only when `triggerOnStartOfGame` is true — any other trigger with no conditions never fires; only `triggerEffects` is schema-required); (2) `triggerEffects`.
 
 > **Structural fields (set mechanically, not cited).** Every *new* entity also needs an `id` — mint it with `mint_ids`, never hand-write — and a `positionInList` (its ordinal index in its list). The schema requires these, but they aren't evidence-backed values, so set them when you create the entity rather than proposing them; carried-forward entities already have both. For the complete required-field set of any entity, see `references/WORLD_JSON_SCHEMA_v2.4.md` or `references/world_v2.4.schema.json`.
 

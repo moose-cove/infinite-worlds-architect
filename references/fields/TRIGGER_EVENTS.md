@@ -79,10 +79,10 @@ Listed under `triggerConditions` with `category: "condition"` and `type: "trigge
 "data": ["PKRVGe1E"]            "data": { "prereqs": ["PKRVGe1E"], "firedThisTurn": false }
 ```
 
-If a prerequisite fires on the same turn, it only satisfies the condition if it appears earlier in the trigger list.
+If a prerequisite can fire on the same turn, list it earlier in the trigger list — the reverse arrangement is untested (see `firedThisTurn` below).
 
 ### `triggerBlockers` (condition type)
-Same shape as `triggerPrereqs`, with the array under `blockers` instead of `prereqs`. The named triggers must NOT have fired previously. If any have fired, this trigger is permanently blocked.
+Same shape as `triggerPrereqs`, with the array under `blockers` instead of `prereqs`. The named triggers must NOT have fired — ever with `firedThisTurn: false` (a permanent block once any has fired), or this turn with `true` (see the table below).
 
 ```jsonc
 "data": { "blockers": ["PKRVGe1E"], "firedThisTurn": false }
@@ -126,9 +126,7 @@ Schema v2.4 adds a top-level `conditions: string[]` to the world. Each entry is 
 
 **The registry is author-maintained.** Confirmed 2026-08-06 by round trip: a world went in with one event *used but not declared* and one entry *declared but unused*, and `conditions` came back byte-identical — the platform neither added the missing entry nor pruned the orphan. It does not regenerate the array, so keeping it in sync is the author's job (and the plugin's).
 
-This also closes off the competing reading, under which the platform derived `conditions` from the `triggerOnEvent` strings already in use. That reading was the only available explanation for how the ten-event cap gets enforced, so ruling it out reopens the cap question — see below.
-
-**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array. The validator warns in the reverse direction too, on a declared entry no `triggerOnEvent` uses: a dead dropdown entry. Both stay warnings, never errors — a desync costs editor selectability, not correctness.
+**When adding a `triggerOnEvent`, add its exact text to `conditions` in the same edit.** Pre-v2.4 worlds have no `conditions` array at all, so migrating one surfaces a warning per `triggerOnEvent` — that is the intended nudge, and the fix is to collect the event strings into a new `conditions` array. The validator warns in the reverse direction too, on a declared entry no `triggerOnEvent` uses: a dead dropdown entry. Both stay warnings, never errors: what a desync actually affects — editor-UI selectability, runtime matching, or neither — is still open (`probes/README.md` P3/P4).
 
 **The cap is ten, and it is not applied at import.** `validate_world` warns past it. A world carrying twelve declared events and twelve matching triggers round-tripped with all twelve intact — nothing was rejected and nothing truncated. Combined with the author-maintained finding above, both import-side enforcement mechanisms are ruled out, so the cap is either applied at runtime or is purely advisory; that is still untested. Each AI-evaluated event costs an extra AI evaluation every turn regardless, so treat ten as a cost ceiling even if it proves not to be a hard limit.
 
@@ -181,7 +179,7 @@ author another trigger that re-installs the old value. This applies to
 deliberately; one-shot "fire and forget" replacements leave the world
 permanently in the new state for the rest of the playthrough.
 
-**Scope restriction:** `effectChangeBackground` and `effectChangeFirstAction` are **Start-of-Game (SoG) only**. Confirmed by IW import testing (May 2026): IW silently ignores these effects in regular (mid-game) triggers. For mid-game context or setting changes, use `effectChangeMainInstructions` instead. (Even if IW permitted mid-game `effectChangeBackground`, the effect would be inert: `background` is only sent to the storyteller AI at turn 0 and is superseded by the Summary AI's running summary after ~turn 8.)
+**Scope restriction:** `effectChangeBackground` and `effectChangeFirstAction` are **Start-of-Game (SoG) only**. KB-empirical (KB v2.8; not probed in this repo): IW silently ignores these effects in regular (mid-game) triggers. For mid-game context or setting changes, use `effectChangeMainInstructions` instead. (Even if IW permitted mid-game `effectChangeBackground`, the change would be short-lived: `background` only reaches the storyteller AI for the first 8 turns, after which the Summary AI's running summary replaces it.)
 
 | Effect | Replaces | Notes |
 |---|---|---|
@@ -248,7 +246,7 @@ comparison.
 ## Key constraints
 
 1. **AND logic only.** All conditions on one trigger must be met simultaneously. For OR logic, create multiple triggers (or use `category: "logic"` with `operator: "or"` when `advancedLogic: true`).
-2. **Evaluation order matters.** `triggerPrereqs` and `triggerBlockers` only recognize triggers that fired earlier in the same evaluation pass (same turn, earlier in the list). Trigger ordering is therefore semantically significant. Tracked-item state moves within the pass too: a script's writes are visible to everything later in the list — later scripts **and** later triggers' `triggerOnPawScript` conditions (Probe D, 2026-08-22: trigger 13 set a flag and trigger 14's condition on that flag fired the same turn). Triggers run in **list order** (a consumer placed before its producer saw the old state on turn 1 and the new state from turn 2). Only the *storyteller* is deferred to the next turn. Order producers before consumers. Note that a one-shot whose script errored and rolled back still counts as fired for a downstream `triggerPrereqs` — the chain advances even though the state change never landed.
+2. **Evaluation order matters.** A trigger that fired earlier in this same pass counts toward another trigger's `triggerPrereqs` / `triggerBlockers` (Probe C always listed the anchor first); whether one listed *after* the consumer also counts is untested, so list anchors first. Triggers that fired on earlier turns count whenever `firedThisTurn` is `false`. Trigger ordering is therefore semantically significant. Tracked-item state moves within the pass too: a script's writes are visible to everything later in the list — later scripts **and** later triggers' `triggerOnPawScript` conditions (Probe D, 2026-08-22: trigger 13 set a flag and trigger 14's condition on that flag fired the same turn). Triggers run in **list order** (a consumer placed before its producer saw the old state on turn 1 and the new state from turn 2). Only the *storyteller* is deferred to the next turn. Order producers before consumers. Note that a one-shot whose script errored and rolled back still counts as fired for a downstream `triggerPrereqs` — the chain advances even though the state change never landed.
 3. **`triggerOnEvent` limit.** Maximum 10 AI-evaluated event conditions per world — documented, but **not enforced at import** (twelve round-tripped untruncated; see the cap discussion above). Treat it as a cost ceiling rather than a hard limit: each one is paid for in additional AI evaluation tokens every turn.
 4. **Pre-game triggers (`triggerOnStartOfGame: true`).** Fire before turn 0, before the player acts, with or without `triggerConditions` (the flag is its own gate — Probe D, 2026-08-22). Some effects (notably `effectTellAIWhatToDo`) behave differently or are no-ops in this context — the "next turn" they target is turn 1, not turn 0.
 

@@ -6,14 +6,14 @@ import json
 from collections.abc import Iterator
 from typing import Any
 
-from iw_architect.paths import require_absolute
+from iw_architect.paths import read_world_text, require_absolute
 
 
 def _load_world(world_path: str) -> dict:
     path = require_absolute(world_path)
     if not path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
-    return json.loads(path.read_text())
+    return json.loads(read_world_text(path, world_path))
 
 
 def _token_estimate(text: str) -> int:
@@ -181,9 +181,22 @@ def _iter_leaf_conditions(conditions: Any) -> Iterator[dict]:
 
 
 def audit_world(world_path: str) -> str:
-    """Quality and optimization analysis: token budgets, trigger-graph cycles, redundancy.
+    """Quality and optimization review of a world — findings, not pass/fail.
 
-    Returns JSON with findings (not pass/fail).
+    Complements validate_world (which checks correctness). Checks: estimated token
+    usage per section (≈ chars/4), with a warning for sections over ~1000 tokens;
+    triggerPrereqs cycles; NPC names repeated in the main instructions; instruction
+    blocks under 10 characters; triggers with no conditions that don't fire at start
+    of game; player characters missing initialTrackedItemValues for per-character
+    tracked items; and triggerOnTrackedItem conditions on pick-one menu items
+    (explained so the condition isn't misread as always-true).
+
+    world_path: absolute path to the world JSON (a leading ``~`` is expanded).
+
+    Returns ``{"findings": [{"type", "severity", "summary", ...}]}`` where ``severity``
+    is ``info``, ``warning``, ``error`` (trigger cycles only) or ``ok``; most findings
+    add a ``suggestion`` and type-specific detail keys. On failure returns
+    ``{"error": "..."}`` (relative path, missing or unreadable file, invalid JSON). Read-only.
     """
     try:
         world = _load_world(world_path)
@@ -282,7 +295,7 @@ def audit_world(world_path: str) -> str:
             }
         )
 
-    # Triggers without any conditions (always fires unless triggerOnStartOfGame)
+    # Triggers without any conditions (never fire unless triggerOnStartOfGame)
     unconditioned = []
     for te in world.get("triggerEvents", []):
         conds = te.get("triggerConditions", [])
@@ -293,11 +306,13 @@ def audit_world(world_path: str) -> str:
             {
                 "type": "unconditioned_triggers",
                 "severity": "warning",
-                "summary": "Triggers with no conditions (fires every eligible turn)",
+                "summary": "Triggers with no conditions (never fire)",
                 "triggers": unconditioned,
                 "suggestion": (
-                    "Add conditions to limit when these triggers fire, "
-                    "or verify this is intentional."
+                    "A trigger with no conditions never fires. Add the condition it was "
+                    "meant to have (for every turn, one always-true condition plus "
+                    "canTriggerMoreThanOnce), set triggerOnStartOfGame if it is setup, "
+                    "or remove it."
                 ),
             }
         )
@@ -439,7 +454,22 @@ def _diff_value(a: Any, b: Any, path: str, changes: list[dict]) -> None:
 
 
 def compare_worlds(world_path_a: str, world_path_b: str) -> str:
-    """Structural diff between two worlds. Returns JSON with additions, removals, and changes."""
+    """Structural diff between two world JSONs, as machine-readable JSON.
+
+    Entity arrays are matched by ``id`` (else ``name``), so reordering is not a
+    change; other arrays are compared whole. Paths look like
+    ``(root).NPCs[id=abc123XYZ].detail``. Long string values are truncated to 100
+    characters in ``from``/``to``. For a short author-facing summary use
+    get_diff_summary instead.
+
+    world_path_a: absolute path to the baseline world.
+    world_path_b: absolute path to the changed world.
+
+    Returns ``{"world_a", "world_b", "total_changes", "changes": [{"path", "type",
+    ...}]}`` where ``type`` is ``added`` / ``removed`` (object keys carry ``value``),
+    ``changed`` (``from``/``to``) or ``type_change``. On failure returns
+    ``{"error": "World A: ..."}`` or ``{"error": "World B: ..."}``. Read-only.
+    """
     try:
         world_a = _load_world(world_path_a)
     except (FileNotFoundError, json.JSONDecodeError) as exc:
@@ -464,7 +494,20 @@ def compare_worlds(world_path_a: str, world_path_b: str) -> str:
 
 
 def get_diff_summary(original_path: str, current_path: str) -> str:
-    """Human-readable narrative summary of changes between two worlds — for the author to read."""
+    """Markdown summary of what changed between two worlds, for showing the author.
+
+    Lists modified field paths, added entities or keys, removed entities or keys, and
+    other changes such as type changes (up to 20 per section, 10 for "other") — paths
+    only, not values. Uses the same matching as compare_worlds; call that when you
+    need the from/to values.
+
+    original_path: absolute path to the baseline world (e.g. the pre-edit source).
+    current_path: absolute path to the edited world (e.g. the draft).
+
+    Returns Markdown, or "No differences found between the two worlds." On failure
+    returns a Markdown line starting ``**Error loading original**:`` or
+    ``**Error loading current**:`` (not JSON). Read-only.
+    """
     try:
         original = _load_world(original_path)
     except (FileNotFoundError, json.JSONDecodeError) as exc:

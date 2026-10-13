@@ -39,13 +39,15 @@ _DOC_GLOBS = (
     "agents/**/*.md",
     ".claude/agents/**/*.md",
     ".github/*.md",
+    "dev-docs/*.md",
     "*.md",
 )
 
-# `dev-docs/` is a frozen historical record (DESIGN_BRIEF_v2.md describes the original v2.1
-# build and names v2.1 artifacts on purpose). Rewriting it to match today's tree would destroy
-# the history it exists to preserve, so it is out of scope for every tier.
-_EXCLUDED_DIRS = ("dev-docs",)
+# `dev-docs/DESIGN_BRIEF_v2.md` is a frozen historical record: it describes the original v2.1
+# build and names v2.1 artifacts on purpose. Rewriting it to match today's tree would destroy
+# the history it exists to preserve, so it is out of scope for every tier. The rest of
+# `dev-docs/` (e.g. AGENT_INVOCATION_MODES.md, which the agent cites) is live and checked.
+_EXCLUDED_FILES = ("dev-docs/DESIGN_BRIEF_v2.md",)
 
 # Extensions worth resolving. Anything else in a link (images, external assets) is ignored.
 _PATH_SUFFIXES = (".md", ".json", ".py", ".yaml", ".yml", ".toml")
@@ -81,7 +83,7 @@ def _doc_files() -> list[Path]:
         for path in REPO_ROOT.glob(pattern):
             if path.is_symlink() or not path.is_file():
                 continue
-            if any(part in _EXCLUDED_DIRS for part in path.relative_to(REPO_ROOT).parts):
+            if path.relative_to(REPO_ROOT).as_posix() in _EXCLUDED_FILES:
                 continue
             seen.add(path)
     return sorted(seen)

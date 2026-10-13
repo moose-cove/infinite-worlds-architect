@@ -162,12 +162,12 @@ def evaluate(payload: dict, project_dir: str | None) -> dict | None:
     field_list = ", ".join(f'"{f}"' for f in bad_fields)
     reason = (
         f"Missing or malformed Evidence citation for field(s): {field_list}. "
-        "Each **Proposed Value:** block must be immediately followed by "
-        "**Evidence:** in one of these formats: "
-        "'From Turn #<N> Outcome: ...' / 'From Story Metadata', "
+        "Each proposal needs **Field:** and **Proposed Value:** on consecutive "
+        "lines, then an **Evidence:** line (before the next **Field:**) in one of "
+        "these formats: 'From Turn #<N> ...' / 'From Story Metadata ...', "
         "'USER_DIRECTED: <reason>', "
         "'CARRY_FORWARD: <reason>', or "
-        "'NO_STORY_EVIDENCE: <reason>'."
+        "'NO_STORY_EVIDENCE: <reason>'. Re-send the proposal(s) with valid citations."
     )
     return {"decision": "block", "reason": reason}
 

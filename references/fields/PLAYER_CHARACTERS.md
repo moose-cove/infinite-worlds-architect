@@ -27,7 +27,7 @@ A list of attributes the storyteller AI uses to evaluate player actions. The AI 
 
 ### Requirements and conventions
 
-- **At least 1 skill is required** to run a world.
+- **Seed at least 1 skill.** KB v2.8 reports that an empty `skills` array may break import (not verified here); `validate_world` warns on it.
 - **Typical worlds have 3–5 skills.** More than 7 dilutes the AI's selection — it will often pick a less-relevant skill when the relevant one is buried among many.
 - **No per-skill description field.** There is no way to explain what a skill does beyond its name in the `skills` array itself. If you need to explain what a skill covers or how it works, put that explanation in `instructions`.
 
@@ -71,7 +71,7 @@ Author-provided prompt info used to generate the portrait. Same shape as the wor
 
 ## Player permissions
 
-Six top-level booleans control what the player can customize before starting the adventure. Note that v2.2 uses `allow*` field names (not the older `can*` form):
+Six top-level booleans control what the player can customize before starting the adventure:
 
 | Field | Default | What it allows |
 |---|---|---|

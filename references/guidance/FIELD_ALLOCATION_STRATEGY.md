@@ -1,6 +1,6 @@
 # Field Allocation Strategy
 
-Where does a given piece of content belong in a world JSON? Player-character description? NPC dossier? Always-on `background`? Keyword-gated `loreBookEntries`? Trigger-gated effect?
+Where does a given piece of content belong in a world JSON? Player-character description? NPC dossier? Opening-turns `background`? Keyword-gated `loreBookEntries`? Trigger-gated effect?
 
 Picking the wrong field doesn't break validation — but it does waste context, confuse the AI, and make the world harder to maintain. This document is the decision aid.
 
@@ -12,18 +12,18 @@ Read this before populating `background`, `instructions`, `loreBookEntries`, `in
 
 Every text field in the world JSON has a different *injection profile* — when, how often, and under what conditions the AI sees it.
 
-- **Always-on fields** (`background`, `instructions`, `objective`, `authorStyle`, `descriptionRequest`, `firstInput`) are sent to the AI **every single turn**. Token cost is paid every turn, forever. Content here had better deserve that cost.
+- **Always-on fields** (`instructions`, `objective`, `authorStyle`, `descriptionRequest`) are sent to the AI **every single turn**. Token cost is paid every turn, forever. Content here had better deserve that cost. (`background` is sent every turn for the first 8 turns, until the Summary AI's running summary replaces it; `firstInput` is sent only on turn 0.)
 - **Per-character fields** (`possibleCharacters[*].description`, skill list) are sent every turn for the active PC, but only the active PC.
-- **NPC dossiers** (`NPCs[*]`) are typically referenced when the NPC is in the scene — they don't all get injected every turn by default.
+- **NPC dossiers** (`NPCs[*]`) are typically referenced when the NPC is in the scene — they don't all get injected every turn by default, except `one_liner`, which is sent every turn for every NPC.
 - **Keyword instruction blocks** (`loreBookEntries[*]`) only inject for 3 turns after a matching keyword appears in recent narrative. Effectively free when irrelevant, present when needed.
 - **Extra instruction blocks** (`instructionBlocks[*]`) are always-on like `instructions`, but separable (and modifiable via `effectModifyInstructionBlock`). Use when you want a chunk of always-on text you can swap out by trigger, or by a `<<choose(…)>>` expression over a tracked item. The expression route picks up a player's edit on the very next turn; see [`patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md`](../patterns/EXPRESSION_SWITCHED_INSTRUCTIONS.md).
 - **Trigger-gated content** (`triggerEvents[*].triggerEffects[*]`) only injects when the trigger's conditions fire. The most surgical option for state-dependent content.
 
 **Two failure modes drive most authoring mistakes:**
 
-1. **Packing always-on fields.** Authors paste NPC backstories, location lore, and faction history into `background` because it "feels canonical." The AI now spends tokens re-reading that content every turn — including the 95% of turns where it's irrelevant — and the player pays the cost via inflated prompt sizes and noisier responses.
+1. **Packing `background`.** Authors paste NPC backstories, location lore, and faction history into `background` because it "feels canonical." For the first 8 turns the AI spends tokens re-reading that content every turn — mostly on turns where it's irrelevant — and the player pays the cost via inflated prompt sizes and noisier responses. From turn 8 the Summary AI's running summary replaces `background`, so anything not restated in a better-suited field drops out of the storyteller's context.
 
-2. **Treating `background` as state.** `background` is the **initial premise**. `effectChangeBackground` is Start-of-Game (SoG) only — it is silently ignored at runtime in regular (mid-game) triggers (confirmed by IW import testing, May 2026). Even if IW allowed mid-game changes, `background` is only sent to the storyteller at turn 0 and is superseded by the Summary AI after ~turn 8, making a mid-game change inert in any case. For mid-game context shifts, use `effectChangeMainInstructions`. Authors who write running plot summaries into `background` are confused when the AI keeps "rewinding" to early-story framing.
+2. **Treating `background` as state.** `background` is the **initial premise**. `effectChangeBackground` is Start-of-Game (SoG) only — it is silently ignored at runtime in regular (mid-game) triggers (KB-empirical; not probed in this repo). Even if IW allowed mid-game changes, `background` only reaches the storyteller for the first 8 turns — from turn 8 the Summary AI's running summary replaces it — so a mid-game change would be short-lived at best. For mid-game context shifts, use `effectChangeMainInstructions`. Authors who write running plot summaries into `background` are confused when the AI keeps "rewinding" to early-story framing.
 
 The allocation strategy below exists to push every piece of content to the **least-injecting field that still works**.
 
@@ -58,18 +58,18 @@ Populate these for the *minimum* framing every turn needs.
 
 ### NPC dossiers (Tier 3)
 
-NPCs are not always-on — they enter the AI's context when relevant to the scene. Map content to the NPC schema fields:
+NPCs are not always-on — they enter the AI's context when relevant to the scene. The exception is `one_liner`, which is sent every turn for every NPC, so keep it short. Map content to the NPC schema fields:
 
 | NPC field | What belongs here | Notes |
 |---|---|---|
 | `name` | Display name | — |
 | `detail` | Personality, role, motivations, history — the "Character Detail" field | This is the long-form bio |
-| `one_liner` | Brief summary shown in the UI | Synthesize from `detail` |
+| `one_liner` | AI-facing summary — the only NPC field the storyteller sees before the character is first mentioned (see `OTHER_CHARACTERS.md`) | Synthesize from `detail` |
 | `appearance` | Free-form physical description | Used by the AI when describing the NPC in narrative |
 | `location` | Where the NPC is encountered | — |
 | `secret_info` | Info the AI should know but the player should not (hidden motivations, undisclosed identity) | Treated as `secretInfo`-level context |
 | `names` | All aliases the character is known by | Drives name-recognition |
-| `img_appearance` / `img_clothing` | Image-generation prompt text | **Always ask the author for these — do not invent.** These drive the visual identity of the character and the wrong prompt text produces wildly wrong portraits. |
+| `img_appearance` / `img_clothing` | Image-generation prompt text | **Draft them from the author's description (or the character's `appearance`) and confirm them — never from genre defaults.** These drive the visual identity of the character and the wrong prompt text produces wildly wrong portraits. |
 
 Do not embed NPC content in `background`. If an NPC is foundational to the world setup, the *fact of their existence* can go in `background` ("You serve under Captain Anjali, a stern woman who tolerates no excuses"), but the NPC's full description goes in `NPCs`.
 
@@ -95,7 +95,7 @@ For content that is only relevant in specific game phases, or that needs to swap
 
 - **`instructionBlocks[*]`** — Extra always-on blocks. Use when you want a separable chunk of always-on instruction you can later modify via `effectModifyInstructionBlock` (e.g., "Chapter 2 narration rules" replacing "Chapter 1 narration rules").
 - **`triggerEvents`** — Conditional logic that fires effects. Use for:
-  - Plot-phase transitions (`effectChangeObjective`, `effectChangeMainInstructions`). For mid-game context or setting changes, use `effectChangeMainInstructions` — not `effectChangeBackground`, which is Start-of-Game (SoG) only and silently ignored in regular triggers (confirmed by IW import testing, May 2026).
+  - Plot-phase transitions (`effectChangeObjective`, `effectChangeMainInstructions`). For mid-game context or setting changes, use `effectChangeMainInstructions` — not `effectChangeBackground`, which is Start-of-Game (SoG) only and silently ignored in regular triggers (KB-empirical; not probed in this repo).
   - State-dependent AI guidance (`effectTellAIWhatToDo` — one-turn directive, the most reliable steering effect).
   - Hidden information surfacing (`effectGiveInfo` — appended to `secretInfo`, suggestive rather than directive).
   - Tracked item changes (`effectSetTrackedItemValue`).

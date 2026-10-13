@@ -205,6 +205,74 @@ def test_format_world_for_review_missing_file(tmp_path):
     assert "success" not in result
 
 
+def test_format_world_for_review_tilde_path_writes_next_to_world(tmp_path, monkeypatch):
+    """A ``~/`` world path writes the review beside the world it read, not under a
+    literal ``~`` directory in the server's working directory."""
+    from iw_architect.tools.inspection import format_world_for_review
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    cwd = tmp_path / "server_cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    (tmp_path / "world.json").write_text(FIXTURE_PATH.read_text())
+
+    result = json.loads(format_world_for_review("~/world.json"))
+    assert "error" not in result, result
+    assert Path(result["success"]) == tmp_path / "world.review.md"
+    assert (tmp_path / "world.review.md").exists()
+    assert not (cwd / "~").exists()
+
+
+def _world_read_tools():
+    from iw_architect.tools.analysis import audit_world, compare_worlds, get_diff_summary
+    from iw_architect.tools.inspection import format_world_for_review, read_world_field
+    from iw_architect.tools.story_tools import get_character_list
+
+    good = str(FIXTURE_PATH)
+    return {
+        "read_world_field": lambda p: read_world_field(p, "title"),
+        "audit_world": audit_world,
+        "compare_worlds_a": lambda p: compare_worlds(p, good),
+        "compare_worlds_b": lambda p: compare_worlds(good, p),
+        "get_diff_summary_original": lambda p: get_diff_summary(p, good),
+        "get_diff_summary_current": lambda p: get_diff_summary(good, p),
+        "get_character_list": get_character_list,
+        "format_world_for_review": format_world_for_review,
+    }
+
+
+@pytest.mark.parametrize("tool", list(_world_read_tools()))
+@pytest.mark.parametrize("kind", ["directory", "non_utf8"])
+def test_world_read_tools_report_unreadable_file_not_raise(tool, kind, tmp_path):
+    """A directory or non-UTF-8 world path comes back in the tool's own error envelope
+    instead of raising out of the tool."""
+    if kind == "directory":
+        bad = tmp_path
+    else:
+        bad = tmp_path / "latin1.json"
+        bad.write_bytes(b'{"title": "caf\xe9"}')
+
+    result = _world_read_tools()[tool](str(bad))
+    assert "Could not read world file" in result
+
+
+def test_make_draft_world_non_utf8_source_leaves_no_draft(tmp_path):
+    from iw_architect.tools.helpers import make_draft_world
+
+    source = tmp_path / "latin1.json"
+    source.write_bytes(b'{"title": "caf\xe9"}')
+    result = json.loads(make_draft_world(str(source)))
+    assert "Could not read source world" in result["error"]
+    assert list(tmp_path.iterdir()) == [source]
+
+
+def test_create_new_world_json_directory_path_reported_not_raised(tmp_path):
+    from iw_architect.tools.helpers import create_new_world_json
+
+    result = json.loads(create_new_world_json(str(tmp_path)))
+    assert "is a directory" in result["error"]
+
+
 def test_format_world_for_review_invalid_json(tmp_path):
     """Invalid JSON in the world file returns an error envelope."""
     from iw_architect.tools.inspection import format_world_for_review

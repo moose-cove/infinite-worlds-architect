@@ -35,7 +35,7 @@ The AI sees several predefined values every turn alongside the world fields you'
 | `playerAction` | The text the player just submitted |
 | `description` | The selected player character's `possibleCharacters[*].description` field (not the world-level `description`, which is the user-facing world-browser blurb) |
 | `objective` | The world's current `objective` (mutable via `effectChangeObjective`) |
-| `background` | The world's `background` (set at Start-of-Game; `effectChangeBackground` is SoG-only — see §7 and the SoG-only notes) |
+| `background` | The world's `background`, for the first 8 turns only — from turn 8 the Summary AI's running summary replaces it (set at Start-of-Game; `effectChangeBackground` is SoG-only — see the SoG-only notes in [`fields/TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md)) |
 
 If you write `instructions` that say "respond to the player's intent" — that intent is in `playerAction`. If you say "remind the player of their goal" — that's `objective`.
 
@@ -156,7 +156,7 @@ trigger order. The lag-free win applies to
   The new values influence turn N+1 onward. (Note: `effectChangeBackground`
   is **Start-of-Game-only** — it is silently ignored in regular mid-game
   triggers entirely; for mid-game context changes use
-  `effectChangeMainInstructions`. See §7 and the SoG-only notes in
+  `effectChangeMainInstructions`. See the SoG-only notes in
   `TRIGGER_EVENTS.md`.)
 - **`effectTellAIWhatToDo` is a *next-turn* directive.** Its description
   specifies "one-turn instruction" — that's the *single turn after firing*,

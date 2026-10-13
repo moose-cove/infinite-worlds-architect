@@ -2,13 +2,13 @@
 
 > **Provenance:** KB-empirical — these templates come from real IW world builds shared by the community (KB v2.8, May 2026). They are not schema-governed. Each template is a ready-to-use EIB (`instructionBlock`) content block; copy and adapt for your world.
 >
-> **Placement:** These belong in `instructionBlocks` (EIBs), not in `instructions` (Main Instructions). EIBs load alongside MI every turn and are easier to manage and replace individually. See `MAIN_INSTRUCTIONS.md` for EIB vs MI placement guidance.
+> **Placement:** These belong in `instructionBlocks` (EIBs), not in `instructions` (Main Instructions). EIBs load alongside MI every turn and are easier to manage and replace individually. See [`fields/MAIN_INSTRUCTIONS.md`](../fields/MAIN_INSTRUCTIONS.md) for EIB vs MI placement guidance.
 
 ---
 
 ## Claude Taming EIB
 
-For Claude-family models (Smilodon, Massivecat, Lynx, and their `-thinking` variants). Addresses Claude's tendency toward omniscient NPCs, generic names, and unwanted external surveillance forces. Previously called "Lion Herding" — renamed because `lion`/`lion-thinking` were removed from IW.
+For Claude-family models (Smilodon, Massivecat, Lynx, and their `-thinking` variants). Addresses Claude's tendency toward omniscient NPCs, generic names, and unwanted external surveillance forces. Written against the retired Lion (Claude Sonnet 3.7) as "Lion Herding" and carried forward under a new name; whether each line still fixes a failure on current Claude storytellers is untested — keep the lines whose failure you see in playtesting.
 
 If using with `selectedAIProfiles`, set that field to include all relevant Claude model strings. Apply to all thinking variants too — they are distinct model strings.
 

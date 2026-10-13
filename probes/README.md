@@ -656,7 +656,7 @@ intended end state.
 `probes/probe-a-core.json` — 4 errors, 4 warnings. The errors are P1a and P1b (legacy
 bare-array gates), P6 (missing `textComparison`) and P10 (`"player"`-scoped entry) — the four
 constructs the probes proved IW deletes. The warnings are the `conditions`-registry desyncs,
-which are genuinely warnings: P3 showed a desync costs editor selectability, not correctness.
+which stay warnings because what a desync affects (editor-UI selectability versus runtime matching) is still open — see P3/P4.
 
 `probes/probe-b-cap.json` — 4 errors, 2 warnings. Errors: P6b, P6d, P10b, P10c. Warnings: the
 twelve-events-over-ten cap (P11), which stays a warning because import-time enforcement was

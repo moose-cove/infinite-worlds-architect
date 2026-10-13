@@ -30,17 +30,27 @@ reviewable in isolation.
 ```
 src/iw_architect/
 ├── server.py          # MCP server entry point (FastMCP, stdio transport)
-├── validator.py       # Two-tier world validator (jsonschema + custom checks)
+├── validator.py       # Two-tier world validator (jsonschema + custom checks); also the validate_world tool
 ├── schema_model.py    # Deriver: builds SCHEMA_SUMMARY from the JSON Schema at import time
+├── paths.py           # Absolute-path guard shared by every path-taking tool
+├── story/             # Pure story-export parse/query/search package (pydantic models, camelCase wire format)
 └── tools/
     ├── inspection.py  # read_world_field, format_world_for_review, get_schema_summary
     ├── helpers.py     # create_new_world_json, make_draft_world, mint_ids, confirm_path
-    └── analysis.py    # audit_world, compare_worlds, get_diff_summary
+    ├── analysis.py    # audit_world, compare_worlds, get_diff_summary
+    └── story_tools.py # extract_story_data, query_story_data, search_turns, get_character_list
 
 tests/
-├── test_round_trip.py  # Fixture round-trip + scaffold tests (most critical)
-├── test_validator.py   # Negative tests for every error class in §4.6
-└── test_analysis.py    # Tests for audit_world, compare_worlds, get_diff_summary
+├── test_round_trip.py           # Fixture round-trip + scaffold tests (most critical)
+├── test_validator.py            # Negative tests for every error class in dev-docs/DESIGN_BRIEF_v2.md §4.6
+├── test_analysis.py             # Tests for audit_world, compare_worlds, get_diff_summary
+├── test_story_tools.py          # MCP wrappers for the story tools
+├── story/                       # Unit tests for the story package
+├── fixtures/                    # Story-export text fixtures for the story tests
+├── conftest.py                  # Shared pytest fixtures
+├── test_citation_gate.py        # Stop-hook citation gate
+├── test_doc_links.py            # Relative-link integrity across live Markdown docs
+└── test_agent_tool_allowlist.py # Every MCP tool the agent body names is in its tools: allowlist
 
 references/                                          # On-demand authoring + schema references
 ├── README.md                                        # Index, authoring-intent lookup, ID-format table
@@ -93,6 +103,12 @@ probes/                     # Instrument worlds for resolving documented schema 
 ├── probe-f-pawscript-view-mode.json # Live EIB expression switch: choose() over a player-edited tracked item
 ├── probe-f-imported.json           # Probe F after import/export — evidence, do not edit
 └── harness/                # Playwright/CDP scripts that drive live IW, plus committed World Debug transcripts
+
+dev-docs/
+├── DESIGN_BRIEF_v2.md           # Frozen original design brief (§3 source of truth, §4.6 validator checks, §6 tests, §9 open questions)
+└── AGENT_INVOCATION_MODES.md    # How world-architect is reached: spawned subagent vs @-inlined by a command
+
+user-scripts/                    # Browser userscripts for the IW web app (not part of the plugin)
 
 .claude-plugin/
 ├── plugin.json         # Plugin manifest (includes inline `mcpServers` config for the iw-json-tools stdio server)
@@ -154,7 +170,7 @@ When a subagent is going to implement a plan that lives in `claude-scratchpad/`,
 
 `.pre-commit-config.yaml` mirrors the GitHub Actions CI workflow exactly: every check that fails in CI will fail on commit, locally, with the same arguments. This is intentional — it shortens the feedback loop from "wait for CI" to "wait for `git commit`".
 
-**One deliberate, mirrored optimization:** the `pytest` step is gated on whether any Python or JSON (including JSON Schema) files changed. A docs-only commit skips the suite in *both* places — the pre-commit hook uses `files: \.(py|json)$`, and CI's `test` job runs a "Detect Python/JSON changes" step and guards the pytest step with `if: steps.changes.outputs.code == 'true'`. CI's job still runs (so the required "Tests" status check keeps reporting); only the pytest step is skipped. Because the same `.py`/`.json` trigger governs both, the mirror is preserved: for any given set of staged changes, local and CI make the identical run/skip decision. If you change one side's gate, change the other in the same commit.
+**One deliberate, mirrored optimization:** the `pytest` step is gated on whether any Python, JSON (including JSON Schema), or Markdown files changed. Markdown is in the gate because `tests/test_doc_links.py` guards documentation link integrity, so docs-only commits still run the suite; changes that touch none of those types skip it in *both* places — the pre-commit hook uses `files: \.(py|json|md)$`, and CI's `test` job runs a "Detect Python/JSON/Markdown changes" step and guards the pytest step with `if: steps.changes.outputs.code == 'true'`. CI's job still runs (so the required "Tests" status check keeps reporting); only the pytest step is skipped. Because the same `.py`/`.json`/`.md` trigger governs both, the mirror is preserved: for any given set of staged changes, local and CI make the identical run/skip decision. If you change one side's gate, change the other in the same commit.
 
 **Never bypass the pre-commit hook.** Do not run `git commit --no-verify`, do not set `SKIP=...`, do not edit `.pre-commit-config.yaml` to silence checks rather than fix them, and do not delete `.git/hooks/pre-commit`. If the hook is failing, fix the underlying issue — the failure is the system working as designed.
 
@@ -204,7 +220,7 @@ uv run python -m iw_architect.server
 
 (`.venv/bin/python -m iw_architect.server` also works once the venv is built.)
 
-## Source-of-truth rules (from DESIGN_BRIEF_v2.md §3)
+## Source-of-truth rules (from dev-docs/DESIGN_BRIEF_v2.md §3)
 
 1. **`example-world-schema-v2.4.json` is the schema.** If `validate_world` reports errors on the fixture, the validator is wrong — fix the validator to accept the fixture. (`example-world-schema-v2.2.json` and `example-world-schema-v2.1.json` are retained as back-compat fixtures — they must still validate with only warnings, never errors. v2.2 is load-bearing: it is the only fixture carrying the pre-v2.4 bare-array shape for `triggerPrereqs` / `triggerBlockers`.)
 2. **Read before writing.** Always call `Read` on the JSON before any `Edit`.
@@ -215,7 +231,7 @@ uv run python -m iw_architect.server
 
 ## Design constraints
 
-- **No write tools.** The plugin has no add/modify/remove MCP tools. The agent edits `world.json` directly with Claude Code's native `Read`, `Edit`, `Write` tools.
+- **No entity-editing tools.** The plugin has no MCP tools that add, modify, or remove entities inside a world. The agent edits `world.json` directly with Claude Code's native `Read`, `Edit`, `Write` tools. (Some tools do write files: `create_new_world_json` writes a fresh scaffold, `make_draft_world` copies a world and bumps its `version` line, `format_world_for_review` writes a sibling `.review.md`, and `extract_story_data` writes extraction JSON.)
 - **Single source of schema truth.** `references/world_v2.4.schema.json` is the canonical schema artifact. `validator.py` enforces it (Tier 1 jsonschema + Tier 2 custom checks). `schema_model.py` derives `SCHEMA_SUMMARY` from it at import time for the LLM-facing summary. When the platform schema evolves, edit the JSON Schema — the rest follows.
 - **Warn, don't error** on unknown top-level keys, unknown effect types, and future schema versions — the platform may add fields the validator doesn't know about. Build-time strictness is enforced separately by `test_fixture_schema_coverage_nested` in `tests/test_round_trip.py`.
 
@@ -229,7 +245,7 @@ The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it au
    - For a new effect/condition type: add an entry to `$defs.triggerEffect.x-iw-effect-types` or `$defs.triggerCondition.x-iw-condition-types`. Register the type in `validator.py`'s `_KNOWN_EFFECT_TYPES` / `_KNOWN_CONDITION_TYPES` set so it stops warning as "unknown".
 2. **Add cross-reference checks** to `validator.py` if the new field references other entity IDs (e.g. tracked-item, instruction-block, trigger IDs).
 3. **Add a negative test** in `tests/test_validator.py` that constructs a world violating the new rule and asserts `validate_world` reports it.
-4. **Run `uv run pytest`.** The fixture round-trip (§6.1) and nested coverage tests (§6.2) will catch any drift between the schema and the canonical fixture.
+4. **Run `uv run pytest`.** The fixture round-trip (design brief §6.1) and nested coverage tests (§6.2) will catch any drift between the schema and the canonical fixture.
 
 `schema_model.SCHEMA_SUMMARY` and `get_schema_summary()` update automatically — no manual edit needed.
 
@@ -237,7 +253,7 @@ The JSON Schema is the single edit point — `SCHEMA_SUMMARY` derives from it au
 
 Markdown reference files in `references/` and its subdirectories (`fields/`, `mechanics/`, `guidance/`, `patterns/`, `templates/`) use **UPPER_SNAKE_CASE** (e.g., `FIELD_ALLOCATION_STRATEGY.md`, `TRIGGER_EVENTS.md`). This matches the repo's existing `.md` convention (CLAUDE.md, DESIGN_BRIEF_v2.md, etc.). Do not rename files to kebab-case.
 
-## Open questions (from DESIGN_BRIEF_v2.md §9)
+## Open questions (from dev-docs/DESIGN_BRIEF_v2.md §9)
 
 - `illustrationStyle*HighPriority` / `LowPriority` coexistence rules with older `imageStyle*` fields
 

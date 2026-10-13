@@ -154,7 +154,7 @@ def test_audit_detects_unconditioned_trigger(tmp_path):
     world["triggerEvents"] = [
         {
             "id": "TRIG0001",
-            "name": "Always Fires",
+            "name": "Never Fires",
             "triggerEffects": [
                 {
                     "id": "eff-uuid-1111-1111-1111-1111-111111111111",
@@ -170,7 +170,8 @@ def test_audit_detects_unconditioned_trigger(tmp_path):
         result = json.loads(audit_world(path))
         uncond = [f for f in result["findings"] if f["type"] == "unconditioned_triggers"]
         assert len(uncond) == 1
-        assert "Always Fires" in uncond[0]["triggers"]
+        assert "Never Fires" in uncond[0]["triggers"]
+        assert "never fire" in uncond[0]["summary"]
     finally:
         Path(path).unlink(missing_ok=True)
 

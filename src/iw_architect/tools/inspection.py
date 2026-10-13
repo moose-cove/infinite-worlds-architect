@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
 from typing import Any
 
-from iw_architect.paths import require_absolute
+from iw_architect.paths import read_world_text, require_absolute
 from iw_architect.schema_model import SCHEMA_SUMMARY
 
 
@@ -15,7 +14,7 @@ def _load_world(world_path: str) -> dict:
     path = require_absolute(world_path)
     if not path.exists():
         raise FileNotFoundError(f"World file not found: {world_path}")
-    return json.loads(path.read_text())
+    return json.loads(read_world_text(path, world_path))
 
 
 def _resolve_path(world: dict, path: str) -> Any:
@@ -81,14 +80,22 @@ def _resolve_path(world: dict, path: str) -> Any:
 
 
 def read_world_field(world_path: str, path: str) -> str:
-    """Read a single field from a world JSON by path.
+    """Read one value from a world JSON by path, without loading the whole world into context.
 
-    Path syntax examples:
-      background
-      imagePromptDetails.illustrGenre
-      NPCs[name=Finnegan Mosswood].location
-      triggerEvents[0].name
-      possibleCharacters[characterId=0TBwVqX9].skills
+    world_path: absolute path to the world JSON (a leading ``~`` is expanded).
+    path: dot/bracket path — ``key``, ``a.b`` (nested key), ``list[0]`` (index), and
+        ``list[field=value]`` (first entry whose ``field`` equals ``value``, compared as
+        strings). Examples:
+          background
+          imagePromptDetails.illustrGenre
+          NPCs[name=Finnegan Mosswood].location
+          triggerEvents[0].name
+          possibleCharacters[characterId=0TBwVqX9].skills
+
+    Returns ``{"path": str, "value": <any JSON value>}``. On failure returns
+    ``{"error": "..."}`` (relative path, missing or unreadable file, invalid JSON) or
+    ``{"error": "...", "path": str}`` (missing key, index out of range, no matching
+    entry, an unparseable path, or a step applied to the wrong type). Read-only.
     """
     try:
         world = _load_world(world_path)
@@ -284,7 +291,7 @@ def format_world_for_review(world_path: str) -> str:
 
     Returns a JSON envelope:
       {"success": "<absolute path to .review.md>"} on success
-      {"error": "<details>"} on failure (missing file, invalid JSON, write error)
+      {"error": "<details>"} on failure (missing or unreadable file, invalid JSON, write error)
     """
     try:
         world = _load_world(world_path)
@@ -297,7 +304,9 @@ def format_world_for_review(world_path: str) -> str:
 
     try:
         markdown = _render_world_markdown(world)
-        output_path = Path(world_path).resolve().with_suffix(".review.md")
+        # Same normalization _load_world applied (expands a leading ``~``), so the
+        # review lands next to the world that was actually read.
+        output_path = require_absolute(world_path).resolve().with_suffix(".review.md")
         output_path.write_text(markdown, encoding="utf-8")
     except OSError as exc:
         return json.dumps({"error": f"Failed to write review file: {exc}"})
@@ -306,5 +315,13 @@ def format_world_for_review(world_path: str) -> str:
 
 
 def get_schema_summary() -> str:
-    """Return the canonical schema as structured JSON — entity types, fields, enums, etc."""
+    """Return a compact JSON summary derived from references/world_v2.4.schema.json.
+
+    Keys: ``schemaVersion``; ``topLevelFields`` and ``entityTypes`` (per field: type,
+    required, category, enum, note, default, description; per entity: description, ID
+    field, ID format, and its fields); ``conditionTypes``; ``effectTypes``;
+    ``templateVariables``. Use it to check which fields and effect/condition types
+    exist; read the schema file or the canonical fixture for full detail. Takes no
+    arguments; read-only.
+    """
     return json.dumps(SCHEMA_SUMMARY, indent=2)

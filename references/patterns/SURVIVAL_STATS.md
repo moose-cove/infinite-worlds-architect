@@ -4,7 +4,7 @@
 
 ---
 
-## Pattern 2 — Survival Stats Single-TI Pattern
+## Survival Stats Single-TI Pattern
 
 A single `text` TI with detailed numerical update rules per stat. The AI updates all stats in one TI following the rules each turn.
 
@@ -27,10 +27,12 @@ Example stat set: Hunger, Thirst, Sleep, Body Temperature, Stamina. Each stat en
 {
   "id": "SrvStats",
   "name": "Survival Stats",
+  "positionInList": 0,
   "dataType": "text",
   "visibility": "ai_only",
   "autoUpdate": true,
   "updateInstructions": "Update on every turn. Stats: Hunger (decreases 5/turn, +30 from meal, max 100, min 0), Thirst (decreases 8/turn, +40 from drink, max 100, min 0). Never exceed 100 or go below 0.",
+  "description": "",
   "initialValue": "Hunger: 80\nThirst: 80"
 }
 ```
@@ -53,23 +55,26 @@ fields, mutated by an `effectRunScript` trigger instead of AI narration:
 {
   "id": "SrvStats",
   "name": "Survival Stats",
+  "positionInList": 0,
   "dataType": "yaml",
   "variableName": "survival_stats",
   "visibility": "ai_only",
   "autoUpdate": false,
+  "description": "",
   "initialValue": "hunger: 80\nthirst: 80"
 }
 ```
 
-Trigger (fires every turn — `canTriggerMoreThanOnce: true`, no conditions
-needed beyond that):
+Trigger (fires every turn — `canTriggerMoreThanOnce: true` plus one always-true gate,
+e.g. a `triggerOnPawScript` condition with `"data": "$survival_stats.hunger >= 0"`;
+a trigger with no conditions never fires, see [`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#how-triggers-work)):
 
 ```
 $survival_stats.hunger -= 5
-if $survival_stats.hunger < 0:
+if $survival_stats.hunger < 0
   $survival_stats.hunger = 0
 $survival_stats.thirst -= 8
-if $survival_stats.thirst < 0:
+if $survival_stats.thirst < 0
   $survival_stats.thirst = 0
 ```
 

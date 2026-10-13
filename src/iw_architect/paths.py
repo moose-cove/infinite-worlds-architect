@@ -42,6 +42,27 @@ class RelativePathError(FileNotFoundError):
     """
 
 
+class WorldReadError(FileNotFoundError):
+    """Raised when a world path exists but cannot be read as UTF-8 text.
+
+    Covers a directory, an unreadable file, and non-UTF-8 bytes. Subclasses
+    ``FileNotFoundError`` for the same reason as ``RelativePathError``: every
+    tool's existing ``FileNotFoundError`` handler reports it in that tool's own
+    error envelope instead of letting it propagate.
+    """
+
+
+def read_world_text(path: Path, world_path: str) -> str:
+    """Read a world file as UTF-8, or raise ``WorldReadError``.
+
+    ``world_path`` is the caller's original argument, used in the message.
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise WorldReadError(f"Could not read world file {world_path}: {exc}") from exc
+
+
 def require_absolute(path: str) -> Path:
     """Expand ``~`` and return an absolute ``Path``, or raise ``RelativePathError``.
 

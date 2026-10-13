@@ -4,7 +4,7 @@
 
 ---
 
-## Pattern 4 — NPC Appearance Cache TI
+## NPC Appearance Cache TI
 
 An `ai_only` `text` TI that the AI maintains as a rolling cache of recently-seen NPC appearances. Keeps image generation consistent for recurring NPCs without relying on context window memory (which degrades over long games).
 
@@ -14,10 +14,12 @@ An `ai_only` `text` TI that the AI maintains as a rolling cache of recently-seen
 {
   "id": "AppCache",
   "name": "Appearance tracking",
+  "positionInList": 0,
   "dataType": "text",
   "visibility": "ai_only",
   "autoUpdate": true,
   "updateInstructions": "Add or update entries for all NPCs met this turn. Remove NPCs not mentioned in the last 7 turns. MAX 100 words total. Per NPC: age, ethnicity, height, build, hair, eyes, notable features only.",
+  "description": "",
   "initialValue": ""
 }
 ```
@@ -43,6 +45,9 @@ The one piece that genuinely is mechanical bookkeeping is the "remove
 NPCs not mentioned in the last 7 turns" clause — that's pure turn-count
 arithmetic once you know which NPCs were touched this turn. If you adopt
 the YAML structure above, an `effectRunScript` trigger firing every turn
+(`canTriggerMoreThanOnce: true` plus one always-true condition — a trigger
+with no conditions never fires; see
+[`TRIGGER_EVENTS.md`](../fields/TRIGGER_EVENTS.md#how-triggers-work))
 can increment each entry's `lastSeenTurn` gap and prune entries past the
 threshold deterministically, leaving the AI responsible only for adding/
 updating entries it actually observed — not for correctly counting turns
