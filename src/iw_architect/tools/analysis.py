@@ -182,9 +182,38 @@ def _iter_leaf_conditions(
             continue
         if cond.get("category") == "logic" and isinstance(cond.get("data"), list):
             op = cond.get("operator")
-            yield from _iter_leaf_conditions(cond["data"], (*operators, str(op or "and")))
+            # A block with no operator is recorded as "?" rather than assumed AND: how IW
+            # combines it is undocumented, so callers hedge it like any non-AND block.
+            yield from _iter_leaf_conditions(cond["data"], (*operators, str(op or "?")))
         else:
             yield cond, operators
+
+
+def _leaf_polarity(operators: tuple[str, ...]) -> tuple[str, bool]:
+    """Return ``(wanted, necessary)`` for a leaf under the ``operators`` chain.
+
+    ``wanted`` is ``"TRUE"`` or ``"FALSE"``: the leaf value that pushes the trigger toward
+    firing. ``necessary`` is whether the trigger cannot fire without it. NONE OF is read as
+    AND-of-negations (the editor label), so it flips the polarity of everything it wraps,
+    and inside an odd number of NONE OFs an OR behaves like an AND and vice versa. Walks
+    outermost first; an unknown operator makes the leaf not necessary.
+    """
+    positive = True
+    necessary = True
+    for op in operators:
+        if op == "and" or op == "none_of":
+            # AND, and NONE OF (an AND of negations), make each child necessary only when
+            # the block itself is being asked to be true.
+            if not positive:
+                necessary = False
+            if op == "none_of":
+                positive = not positive
+        elif op == "or":
+            if positive:
+                necessary = False
+        else:
+            necessary = False
+    return ("TRUE" if positive else "FALSE"), necessary
 
 
 def audit_world(world_path: str) -> str:
@@ -365,7 +394,9 @@ def audit_world(world_path: str) -> str:
                 if cond.get("type") != "triggerOnTrackedItem":
                     continue
                 raw_data = cond.get("data")
-                data = raw_data if isinstance(raw_data, dict) else {}
+                # Flat-shaped conditions carry the payload on the condition itself; resolve
+                # them the way the validator does so their textComparison is not missed.
+                data = raw_data if isinstance(raw_data, dict) else cond
                 tid = cond.get("trackedItemID") or data.get("trackedItemID")
                 if tid not in menu_items:
                     continue
@@ -383,14 +414,19 @@ def audit_world(world_path: str) -> str:
                     shown_ops = " > ".join(op.upper() for op in operators)
                     fires = (
                         f"so on its own it is true only for {satisfied_by}. It sits inside a "
-                        f"{shown_ops} logic block, so whether the trigger fires also depends "
-                        "on the block's other branches"
+                        f"{shown_ops} logic block, so whether the trigger fires may also "
+                        "depend on the block's other branches"
                     )
-                    if "none_of" in operators:
+                    wanted, necessary = _leaf_polarity(operators)
+                    if necessary:
+                        fires += f" — the trigger needs this test to be {wanted}"
+                    else:
                         fires += (
-                            " — and under NONE OF the trigger needs this test to be FALSE "
-                            "(NONE OF semantics are read off the editor label, unprobed)"
+                            f" — this test helps the trigger fire when it is {wanted}, but "
+                            "is not required"
                         )
+                    if "none_of" in operators:
+                        fires += " (NONE OF semantics are read off the editor label, unprobed)"
                 else:
                     fires = f"so it fires ONLY for {satisfied_by}"
                 findings.append(

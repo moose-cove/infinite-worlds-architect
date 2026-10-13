@@ -1050,7 +1050,7 @@ def test_audit_menu_backed_does_not_contain_is_inverted():
 
 @pytest.mark.parametrize("operator", ["or", "none_of"])
 def test_audit_menu_backed_leaf_under_or_or_none_of_is_hedged(operator):
-    # Under OR the leaf alone is not necessary; under NONE OF the trigger needs it FALSE.
+    # Under OR the leaf alone is not required; under NONE OF the trigger needs it FALSE.
     # Neither may be reported as "fires ONLY for players whose choice matches".
     detail = _menu_detail(
         _menu_world(
@@ -1060,6 +1060,61 @@ def test_audit_menu_backed_leaf_under_or_or_none_of_is_hedged(operator):
     assert "fires ONLY" not in detail
     assert "other branches" in detail
     assert ("needs this test to be FALSE" in detail) == (operator == "none_of")
+
+
+@pytest.mark.parametrize(
+    ("outer", "inner", "expected"),
+    [
+        # NONE OF(NONE OF(a, ...)) = a OR ...: the negations cancel, and the leaf is optional.
+        ("none_of", "none_of", "helps the trigger fire when it is TRUE, but is not required"),
+        # OR(NONE OF(a), ...): FALSE helps, but another OR branch can fire the trigger.
+        ("or", "none_of", "helps the trigger fire when it is FALSE, but is not required"),
+        # NONE OF(OR(a, ...)) = AND(NOT a, ...): every OR branch must be FALSE.
+        ("none_of", "or", "the trigger needs this test to be FALSE"),
+        # NONE OF(AND(a, ...)): any false AND child satisfies it, so FALSE only helps.
+        ("none_of", "and", "helps the trigger fire when it is FALSE, but is not required"),
+    ],
+)
+def test_audit_menu_backed_nested_logic_polarity(outer, inner, expected):
+    world = _menu_world(
+        ["Basic Images", "Premium Advanced Images"], nest_in_logic=True, operator=inner
+    )
+    trigger = world["triggerEvents"][0]
+    trigger["triggerConditions"] = [
+        {
+            "id": "cond-uuid-8888-8888-8888-8888-888888888888",
+            "category": "logic",
+            "operator": outer,
+            "data": trigger["triggerConditions"],
+        }
+    ]
+    detail = _menu_detail(world)
+    assert f"{outer.upper()} > {inner.upper()}" in detail
+    assert expected in detail
+    assert "fires ONLY" not in detail
+
+
+def test_audit_menu_backed_leaf_under_operatorless_block_is_hedged():
+    # IW's handling of a logic block with no operator is undocumented, so it is not read as AND.
+    world = _menu_world(["Basic Images", "Premium Advanced Images"], nest_in_logic=True)
+    del world["triggerEvents"][0]["triggerConditions"][0]["operator"]
+    detail = _menu_detail(world)
+    assert "fires ONLY" not in detail
+    assert "inside a ? logic block" in detail
+    assert "but is not required" in detail
+
+
+def test_audit_menu_backed_flat_does_not_contain_is_inverted():
+    # A flat-shaped condition (payload on the condition, no `data` object) must still have
+    # its textComparison read, or does_not_contain gets the un-inverted wording.
+    world = _menu_world(
+        ["Basic Images", "Premium Advanced Images"], text_comparison="does_not_contain"
+    )
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]
+    leaf.update(leaf.pop("data"))
+    detail = _menu_detail(world)
+    assert "fires ONLY for players whose choice does NOT match" in detail
+    assert "does_not_contain 'Basic Images'" in detail
 
 
 def test_audit_menu_backed_leaf_under_and_is_unhedged():

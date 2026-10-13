@@ -2707,7 +2707,9 @@ def test_unknown_logic_operator_still_errors():
     # Widening the enum must not switch it off: a value the editor never offers stays an error.
     result = _validate(_editor_logic_world("xor"))
     assert not result["valid"]
-    assert any("operator" in e and "xor" in e for e in result["errors"]), result["errors"]
+    # Exactly once: Tier 1 reports the top-level operator, so Tier 2's nested check must not.
+    hits = [e for e in result["errors"] if "xor" in e]
+    assert len(hits) == 1 and "operator" in hits[0], result["errors"]
 
 
 def _nest_logic_world(inner_operator: str) -> dict:
@@ -2748,6 +2750,23 @@ def test_nested_tracked_item_condition_missing_text_comparison_errors():
     result = _validate(world)
     assert not result["valid"]
     assert any("textComparison" in e and "missing" in e for e in result["errors"]), result["errors"]
+
+
+def test_nested_tracked_item_condition_non_string_required_value_errors():
+    world = _editor_logic_world("or")
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]["data"][0]
+    leaf["data"]["requiredValue"] = 3
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("requiredValue must be a string" in e for e in result["errors"]), result["errors"]
+
+
+def test_nested_tracked_item_condition_empty_inequality_warns():
+    world = _editor_logic_world("and")
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]["data"][0]
+    leaf["data"]["inequality"] = ""
+    result = _validate(world)
+    assert any("inequality is empty string" in w for w in result["warnings"]), result["warnings"]
 
 
 def test_does_not_contain_text_comparison_is_accepted():

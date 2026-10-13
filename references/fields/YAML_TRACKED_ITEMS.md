@@ -26,7 +26,7 @@ functions (`.count()`, `.where(…)`, `for each`, …) are designed to walk. See
 
 | `dataType` | Use for | Notes |
 |---|---|---|
-| `text` | Inventory lists, location names, qualitative states, comma-separated tags | Most flexible scalar. Supports the `contains` / `does_not_contain` comparisons in `triggerOnTrackedItem`. |
+| `text` | Inventory lists, location names, qualitative states, comma-separated tags | Most flexible scalar. Supports the `contains` / `does_not_contain` comparisons in `triggerOnTrackedItem` (`does_not_contain` editor-observed 2026-09-30, import unprobed). |
 | `number` | Health, gold, counters, skill scores, meters | Required for arithmetic and the `at_least` / `is_exactly` / `at_most` / `not_equal` operators. |
 | `yaml` | **Structured state** — lists of records, maps of stats, mini-databases | **Recommended** structured format. Walkable by PawScript collection functions. |
 | `xml` | Legacy structured state | **DEPRECATED.** Older worlds used `xml` for structured state. Preserve it on round-trip, but author new structured items as `yaml`. |
@@ -140,10 +140,14 @@ the name would derive.
 whitespace and special characters into **one** `_`, and drop any leading or trailing
 `_`. That reproduces all six fixture handles and the owner's example, and it always
 satisfies the validator's `^[a-z][a-z0-9_]*$` check, except when the name starts
-with a digit or has non-ASCII letters (see below). Then adjust the handle by hand. It is the plugin's choice, not a verified copy of IW's algorithm.
+with a digit or has non-ASCII letters (see below), or has no ASCII letters or digits
+at all (which leaves an empty handle). Then adjust the handle by hand. It is the plugin's choice, not a verified copy of IW's algorithm.
 
 **Still unverified** (don't rely on any of these until probed):
 
+- **Absent `variableName`.** Does import generate a handle for an item that has
+  none? Every fixture and probe tracked item carries one, so this has never been
+  observed. Always author it.
 - **Runs of special characters.** Does IW turn `A - B` into `a_b` or `a___b`? The
   fixture's `Puppy Tracking - YAML …` → `puppy_tracking_yaml_…` is the one
   data point, and it points to collapsing, but the fixture can't show whether IW
