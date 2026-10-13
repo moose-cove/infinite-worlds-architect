@@ -2710,6 +2710,46 @@ def test_unknown_logic_operator_still_errors():
     assert any("operator" in e and "xor" in e for e in result["errors"]), result["errors"]
 
 
+def _nest_logic_world(inner_operator: str) -> dict:
+    """An OR block whose only child is a logic block with ``inner_operator``."""
+    world = _editor_logic_world(inner_operator)
+    trigger = world["triggerEvents"][0]
+    trigger["triggerConditions"] = [
+        {
+            "id": "eeac5aa8-13cc-cc5a-f032-2016af92a391",
+            "category": "logic",
+            "operator": "or",
+            "data": trigger["triggerConditions"],
+        }
+    ]
+    return world
+
+
+def test_nested_none_of_is_accepted():
+    result = _validate(_nest_logic_world("none_of"))
+    assert result["valid"], result["errors"]
+
+
+def test_nested_unknown_operator_errors_once():
+    # Tier 1 cannot see below the top level (`data` is unconstrained), so Tier 2 re-checks
+    # nested blocks against the same enum. Before, a nested "xor" validated clean.
+    result = _validate(_nest_logic_world("xor"))
+    assert not result["valid"]
+    hits = [e for e in result["errors"] if "xor" in e]
+    assert len(hits) == 1 and "nested logic condition" in hits[0], result["errors"]
+
+
+def test_nested_tracked_item_condition_missing_text_comparison_errors():
+    # The textComparison rule used to read only top-level conditions, so the leaves of every
+    # editor-made And / Or / None Of block escaped it.
+    world = _editor_logic_world("none_of")
+    leaf = world["triggerEvents"][0]["triggerConditions"][0]["data"][0]
+    del leaf["data"]["textComparison"]
+    result = _validate(world)
+    assert not result["valid"]
+    assert any("textComparison" in e and "missing" in e for e in result["errors"]), result["errors"]
+
+
 def test_does_not_contain_text_comparison_is_accepted():
     # Editor export for a text item set to "Does not contain" — inequality is still written
     # (as at_least) alongside the text comparison.
@@ -2725,6 +2765,27 @@ def test_does_not_contain_text_comparison_is_accepted():
     result = _validate(world)
     assert result["valid"], result["errors"]
     assert not any("textComparison" in e for e in result["errors"]), result["errors"]
+
+
+@pytest.mark.parametrize(
+    ("tc", "warns"),
+    [("contains", False), ("does_not_contain", False), ("not_contains", True)],
+)
+def test_unknown_text_comparison_value_warns(tc, warns):
+    # Known values come from the schema registry; anything else is probably a typo. Warn,
+    # don't error — the platform may carry values the 2026-09-30 editor survey missed.
+    world = _trigger_world_with_condition(
+        {
+            "trackedItemID": "ITEM00001",
+            "inequality": "at_least",
+            "requiredValue": "x",
+            "textComparison": tc,
+        }
+    )
+    result = _validate(world)
+    assert result["valid"], result["errors"]
+    hit = any("not a known value" in w and tc in w for w in result["warnings"])
+    assert hit == warns, result["warnings"]
 
 
 def test_logic_registry_matches_tier1_operator_enum():

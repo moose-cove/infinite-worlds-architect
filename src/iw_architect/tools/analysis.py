@@ -163,11 +163,17 @@ def _menu_backed_items(world: dict) -> dict[str, dict]:
     return menu
 
 
-def _iter_leaf_conditions(conditions: Any) -> Iterator[dict]:
-    """Yield leaf trigger conditions, descending into compound logic groups.
+def _iter_leaf_conditions(
+    conditions: Any, operators: tuple[str, ...] = ()
+) -> Iterator[tuple[dict, tuple[str, ...]]]:
+    """Yield ``(leaf, operators)`` for each leaf trigger condition, descending into logic groups.
 
     A compound condition has ``category == "logic"`` and a list ``data`` of
     sub-conditions; leaves carry a ``type`` (e.g. ``triggerOnTrackedItem``).
+    ``operators`` is the chain of enclosing logic operators, outermost first, so a
+    caller can tell a leaf the trigger needs to be TRUE (top level, or under ``and``)
+    from one whose effect depends on sibling branches (``or``) or is inverted
+    (``none_of``).
     """
     if not isinstance(conditions, list):
         return
@@ -175,9 +181,10 @@ def _iter_leaf_conditions(conditions: Any) -> Iterator[dict]:
         if not isinstance(cond, dict):
             continue
         if cond.get("category") == "logic" and isinstance(cond.get("data"), list):
-            yield from _iter_leaf_conditions(cond["data"])
+            op = cond.get("operator")
+            yield from _iter_leaf_conditions(cond["data"], (*operators, str(op or "and")))
         else:
-            yield cond
+            yield cond, operators
 
 
 def audit_world(world_path: str) -> str:
@@ -354,7 +361,7 @@ def audit_world(world_path: str) -> str:
     if menu_items:
         for te in world.get("triggerEvents", []):
             tname = te.get("name", te.get("id", "?"))
-            for cond in _iter_leaf_conditions(te.get("triggerConditions", [])):
+            for cond, operators in _iter_leaf_conditions(te.get("triggerConditions", [])):
                 if cond.get("type") != "triggerOnTrackedItem":
                     continue
                 raw_data = cond.get("data")
@@ -366,6 +373,26 @@ def audit_world(world_path: str) -> str:
                 options = item["options"]
                 comparison = data.get("textComparison") or data.get("inequality") or "?"
                 required = data.get("requiredValue", "?")
+                # does_not_contain inverts which choices satisfy the leaf (its meaning is read
+                # off the editor's "Does not contain" label; import/runtime unprobed).
+                if data.get("textComparison") == "does_not_contain":
+                    satisfied_by = "players whose choice does NOT match"
+                else:
+                    satisfied_by = "players whose choice matches"
+                if any(op != "and" for op in operators):
+                    shown_ops = " > ".join(op.upper() for op in operators)
+                    fires = (
+                        f"so on its own it is true only for {satisfied_by}. It sits inside a "
+                        f"{shown_ops} logic block, so whether the trigger fires also depends "
+                        "on the block's other branches"
+                    )
+                    if "none_of" in operators:
+                        fires += (
+                            " — and under NONE OF the trigger needs this test to be FALSE "
+                            "(NONE OF semantics are read off the editor label, unprobed)"
+                        )
+                else:
+                    fires = f"so it fires ONLY for {satisfied_by}"
                 findings.append(
                     {
                         "type": "menu_backed_condition",
@@ -379,8 +406,8 @@ def audit_world(world_path: str) -> str:
                             f"menu: the player selects exactly one of {options} at character "
                             f"selection, and that single choice becomes the active value. The "
                             f"condition ({comparison} '{required}') is evaluated against the "
-                            "player's chosen value, so it fires ONLY for players whose choice "
-                            f"matches — it is NOT always-true merely because the menu lists "
+                            f"player's chosen value, {fires} — it is NOT always-true merely "
+                            "because the menu lists "
                             f"'{required}'. Reason about which single option satisfies it before "
                             "concluding the trigger always (or never) fires."
                         ),

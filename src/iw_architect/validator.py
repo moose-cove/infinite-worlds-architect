@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -382,17 +383,34 @@ def _check_cross_field_invariants(world: dict, errors: list[str], warnings: list
 
 
 def _check_logic_conditions(world: dict, errors: list[str], warnings: list[str]) -> None:
-    def _check_conditions(conditions: list[dict], trigger_name: str, advanced: bool) -> None:
+    # Tier 1 enforces the operator enum only on top-level conditions: the schema leaves a
+    # condition's `data` unconstrained, so nothing reaches a logic block nested inside
+    # another. Re-check nested blocks here against the same enum (read from the schema so
+    # there is one list), and skip depth 0 so a top-level bad operator is reported once.
+    allowed_ops = _get_schema()["$defs"]["triggerCondition"]["properties"]["operator"]["enum"]
+
+    def _check_conditions(
+        conditions: Any, trigger_name: str, advanced: bool, depth: int = 0
+    ) -> None:
+        if depth > _MAX_CONDITION_DEPTH or not isinstance(conditions, list):
+            return
         for cond in conditions:
+            if not isinstance(cond, dict):
+                continue
             if cond.get("category") == "logic" and not advanced:
                 errors.append(
                     f"Trigger '{trigger_name}': logic condition (id={cond.get('id')}) "
                     "requires advancedLogic: true on the trigger"
                 )
             if cond.get("category") == "logic":
-                sub = cond.get("data", [])
-                if isinstance(sub, list):
-                    _check_conditions(sub, trigger_name, advanced)
+                op = cond.get("operator")
+                if depth > 0 and "operator" in cond and op not in allowed_ops:
+                    errors.append(
+                        f"Trigger '{trigger_name}': nested logic condition "
+                        f"(id={cond.get('id')}) has operator {op!r}, which is not one of "
+                        f"{allowed_ops}"
+                    )
+                _check_conditions(cond.get("data", []), trigger_name, advanced, depth + 1)
 
     for trigger in world.get("triggerEvents", []):
         advanced = trigger.get("advancedLogic", False)
@@ -450,11 +468,35 @@ def _check_tracked_item_condition_data(world: dict, errors: list[str], warnings:
 
     The empty-``inequality`` case below was NOT part of the probe and keeps its original
     severity rather than inheriting a result it did not earn.
+
+    Leaves nested inside ``category: "logic"`` blocks are checked too. The probe's
+    conditions were all top-level, so applying the rules to nested leaves is an
+    extrapolation, but it is the same extrapolation the triggerOnPawScript errors already
+    make. The editor puts every And / Or / None Of leaf there, and skipping them meant a
+    nested condition missing ``textComparison`` validated clean.
     """
+
+    known_text_comparisons = set(
+        _get_schema()["$defs"]["triggerCondition"]["x-iw-condition-types"]["triggerOnTrackedItem"][
+            "textComparisons"
+        ]
+    )
+
+    def _leaves(conditions: Any, depth: int = 0) -> Iterator[dict]:
+        if depth > _MAX_CONDITION_DEPTH or not isinstance(conditions, list):
+            return
+        for cond in conditions:
+            if not isinstance(cond, dict):
+                continue
+            if cond.get("category") == "logic":
+                yield from _leaves(cond.get("data"), depth + 1)
+            else:
+                yield cond
+
     for trigger in world.get("triggerEvents", []):
         tname = trigger.get("name", trigger.get("id", "?"))
-        for cond in trigger.get("triggerConditions", []):
-            if not isinstance(cond, dict) or cond.get("type") != "triggerOnTrackedItem":
+        for cond in _leaves(trigger.get("triggerConditions", [])):
+            if cond.get("type") != "triggerOnTrackedItem":
                 continue
             data = cond.get("data")
             cond_id = cond.get("id", "?")
@@ -484,6 +526,14 @@ def _check_tracked_item_condition_data(world: dict, errors: list[str], warnings:
                     f"data.textComparison is {shown} — IW deletes the whole condition on "
                     "import, leaving the trigger under-gated with no error. Set a non-empty "
                     'string (e.g. "contains") or remove the condition'
+                )
+            elif tc not in known_text_comparisons:
+                # Warn, don't error: the platform may have values the editor survey missed,
+                # but a typo like "not_contains" otherwise passes silently.
+                warnings.append(
+                    f"Trigger '{tname}' condition '{cond_id}': triggerOnTrackedItem "
+                    f"data.textComparison {tc!r} is not a known value "
+                    f"({', '.join(sorted(known_text_comparisons))})"
                 )
 
             # rec 2: non-string requiredValue causes an AttributeError crash on IW import
@@ -891,8 +941,8 @@ def _check_pawscript_conditions(world: dict, errors: list[str], warnings: list[s
 
     The random-chance dialect is mixed: ``turn_number`` and ``random`` appear as bare
     identifiers, so only ``$``-prefixed roots are checked and the bare tokens pass
-    untouched. Walks nested ``category: "logic"`` trees so a scripted test inside an
-    and/or combinator is checked too.
+    untouched. Walks nested ``category: "logic"`` trees so a scripted test inside any
+    combinator (and / or / none_of) is checked too.
     """
     variable_names = set(_collect_variable_names(world))
     legal = variable_names | _SCRIPT_NATIVES
