@@ -44,7 +44,8 @@ disabled (`dangerouslyDisableSandbox`) or to be run from a plain terminal.
 - **Never pick an editor checkbox by position.** "Show optional features" is the editor's
   last checkbox in DOM order. With a trigger card expanded, the first visible checkbox is
   that trigger's "Trigger at start of game". `iwdrive.labelled_checkbox` / `set_checkbox`
-  match the checkbox by its exact `<label>` text and check the resulting state.
+  match the checkbox by its exact `<label>` text and set it by state, never by a blind
+  click. `raw_json_box` uses them for both "Show optional features" and "Show raw JSON".
 - The import alert can arrive 10–20 s after the click on a large world — poll, don't sleep.
   Sequence: overwrite confirmation first, then (after the OK, up to ~20 s later) the
   "World imported from raw JSON." alert, which intercepts every click until dismissed —
