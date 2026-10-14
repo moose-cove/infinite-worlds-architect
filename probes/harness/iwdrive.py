@@ -14,9 +14,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 CDP = "http://127.0.0.1:9222"
 
@@ -140,15 +142,42 @@ def menu_path(pg: Page, *path: str) -> None:
         pg.wait_for_timeout(800)
 
 
-def discard_editor(pg: Page) -> None:
-    """Leave the editor without saving (confirms the 'discard all your changes?' prompt)."""
+WORLD_LIST_MARKER = 'button:has-text("Back to current adventure")'
+
+
+def at_world_list(pg: Page) -> bool:
+    return bool(vis(pg, WORLD_LIST_MARKER).count()) and not open_modal_ids(pg)
+
+
+def discard_editor(pg: Page, timeout_ms: int = 30000) -> None:
+    """Leave the editor without saving.
+
+    IW asks "discard all your changes?" and, after the OK, shows a "Changes discarded." alert
+    that blocks the world list until it is dismissed. Like the import alert (`import_json`),
+    it can arrive many seconds after the confirm, so poll for up to `timeout_ms`: OK every
+    dialog that appears, stop once the "Changes discarded." alert is dismissed or the world
+    list is showing with no dialog open. Raises RuntimeError if the world list never appears.
+    """
     vis(pg, 'button:has-text("Discard changes")').first.click()
-    for _ in range(10):
-        pg.wait_for_timeout(400)
-        if dialog_text(pg):
+    deadline = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < deadline:
+        t = dialog_text(pg)
+        if t:
+            log("dialog after discard: " + t[:120].replace("\n", " / "))
             close_all_modals(pg, prefer=("OK",))
+            if "changes discarded" in t.lower():
+                break
+        elif at_world_list(pg):
             break
-    wait_for(pg, 'button:has-text("Back to current adventure")', 30000)
+        pg.wait_for_timeout(500)
+    try:
+        wait_for(pg, WORLD_LIST_MARKER, 10000)
+    except PlaywrightTimeoutError as e:
+        raise RuntimeError(
+            "discard_editor: world list did not appear; open dialog: " + repr(dialog_text(pg)[:200])
+        ) from e
+    # A dialog that was not dismissed in time would block the next click; clear it now.
+    settle_dialogs(pg, 1000)
     pg.wait_for_timeout(800)
 
 
@@ -193,12 +222,41 @@ def open_editor(pg: Page, title: str):
     pg.wait_for_timeout(800)
 
 
-def raw_json_box(pg: Page):
-    """From the editor: reveal the raw-JSON textarea; return its locator."""
-    cb = pg.locator("input[type=checkbox]").locator("visible=true").first  # Show optional features
-    if not cb.is_checked():
+OPTIONAL_FEATURES = "Show optional features"
+
+
+def labelled_checkbox(pg: Page, label: str):
+    """The single visible checkbox whose <label> text is exactly `label`.
+
+    Never pick a checkbox by position: the editor's first visible checkbox is "Show optional
+    features" only until a trigger card is open, after which it can be that trigger's
+    "Trigger at start of game". Raises RuntimeError unless exactly one visible checkbox
+    matches and its wrapping <label> reads `label`.
+    """
+    loc = pg.get_by_role("checkbox", name=label, exact=True).locator("visible=true")
+    n = loc.count()
+    if n != 1:
+        raise RuntimeError(f"expected one visible {label!r} checkbox, found {n}")
+    cb = loc.first
+    actual = cb.evaluate("e => { const l = e.closest('label'); return l ? l.innerText : null; }")
+    if (actual or "").strip() != label:
+        raise RuntimeError(f"checkbox matched {label!r} but its <label> reads {actual!r}")
+    return cb
+
+
+def set_checkbox(pg: Page, label: str, checked: bool = True) -> None:
+    """Tick (or untick) the checkbox labelled exactly `label`, then confirm the new state."""
+    cb = labelled_checkbox(pg, label)
+    if cb.is_checked() != checked:
         cb.click()
         pg.wait_for_timeout(600)
+        if cb.is_checked() != checked:
+            raise RuntimeError(f"{label!r} checkbox did not change to checked={checked}")
+
+
+def raw_json_box(pg: Page):
+    """From the editor: reveal the raw-JSON textarea; return its locator."""
+    set_checkbox(pg, OPTIONAL_FEATURES, True)
     if not vis(pg, 'button:has-text("Refresh raw JSON")').count():
         if not vis(pg, 'text="Show raw JSON"').count():
             vis(pg, 'button:has-text("Misc advanced features")').first.click()
