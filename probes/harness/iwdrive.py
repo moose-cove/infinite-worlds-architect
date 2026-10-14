@@ -14,9 +14,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 CDP = "http://127.0.0.1:9222"
 
@@ -140,27 +142,69 @@ def menu_path(pg: Page, *path: str) -> None:
         pg.wait_for_timeout(800)
 
 
-def discard_editor(pg: Page) -> None:
-    """Leave the editor without saving (confirms the 'discard all your changes?' prompt)."""
-    vis(pg, 'button:has-text("Discard changes")').first.click()
-    for _ in range(10):
-        pg.wait_for_timeout(400)
+WORLD_LIST_MARKER = 'button:has-text("Back to current adventure")'
+EDITOR_MARKER = 'button:has-text("Discard changes")'
+
+
+def at_world_list(pg: Page) -> bool:
+    """World list showing and no dialog with text open (same test as `dialog_text`, so an
+    empty leftover `.modal` neither blocks this nor goes undismissed)."""
+    return bool(vis(pg, WORLD_LIST_MARKER).count()) and not dialog_text(pg)
+
+
+def discard_editor(pg: Page, timeout_ms: int = 30000) -> None:
+    """Leave the editor without saving.
+
+    With unsaved changes IW asks "Are you sure you wish to discard all your changes to this
+    world?" and, after the OK, may show a "Changes discarded." alert that hides the world list
+    until it is dismissed. With no changes it shows neither. Like the import alert
+    (`import_json`), the alert can arrive many seconds after the confirm, so poll for up to
+    `timeout_ms`: OK every dialog that appears (logging each one closed), and stop once the
+    "Changes discarded." alert is closed or the world list is showing with no dialog open.
+    Raises RuntimeError if the world list never appears or a dialog will not close.
+    """
+    vis(pg, EDITOR_MARKER).first.click()
+    deadline = time.monotonic() + timeout_ms / 1000
+    done = False
+    while not done and time.monotonic() < deadline:
         if dialog_text(pg):
-            close_all_modals(pg, prefer=("OK",))
-            break
-    wait_for(pg, 'button:has-text("Back to current adventure")', 30000)
+            closed = close_all_modals(pg, prefer=("OK",))
+            for c in closed:
+                log("dialog after discard: " + c)
+            done = any("changes discarded" in c.lower() for c in closed)
+        elif at_world_list(pg):
+            done = True
+        if not done:
+            pg.wait_for_timeout(500)
+    if not done:
+        log(f"discard_editor: {timeout_ms} ms deadline passed; dialog: {dialog_text(pg)[:120]!r}")
+        for c in close_all_modals(pg, prefer=("OK",)):  # an alert that came in just too late
+            log("dialog after discard (late): " + c)
+    try:
+        wait_for(pg, WORLD_LIST_MARKER, 10000)
+    except PlaywrightTimeoutError as e:
+        raise RuntimeError(
+            "discard_editor: world list did not appear; open dialog: "
+            + repr(dialog_text(pg)[:200])
+            + ("; the editor is still open" if vis(pg, EDITOR_MARKER).count() else "")
+        ) from e
+    # A dialog that was not dismissed in time would block the next click; clear it now.
+    for s in settle_dialogs(pg, 1000, max_ms=10000):
+        log("dialog after discard (settle): " + s)
+    if dialog_text(pg):
+        raise RuntimeError(f"discard_editor: dialog will not close: {dialog_text(pg)[:200]!r}")
     pg.wait_for_timeout(800)
 
 
 def goto_world_list(pg: Page):
     close_all_modals(pg, prefer=("OK", "Cancel"))
-    if vis(pg, 'button:has-text("Back to current adventure")').count():
+    if vis(pg, WORLD_LIST_MARKER).count():
         return
-    if vis(pg, 'button:has-text("Discard changes")').count():  # in an editor
+    if vis(pg, EDITOR_MARKER).count():  # in an editor
         discard_editor(pg)
         return
     menu_click(pg, "World Browser", "Start new adventure / Edit adventure")
-    wait_for(pg, 'button:has-text("Back to current adventure")', 30000)
+    wait_for(pg, WORLD_LIST_MARKER, 30000)
     pg.wait_for_timeout(1000)
 
 
@@ -189,21 +233,51 @@ def open_editor(pg: Page, title: str):
     # dispatch_event, not click(): the top row can sit under .iw-top-bar-overlay, which
     # intercepts real pointer clicks.
     row.first.get_by_role("button", name="Edit", exact=True).first.dispatch_event("click")
-    wait_for(pg, 'button:has-text("Discard changes")', 30000)
+    wait_for(pg, EDITOR_MARKER, 30000)
     pg.wait_for_timeout(800)
+
+
+OPTIONAL_FEATURES = "Show optional features"
+
+
+def labelled_checkbox(pg: Page, label: str):
+    """The single visible checkbox whose <label> text is exactly `label`.
+
+    Never pick a checkbox by position: the editor's first visible checkbox is "Show optional
+    features" only until a trigger card is open, after which it can be that trigger's
+    "Trigger at start of game". Raises RuntimeError unless exactly one visible checkbox
+    matches and its wrapping <label> reads `label`.
+    """
+    loc = pg.get_by_role("checkbox", name=label, exact=True).locator("visible=true")
+    n = loc.count()
+    if n != 1:
+        raise RuntimeError(f"expected one visible {label!r} checkbox, found {n}")
+    cb = loc.first
+    actual = cb.evaluate("e => { const l = e.closest('label'); return l ? l.innerText : null; }")
+    if (actual or "").strip() != label:
+        raise RuntimeError(f"checkbox matched {label!r} but its <label> reads {actual!r}")
+    return cb
+
+
+def set_checkbox(pg: Page, label: str, checked: bool = True) -> None:
+    """Tick (or untick) the checkbox labelled exactly `label`. A no-op when it is already in
+    that state; Playwright's `set_checked` raises if the state does not change."""
+    cb = labelled_checkbox(pg, label)
+    if cb.is_checked() != checked:
+        cb.set_checked(checked)
+        pg.wait_for_timeout(600)
 
 
 def raw_json_box(pg: Page):
     """From the editor: reveal the raw-JSON textarea; return its locator."""
-    cb = pg.locator("input[type=checkbox]").locator("visible=true").first  # Show optional features
-    if not cb.is_checked():
-        cb.click()
-        pg.wait_for_timeout(600)
+    set_checkbox(pg, OPTIONAL_FEATURES, True)
     if not vis(pg, 'button:has-text("Refresh raw JSON")').count():
         if not vis(pg, 'text="Show raw JSON"').count():
             vis(pg, 'button:has-text("Misc advanced features")').first.click()
             pg.wait_for_timeout(600)
-        vis(pg, 'text="Show raw JSON"').first.click()
+        # By label and state, not a blind click: if "Show raw JSON" is already ticked (its
+        # section was merely collapsed), clicking its text would untick it.
+        set_checkbox(pg, "Show raw JSON", True)
         wait_for(pg, 'button:has-text("Refresh raw JSON")')
         pg.wait_for_timeout(600)
     box = (
@@ -262,14 +336,7 @@ def import_json(pg: Page, title: str, src: Path):
     d = dialog_text(pg)
     if d:
         log("dialog after save:\n" + d[:1500])
-    log(
-        "import done; now at: "
-        + (
-            "world list"
-            if vis(pg, 'button:has-text("Back to current adventure")').count()
-            else pg.url
-        )
-    )
+    log("import done; now at: " + ("world list" if vis(pg, WORLD_LIST_MARKER).count() else pg.url))
 
 
 # ---------------------------------------------------------------- main
@@ -306,13 +373,21 @@ def open_modal_ids(pg: Page) -> list[str]:
     )
 
 
-def close_all_modals(pg: Page, prefer=("Cancel", "OK", "Close")) -> None:
-    """Dismiss stacked Bootstrap modals topmost-first (Anvil stacks alert-modal, alert-modal-1…)."""
+def close_all_modals(pg: Page, prefer=("Cancel", "OK", "Close")) -> list[str]:
+    """Dismiss stacked Bootstrap modals topmost-first (Anvil stacks alert-modal, alert-modal-1…).
+
+    Returns the (shortened) text of each modal it tried to close, in order, so callers can
+    log or test what was dismissed."""
+    acted: list[str] = []
     for _ in range(6):
         ids = open_modal_ids(pg)
         if not ids:
-            return
+            return acted
         top = ids[-1]
+        try:
+            acted.append(pg.locator(f"#{top}").inner_text(timeout=2000)[:120].replace("\n", " / "))
+        except Exception:  # noqa: BLE001 — modal detached mid-read; still try to close it
+            acted.append(f"<#{top}, text unreadable>")
         for label in prefer:
             b = pg.locator(f'#{top} button:has-text("{label}")').locator("visible=true")
             if b.count():
@@ -325,13 +400,20 @@ def close_all_modals(pg: Page, prefer=("Cancel", "OK", "Close")) -> None:
         else:
             pg.keyboard.press("Escape")
             pg.wait_for_timeout(400)
+    return acted
 
 
-def settle_dialogs(pg: Page, quiet_ms: int = 4000, prefer=("OK",)) -> list[str]:
-    """Dismiss dialogs as they appear until none shows up for quiet_ms; return their texts."""
+def settle_dialogs(
+    pg: Page, quiet_ms: int = 4000, prefer=("OK",), max_ms: int | None = None
+) -> list[str]:
+    """Dismiss dialogs as they appear until none shows up for quiet_ms; return their texts.
+
+    `max_ms` caps the total time, so a dialog that will not close cannot hang the caller;
+    the caller should check `dialog_text` afterwards if that matters."""
     seen: list[str] = []
     idle = 0
-    while idle < quiet_ms:
+    stop = None if max_ms is None else time.monotonic() + max_ms / 1000
+    while idle < quiet_ms and (stop is None or time.monotonic() < stop):
         t = dialog_text(pg)
         if t:
             seen.append(t[:60].replace("\n", " / "))
@@ -346,17 +428,17 @@ def settle_dialogs(pg: Page, quiet_ms: int = 4000, prefer=("OK",)) -> list[str]:
 def recover(pg: Page) -> None:
     """Get back to the world list from any state (reload if needed)."""
     close_all_modals(pg, prefer=("OK", "Cancel"))
-    if vis(pg, 'button:has-text("Discard changes")').count():
-        discard_editor(pg)
-    if not vis(pg, 'button:has-text("Back to current adventure")').count():
-        try:
-            goto_world_list(pg)
-        except Exception:  # noqa: BLE001
-            pg.reload(wait_until="domcontentloaded")
-            pg.wait_for_timeout(6000)
-            pg.evaluate("() => sessionStorage.setItem('iwx','1')")
-            settle_dialogs(pg, 2000)
-            goto_world_list(pg)
+    if vis(pg, WORLD_LIST_MARKER).count():
+        return
+    try:
+        goto_world_list(pg)  # discards the editor first if one is open
+    except Exception as e:  # noqa: BLE001 — reloading never saves, so it is a safe fallback
+        log(f"recover: {e!r}; reloading")
+        pg.reload(wait_until="domcontentloaded")
+        pg.wait_for_timeout(6000)
+        pg.evaluate("() => sessionStorage.setItem('iwx','1')")
+        settle_dialogs(pg, 2000)
+        goto_world_list(pg)
 
 
 if __name__ == "__main__":
