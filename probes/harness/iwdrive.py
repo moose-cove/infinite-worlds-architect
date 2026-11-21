@@ -4,7 +4,10 @@ drives its own tab. Nothing here spends credits except `turn`.
   python iwdrive.py worlds                          list "Your Worlds" titles
   python iwdrive.py export-json --world T out.json  editor → raw JSON → Refresh → save → discard
   python iwdrive.py import-json --world T in.json   editor → raw JSON → paste → Import → Save & exit
+  python iwdrive.py recover                         dismiss dialogs, get back to the world list
   python iwdrive.py snap                            aria snapshot + any open dialog text
+
+`--world T` matches the first "Your Worlds" row whose text contains T.
 
 Game-play helpers (turns, World Debug, tracked items) live in play_probe_d.py.
 """
@@ -81,20 +84,19 @@ def log(msg: str):
 
 class MenuEntryMissing(RuntimeError):
     """A menu entry was not found. A RuntimeError, not SystemExit, so callers such as
-    `recover()` (reload fallback) and `open_option()` (legacy-menu fallback) can catch it."""
+    `recover()` (reload fallback) can catch it."""
 
 
 def _visible_entry(pg: Page, name: str, timeout_ms: int = 3000):
-    """First visible menuitem (2026-09 UI) or legacy button matching `name`, polling briefly
-    because the menu can render a beat after it is opened; None if neither appears."""
+    """First visible `role=menuitem` whose accessible name contains `name`, polling briefly
+    because the menu can render a beat after it is opened; None if none appears.
+
+    Partial match on purpose: entries carry a second line ("World Browser / Play a new world
+    or create your own", "AI model / DOLPHIN")."""
     for _ in range(max(1, timeout_ms // 250)):
-        for loc in (
-            pg.get_by_role("menuitem", name=name, exact=False),
-            pg.locator(f'button:has-text("{name}")'),
-        ):
-            v = loc.locator("visible=true")
-            if v.count():
-                return v.first
+        v = pg.get_by_role("menuitem", name=name, exact=False).locator("visible=true")
+        if v.count():
+            return v.first
         pg.wait_for_timeout(250)
     return None
 
@@ -107,31 +109,22 @@ def open_menu(pg: Page):
     pg.wait_for_timeout(800)
 
 
-def menu_click(pg: Page, *names: str) -> str:
-    """Open the menu and click the first entry whose name contains any of `names`.
+def menu_click(pg: Page, name: str) -> None:
+    """Open the menu and click the top-level entry whose name contains `name`.
 
-    The 2026-09 UI renders the menu as `role=menu` / `role=menuitem` ("World Browser …",
-    "AI model", "Settings", …); before that the entries were plain buttons ("Start new
-    adventure / Edit adventure", "Illustration options", …). Both are tried, so callers pass
-    the new name first and the old one as a fallback.
+    The menu is `role=menu` / `role=menuitem`: World Browser, the ongoing game(s), Save
+    game, Load game, Restart game, Image style, AI model, Export story, Comic Maker, and a
+    Settings submenu (see `menu_path`).
     """
-    open_menu(pg)
-    for i, name in enumerate(names):
-        # Only the first name gets the full render wait; fallbacks are checked quickly.
-        entry = _visible_entry(pg, name, 3000 if i == 0 else 250)
-        if entry is not None:
-            entry.click()
-            pg.wait_for_timeout(800)
-            return name
-    raise MenuEntryMissing(f"no menu entry among {names!r}")
+    menu_path(pg, name)
 
 
 def menu_path(pg: Page, *path: str) -> None:
     """Open the menu and follow a submenu path, e.g. ("Settings", "World debug tools").
 
-    The 2026-09 UI moved "World debug tools" and "Illustration options" under a
-    "Settings" submenu (also "Storyteller mode", "Keep menu bar on screen"). Each hop
-    clicks a menuitem (or a legacy button) by partial name.
+    "Settings" holds Storyteller mode, World debug tools (only while Storyteller mode is
+    on), Illustration options and Keep menu bar on screen. Each hop clicks a menuitem by
+    partial name.
     """
     open_menu(pg)
     for name in path:
@@ -203,15 +196,16 @@ def goto_world_list(pg: Page):
     if vis(pg, EDITOR_MARKER).count():  # in an editor
         discard_editor(pg)
         return
-    menu_click(pg, "World Browser", "Start new adventure / Edit adventure")
+    menu_click(pg, "World Browser")
     wait_for(pg, WORLD_LIST_MARKER, 30000)
     pg.wait_for_timeout(1000)
 
 
 def your_world_rows(pg: Page):
-    # "Your Worlds" is the first grid on the list screen (Anvil keeps hidden Edit buttons in the
-    # DOM of every row, so filter by grid, not by button presence).
-    return pg.locator("[role=grid]").first.locator("[role=row]")
+    # "Your Worlds" is the first grid on the list screen, a Tabulator table. Its hidden header
+    # (`.tabulator-headers`, text "uuid") is also a `role=row`, so select the data rows by
+    # class. Every row keeps hidden Play/Edit/… buttons in the DOM, so scope to the grid.
+    return pg.locator("[role=grid]").first.locator(".tabulator-row")
 
 
 def list_worlds(pg: Page) -> list[str]:
@@ -229,7 +223,7 @@ def open_editor(pg: Page, title: str):
     if row.count() == 0:
         raise SystemExit(f"no 'Your Worlds' row matches {title!r}")
     if row.count() > 1:
-        log(f"{row.count()} rows match {title!r} (nested row elements?) — using the first")
+        log(f"{row.count()} rows match {title!r} — using the first (top of the list)")
     # dispatch_event, not click(): the top row can sit under .iw-top-bar-overlay, which
     # intercepts real pointer clicks.
     row.first.get_by_role("button", name="Edit", exact=True).first.dispatch_event("click")
@@ -301,6 +295,9 @@ def export_json(pg: Page, title: str, out: Path):
     discard_editor(pg)
 
 
+IMPORT_TIMEOUT_S = 180
+
+
 def import_json(pg: Page, title: str, src: Path):
     text = src.read_text()
     json.loads(text)
@@ -317,17 +314,25 @@ def import_json(pg: Page, title: str, src: Path):
     if d:
         log("dialog after import:\n" + d[:1500])
         dismiss_alert(pg)
-    # That dismissed the overwrite confirmation. The "World imported from raw JSON."
-    # alert arrives up to ~20s AFTER the confirm and intercepts every click until it
-    # is closed — poll for it and dismiss before touching the Save button.
-    for _ in range(60):
+    # That dismissed the overwrite confirmation. The "World imported from raw JSON." alert
+    # arrives well AFTER the confirm (over 35 s for Probe C's 12-trigger world on
+    # 2026-11-21) and intercepts every click until closed. Saving before it arrives saves
+    # the editor's pre-import state over the import, so wait for it, and refuse to save
+    # without it.
+    imported = False
+    deadline = time.monotonic() + IMPORT_TIMEOUT_S
+    while not imported and time.monotonic() < deadline:
         pg.wait_for_timeout(500)
         d = dialog_text(pg)
         if d:
             log("dialog after confirm: " + d[:200].replace("\n", " / "))
             dismiss_alert(pg)
-            if "imported" in d:
-                break
+            imported = "imported" in d
+    if not imported:
+        raise RuntimeError(
+            f"import_json: no 'World imported from raw JSON.' alert within {IMPORT_TIMEOUT_S}s;"
+            " not saving (the editor is still open)"
+        )
     vis(pg, 'button:has-text("Save changes and exit")').first.click()
     for _ in range(30):
         pg.wait_for_timeout(500)
@@ -335,8 +340,12 @@ def import_json(pg: Page, title: str, src: Path):
             break
     d = dialog_text(pg)
     if d:
+        # "Changes saved!" or "No changes to save." (seen both after an import); either
+        # blocks the world list until OK'd.
         log("dialog after save:\n" + d[:1500])
-    log("import done; now at: " + ("world list" if vis(pg, WORLD_LIST_MARKER).count() else pg.url))
+        close_all_modals(pg, prefer=("OK",))
+    wait_for(pg, WORLD_LIST_MARKER, 30000)
+    log("import done; back at the world list")
 
 
 # ---------------------------------------------------------------- main

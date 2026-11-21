@@ -27,11 +27,10 @@ def main() -> None:
     resume = "--resume" in sys.argv[2:]
     with sync_playwright() as pw:
         pg = d.our_page(pw.chromium.connect_over_cdp(d.CDP).contexts[0])
-        if resume:
-            d.settle_dialogs(pg, 1500)
-        else:
+        d.settle_dialogs(pg, 1500)
+        pd.prepare_play_settings(pg)
+        if not resume:
             pd.start_new_game(pg, out)
-        pd.set_option(pg, "Illustration options", "never")
         pd.enable_world_debug(pg)
         (out / "turn1-debug.txt").write_text(pd.debug_modal(pg))
         (out / "turn1-items.txt").write_text(pd.tracked_items(pg))
