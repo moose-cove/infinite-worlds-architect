@@ -36,7 +36,16 @@ disabled (`dangerouslyDisableSandbox`) or to be run from a plain terminal.
   `get_by_role("button", name="Edit", exact=True)`.
 - Import flow: paste → **Import JSON to world** → "Are you sure you wish to overwrite…" → OK →
   "World imported from raw JSON." The import **persists immediately**; **Save changes and
-  exit** afterwards reports "No changes to save." **Discard changes** asks for confirmation.
+  exit** afterwards reports "No changes to save." **Discard changes** asks for confirmation
+  when the editor holds unsaved changes ("Are you sure you wish to discard all your changes
+  to this world?"), and may then show a "Changes discarded." alert that hides the world list
+  until it is OK'd. That alert has arrived more than 4 s after the confirm, so
+  `discard_editor` polls for it for up to 30 s.
+- **Never pick an editor checkbox by position.** "Show optional features" is the editor's
+  last checkbox in DOM order. With a trigger card expanded, the first visible checkbox is
+  that trigger's "Trigger at start of game". `iwdrive.labelled_checkbox` / `set_checkbox`
+  match the checkbox by its exact `<label>` text and set it by state, never by a blind
+  click. `raw_json_box` uses them for both "Show optional features" and "Show raw JSON".
 - The import alert can arrive 10–20 s after the click on a large world — poll, don't sleep.
   Sequence: overwrite confirmation first, then (after the OK, up to ~20 s later) the
   "World imported from raw JSON." alert, which intercepts every click until dismissed —
