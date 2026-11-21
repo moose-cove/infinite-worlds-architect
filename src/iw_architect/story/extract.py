@@ -37,6 +37,7 @@ from iw_architect.story.models import (
     ExtractionSummary,
     Manifest,
     Source,
+    TrackedSplit,
     TrackedState,
     Turn,
     TurnIndex,
@@ -47,8 +48,38 @@ from iw_architect.story.tracked import generate_snapshots, split_tracked_items
 
 #: Cap on per-turn key-set-change warnings in the no-names fallback.
 _MAX_KEYSET_WARNINGS = 10
+#: Cap on per-name diagnostic warnings in known-names mode.
+_MAX_NAME_WARNINGS = 20
 #: Cap on turn numbers / names listed inside a single warning.
 _MAX_LISTED = 8
+
+_SECTIONS = (
+    ("Tracked Items", "tracked_items"),
+    ("Hidden Tracked Items", "hidden_tracked_items"),
+)
+
+#: Known-names diagnostic kind → warning template (``{label}``, ``{line}``, ``{turns}``).
+_NAME_WARNING_TEMPLATES = {
+    "merged_unlisted": (
+        "{label}: line {line} is not in tracked_item_names, so it was kept inside the value "
+        "of the listed item above it (turns {turns}). Add the name if it is a real item."
+    ),
+    "leading_unlisted": (
+        "{label}: line {line} comes before the first listed item and is not in "
+        "tracked_item_names; it was kept as its own item (turns {turns}). Add the name if it "
+        "is a real item."
+    ),
+    "fallback_unlisted": (
+        "{label}: no line matched a name in tracked_item_names, so the blank-line rule was "
+        "used and line {line} became an item (turns {turns}). Check that the names belong "
+        "to the world that produced this story."
+    ),
+    "listed_inside_value": (
+        "{label}: line {line} matches a name in tracked_item_names but does not open the "
+        "section or follow a blank line, or repeats an earlier name line, so it was kept "
+        "inside the value it sits in (turns {turns})."
+    ),
+}
 
 
 def _fmt_list(values: list) -> str:
@@ -61,25 +92,46 @@ def _fmt_list(values: list) -> str:
 def _tracked_item_warnings(
     parsed_turns: list[Turn],
     tracked_item_names: list[str] | None,
-    unknown_by_key: dict[tuple[str, str], list[int]],
+    splits: list[tuple[int, str, TrackedSplit]],
 ) -> list[str]:
-    """Manifest warnings that flag a suspected tracked-item mis-split."""
+    """Manifest warnings that flag a suspected tracked-item mis-split.
+
+    ``splits`` holds ``(turn number, section label, TrackedSplit)`` for every
+    section that was present.
+    """
     warnings: list[str] = []
-    sections = (
-        ("Tracked Items", "tracked_items"),
-        ("Hidden Tracked Items", "hidden_tracked_items"),
-    )
+
+    unassigned_turns = sorted({n for n, _, s in splits if s.unassigned_lines})
+    if unassigned_turns:
+        total = sum(s.unassigned_lines for _, _, s in splits)
+        warnings.append(
+            f"{total} non-blank line(s) before the first tracked-item name could not be "
+            f"assigned to any item and were dropped (turns {_fmt_list(unassigned_turns)})."
+        )
 
     if tracked_item_names:
-        for (label, key), turn_numbers in unknown_by_key.items():
+        by_kind: dict[tuple[str, str, str], list[int]] = {}
+        for number, label, split in splits:
+            for kind in _NAME_WARNING_TEMPLATES:
+                for key in getattr(split, kind):
+                    turns = by_kind.setdefault((kind, label, key), [])
+                    if number not in turns:
+                        turns.append(number)
+        name_warnings = [
+            _NAME_WARNING_TEMPLATES[kind].format(
+                label=label, line=repr(key + ":"), turns=_fmt_list(turns)
+            )
+            for (kind, label, key), turns in by_kind.items()
+        ]
+        warnings.extend(name_warnings[:_MAX_NAME_WARNINGS])
+        if len(name_warnings) > _MAX_NAME_WARNINGS:
             warnings.append(
-                f"{label}: line {key + ':'!r} looks like a tracked-item name but is not in "
-                f"tracked_item_names (turns {_fmt_list(turn_numbers)}); its lines were kept "
-                "inside the preceding item's value. Add the name if it is a real item."
+                f"… {len(name_warnings) - _MAX_NAME_WARNINGS} more tracked-item name "
+                "warnings not listed."
             )
         seen: set[str] = set()
         for t in parsed_turns:
-            for _, attr in sections:
+            for _, attr in _SECTIONS:
                 seen.update(getattr(t, attr) or {})
         missing = [n for n in tracked_item_names if n not in seen]
         if missing:
@@ -91,9 +143,9 @@ def _tracked_item_warnings(
 
     # No names: items normally appear on every turn, so a key set that changes
     # from one turn to the next is a strong sign a multi-line value was split.
+    ordered = sorted(parsed_turns, key=lambda t: t.number)
     changes: list[str] = []
-    for label, attr in sections:
-        ordered = sorted(parsed_turns, key=lambda t: t.number)
+    for label, attr in _SECTIONS:
         for prev, cur in zip(ordered, ordered[1:], strict=False):
             a, b = getattr(prev, attr), getattr(cur, attr)
             if a is None or b is None or a.keys() == b.keys():
@@ -110,6 +162,19 @@ def _tracked_item_warnings(
     if len(changes) > _MAX_KEYSET_WARNINGS:
         warnings.append(
             f"… {len(changes) - _MAX_KEYSET_WARNINGS} more tracked-item key-set changes not listed."
+        )
+
+    # One aggregated note: column-0 "Key:" lines that stayed inside values.
+    inside = [(n, s.column0_key_lines_in_values) for n, _, s in splits]
+    total_inside = sum(c for _, c in inside)
+    if total_inside:
+        turns_inside = len({n for n, c in inside if c})
+        warnings.append(
+            f"Without tracked_item_names, {total_inside} column-0 'Key:' line(s) on "
+            f"{turns_inside} turn(s) were kept inside tracked-item values, because only a name "
+            "line that opens the section or follows a blank line starts a new item. That is "
+            "expected for YAML map values; but if this export does not separate items with "
+            "blank lines, items were merged. Pass tracked_item_names to anchor item boundaries."
         )
     return warnings
 
@@ -146,7 +211,8 @@ def extract_story_data(
         normally every ``trackedItems[*].name`` of the world that produced the
         story, hidden items included.  Applied to both the ``Tracked Items`` and
         ``Hidden Tracked Items`` sections: only a line naming one of them starts a
-        new item.  Without it, a blank-line boundary heuristic is used.
+        listed item, and the header's ``Starting Tracked Items`` are parsed with
+        the same names.  Without it, a blank-line boundary heuristic is used.
 
     Returns
     -------
@@ -184,22 +250,28 @@ def extract_story_data(
             source_text[src] = raw
 
     # Parse metadata from header — returns a Metadata model.
-    metadata = parse_header(header_text)
+    metadata = parse_header(header_text, tracked_item_names)
 
     # Parse each turn — compute line_range relative to its source file.
     parsed_turns: list[Turn] = []
-    unknown_by_key: dict[tuple[str, str], list[int]] = {}
+    splits: list[tuple[int, str, TrackedSplit]] = []
     for t in raw_turns:
         number = t.number
         content = t.content
         src = t.source
 
         sections = parse_turn_sections(content, number)
-        tracked, unknown_t = split_tracked_items(sections.tracked_items, tracked_item_names)
-        hidden, unknown_h = split_tracked_items(sections.hidden_tracked_items, tracked_item_names)
-        for label, unknown in (("Tracked Items", unknown_t), ("Hidden Tracked Items", unknown_h)):
-            for key in unknown:
-                unknown_by_key.setdefault((label, key), []).append(number)
+        tracked_split = split_tracked_items(sections.tracked_items, tracked_item_names)
+        hidden_split = split_tracked_items(sections.hidden_tracked_items, tracked_item_names)
+        tracked, hidden = tracked_split.items, hidden_split.items
+        for (label, _), raw_section, split in zip(
+            _SECTIONS,
+            (sections.tracked_items, sections.hidden_tracked_items),
+            (tracked_split, hidden_split),
+            strict=True,
+        ):
+            if raw_section is not None:
+                splits.append((number, label, split))
 
         # Compute line_range: find the turn marker in the source file.
         src_lines = source_lines[src]
@@ -244,7 +316,7 @@ def extract_story_data(
             )
         )
 
-    warnings.extend(_tracked_item_warnings(parsed_turns, tracked_item_names, unknown_by_key))
+    warnings.extend(_tracked_item_warnings(parsed_turns, tracked_item_names, splits))
 
     # Build TurnIndex directly from the parsed Turn models.
     turn_index = TurnIndex(turns=parsed_turns)

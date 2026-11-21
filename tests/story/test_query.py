@@ -315,3 +315,42 @@ class TestQueryChangesOnly:
     def test_rejected_for_turn_index(self, extracted_yaml):
         with pytest.raises(ValueError, match="changes_only is only supported"):
             query_story_data(extracted_yaml, "turn_index", items=["Level"], changes_only=True)
+
+
+class TestQueryItemsEdges:
+    def test_changes_only_compares_hidden_items(self, extracted_yaml):
+        result = query_story_data(
+            extracted_yaml, "tracked_state", items=["Secret Plans"], changes_only=True
+        )
+        assert _ranges(result) == [(1, 2), (3, 3)]
+        assert all(s.tracked_items == {} for s in result.snapshots)
+
+    def test_tracked_state_projection_empties_hidden(self, extracted_yaml):
+        result = query_story_data(extracted_yaml, "tracked_state", items=["Level"])
+        assert all(s.hidden_tracked_items == {} for s in result.snapshots)
+
+    def test_padded_upper_case_resolves(self, extracted_yaml):
+        result = query_story_data(extracted_yaml, "tracked_state", items=[" EXP "])
+        assert list(result.snapshots[0].tracked_items) == ["Exp "]
+
+    def test_order_follows_request(self, extracted_yaml):
+        result = query_story_data(extracted_yaml, "tracked_state", items=["Dead", "Level"])
+        assert list(result.snapshots[0].tracked_items) == ["Dead", "Level"]
+        turns = query_story_data(extracted_yaml, "turn_index", items=["Dead", "Level"])
+        assert list(turns.turns[0].tracked_items) == ["Dead", "Level"]
+
+    def test_duplicate_requested_names_collapse(self, extracted_yaml):
+        result = query_story_data(
+            extracted_yaml, "tracked_state", items=["Level", "level", "Level"]
+        )
+        assert list(result.snapshots[0].tracked_items) == ["Level"]
+
+    def test_absent_section_stays_none(self, extracted_no_hidden):
+        result = query_story_data(extracted_no_hidden, "tracked_state", items=["Miles Walked"])
+        assert all(s.hidden_tracked_items is None for s in result.snapshots)
+        assert all(list(s.tracked_items) == ["Miles Walked"] for s in result.snapshots)
+
+    @pytest.mark.parametrize("category", ["tracked_state", "turn_index"])
+    def test_empty_items_rejected(self, extracted_yaml, category):
+        with pytest.raises(ValueError, match="items must name at least one tracked item"):
+            query_story_data(extracted_yaml, category, items=[])

@@ -5,8 +5,8 @@ import os
 
 import pytest
 
-from iw_architect.story.extract import extract_story_data
-from iw_architect.story.models import ExtractionSummary
+from iw_architect.story.extract import _tracked_item_warnings, extract_story_data
+from iw_architect.story.models import ExtractionSummary, Turn
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "..", "fixtures")
 
@@ -346,7 +346,9 @@ class TestYamlTrackedItems:
         summary = extract_story_data(
             [fixture("story_export_yaml_tracked.txt")], str(tmp_path / "b")
         )
-        assert summary.warnings == []
+        # Only the aggregated "column-0 keys kept inside values" note (YAML map keys).
+        assert len(summary.warnings) == 1
+        assert "19 column-0 'Key:' line(s) on 3 turn(s)" in summary.warnings[0]
         assert _turns(tmp_path / "a") == _turns(tmp_path / "b")
 
     def test_no_key_starts_with_whitespace(self, tmp_path):
@@ -359,10 +361,41 @@ class TestYamlTrackedItems:
         summary = extract_story_data(
             [fixture("story_export_yaml_tracked.txt")], str(tmp_path), tracked_item_names=names
         )
-        assert len(summary.warnings) == 1
-        assert "'Notes:'" in summary.warnings[0]
-        assert "1, 2, 3" in summary.warnings[0]
+        assert summary.warnings == [
+            "Tracked Items: line 'Notes:' is not in tracked_item_names, so it was kept inside "
+            "the value of the listed item above it (turns 1, 2, 3). Add the name if it is a "
+            "real item."
+        ]
         assert "Notes" not in _turns(tmp_path)[0]["trackedItems"]
+        assert _turns(tmp_path)[0]["trackedItems"]["Deeds"].endswith("Notes:\nStarted the journey.")
+
+    def test_leading_unlisted_item_kept_and_warned(self, tmp_path):
+        names = [n for n in YAML_NAMES if n != "Level"]
+        summary = extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")], str(tmp_path), tracked_item_names=names
+        )
+        assert [t["trackedItems"]["Level"] for t in _turns(tmp_path)] == ["1", "1", "2"]
+        with open(tmp_path / "tracked_state.json") as fh:
+            snaps = json.load(fh)["snapshots"]
+        assert all("Level" in s["trackedItems"] for s in snaps)
+        assert summary.warnings == [
+            "Tracked Items: line 'Level:' comes before the first listed item and is not in "
+            "tracked_item_names; it was kept as its own item (turns 1, 2, 3). Add the name if "
+            "it is a real item."
+        ]
+
+    def test_section_with_no_listed_name_warns_truthfully(self, tmp_path):
+        names = [n for n in YAML_NAMES if n != "Secret Plans"]
+        summary = extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")], str(tmp_path), tracked_item_names=names
+        )
+        assert list(_turns(tmp_path)[0]["hiddenTrackedItems"]) == ["Secret Plans"]
+        assert len(summary.warnings) == 1
+        assert summary.warnings[0].startswith(
+            "Hidden Tracked Items: no line matched a name in tracked_item_names, so the "
+            "blank-line rule was used and line 'Secret Plans:' became an item (turns 1, 2, 3)."
+        )
+        assert "kept inside" not in summary.warnings[0]
 
     def test_never_matched_name_warns(self, tmp_path):
         summary = extract_story_data(
@@ -403,3 +436,112 @@ class TestYamlTrackedItems:
         summary = extract_story_data([str(src)], str(tmp_path / "out"))
         assert len(summary.warnings) == 11
         assert summary.warnings[-1].startswith("… 3 more tracked-item key-set changes")
+
+
+def _export(tmp_path, *turn_sections: tuple[str, str | None]) -> str:
+    """Write a minimal export whose turns have the given (tracked, hidden) section bodies."""
+    parts = ["== T ==\n"]
+    for n, (tracked, hidden) in enumerate(turn_sections, start=1):
+        action = "" if n == 1 else "Action\n------\nGo.\n\n"
+        body = f"\n-- Turn {n} --\n\n{action}Outcome\n-------\nA.\n\n"
+        body += f"Tracked Items\n-------------\n{tracked}\n\n"
+        if hidden is not None:
+            body += f"Hidden Tracked Items\n--------------------\n{hidden}\n\n"
+        parts.append(body)
+    path = tmp_path / "export.txt"
+    path.write_text("".join(parts))
+    return str(path)
+
+
+def _turn(number: int, tracked: dict | None, hidden: dict | None = None) -> Turn:
+    return Turn(
+        number=number,
+        action=None,
+        outcome=None,
+        secret_info=None,
+        tracked_items=tracked,
+        hidden_tracked_items=hidden,
+        source="/fake.txt",
+        line_range=(1, 1),
+    )
+
+
+class TestTrackedItemDiagnostics:
+    def test_names_apply_to_hidden_section(self, tmp_path):
+        src = _export(tmp_path, ("Level:\n1", "Plans:\nstep one\n\nBackup:\nyes"))
+        extract_story_data([src], str(tmp_path / "named"), tracked_item_names=["Level", "Plans"])
+        extract_story_data([src], str(tmp_path / "bare"))
+        assert _turns(tmp_path / "named")[0]["hiddenTrackedItems"] == {
+            "Plans": "step one\n\nBackup:\nyes"
+        }
+        assert _turns(tmp_path / "bare")[0]["hiddenTrackedItems"] == {
+            "Plans": "step one",
+            "Backup": "yes",
+        }
+
+    def test_listed_name_inside_value_not_split(self, tmp_path):
+        src = _export(tmp_path, ("Time:\nnoon", "Plans:\nTime:\n  dawn"))
+        summary = extract_story_data(
+            [src], str(tmp_path / "out"), tracked_item_names=["Time", "Plans"]
+        )
+        turn = _turns(tmp_path / "out")[0]
+        assert turn["hiddenTrackedItems"] == {"Plans": "Time:\n  dawn"}
+        assert turn["trackedItems"] == {"Time": "noon"}
+        assert summary.warnings == [
+            "Hidden Tracked Items: line 'Time:' matches a name in tracked_item_names but does "
+            "not open the section or follow a blank line, or repeats an earlier name line, so "
+            "it was kept inside the value it sits in (turns 1)."
+        ]
+
+    def test_unseparated_items_warn_once_without_names(self, tmp_path):
+        src = _export(tmp_path, ("Gold:\n5\nHP:\n10", None), ("Gold:\n4\nHP:\n10", None))
+        summary = extract_story_data([src], str(tmp_path / "out"))
+        assert _turns(tmp_path / "out")[0]["trackedItems"] == {"Gold": "5\nHP:\n10"}
+        assert len(summary.warnings) == 1
+        assert summary.warnings[0].startswith(
+            "Without tracked_item_names, 2 column-0 'Key:' line(s) on 2 turn(s) were kept "
+            "inside tracked-item values"
+        )
+        assert "Pass tracked_item_names" in summary.warnings[0]
+
+    def test_no_column0_warning_with_names(self, tmp_path):
+        src = _export(tmp_path, ("Gold:\n5\n\nHP:\n10", None))
+        summary = extract_story_data(
+            [src], str(tmp_path / "out"), tracked_item_names=["Gold", "HP"]
+        )
+        assert summary.warnings == []
+
+    def test_hidden_keyset_change_warns(self, tmp_path):
+        src = _export(tmp_path, ("A:\n1", "S:\nx"), ("A:\n1", "S:\nx\n\nT:\ny"))
+        summary = extract_story_data([src], str(tmp_path / "out"))
+        assert len(summary.warnings) == 1
+        assert summary.warnings[0].startswith(
+            "Hidden Tracked Items: keys changed between turns 1 and 2 (added: ['T']"
+        )
+
+    def test_keyset_warning_sorts_turns(self):
+        turns = [_turn(2, {"A": "1", "B": "2"}), _turn(1, {"A": "1"})]
+        warnings = _tracked_item_warnings(turns, None, [])
+        assert len(warnings) == 1
+        assert "between turns 1 and 2 (added: ['B']; removed: [])" in warnings[0]
+
+    def test_unassigned_text_warns(self, tmp_path):
+        src = _export(tmp_path, ("stray note\n\nA:\n1", None))
+        summary = extract_story_data([src], str(tmp_path / "out"), tracked_item_names=["A"])
+        assert summary.warnings == [
+            "1 non-blank line(s) before the first tracked-item name could not be assigned to "
+            "any item and were dropped (turns 1)."
+        ]
+
+    def test_header_starting_items_use_names(self, tmp_path):
+        src = tmp_path / "export.txt"
+        src.write_text(
+            "== T ==\n\n-- Character --\n\nName\n----\nX\n\n"
+            "Starting Tracked Items\n----------------------\nNotes:\nline\n\nInner:\nmore\n\n"
+            "-- Turn 1 --\n\nOutcome\n-------\nA.\n\n"
+            "Tracked Items\n-------------\nNotes:\nline\n"
+        )
+        extract_story_data([str(src)], str(tmp_path / "out"), tracked_item_names=["Notes"])
+        with open(tmp_path / "out" / "metadata.json") as fh:
+            starting = json.load(fh)["character"]["startingTrackedItems"]
+        assert starting == {"Notes": "line\n\nInner:\nmore"}

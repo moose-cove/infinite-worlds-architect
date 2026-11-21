@@ -8,7 +8,8 @@ Header format (spec §2):
     - ``Background\\n----``                    → ``character.background``
     - ``Skills\\n----``                        → ``character.skills``
     - ``Starting Tracked Items\\n----``        → ``character.starting_tracked_items``
-      (optional; parse with ``parse_tracked_items``; absent → ``None``)
+      (optional; parse with ``parse_tracked_items``, anchored to
+      ``tracked_item_names`` when given; absent → ``None``)
 
 Returns a :class:`~iw_architect.story.models.Metadata` model (``objective``
 defaults to ``None``).  Serialise with ``model_dump(by_alias=True)`` to get
@@ -49,13 +50,16 @@ def _extract_subsection(text: str, label: str) -> str | None:
     return None
 
 
-def parse_header(header_text: str) -> Metadata:
+def parse_header(header_text: str, tracked_item_names: list[str] | None = None) -> Metadata:
     """Parse the header block into a :class:`~iw_architect.story.models.Metadata` model.
 
     Parameters
     ----------
     header_text:
         The raw text before the first ``-- Turn 1 --`` marker, CRLF-normalised.
+    tracked_item_names:
+        Optional exact tracked-item names used to find item boundaries in
+        ``Starting Tracked Items`` (see :mod:`iw_architect.story.tracked`).
 
     Returns
     -------
@@ -81,7 +85,9 @@ def parse_header(header_text: str) -> Metadata:
 
     # Starting Tracked Items is optional.
     starting_raw = _extract_subsection(char_block, "Starting Tracked Items")
-    starting_tracked = parse_tracked_items(starting_raw) if starting_raw is not None else None
+    starting_tracked = (
+        parse_tracked_items(starting_raw, tracked_item_names) if starting_raw is not None else None
+    )
 
     character = Character(
         name=char_name,

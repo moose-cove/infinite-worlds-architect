@@ -79,7 +79,7 @@ All paths must be absolute. If the call returns an error, present it to the auth
 
 Read `tracked_item_names` from the source world you confirmed in Step 1: every `trackedItems[*].name`, hidden items included, copied **verbatim** — a trailing space is part of the name (`"Exp "`), so don't trim. The names tell the extractor where each tracked item starts; without them a multi-line YAML value whose lines end in `:` can be split into phantom items. If the story was played on a different version of the world than the one you have, a renamed or added item shows up as a warning.
 
-Share the extraction summary with the author (total turns, turn range, warnings, files written). If `warnings` mentions tracked-item names (a name-like line not in `tracked_item_names`, a name never found, or a key set that changed between turns), tell the author before relying on `tracked_state` values.
+Share the extraction summary with the author (total turns, turn range, warnings, files written). If `warnings` mentions tracked items (an unlisted name line, a listed name never found or kept inside a value, or lines that could not be assigned to any item), tell the author before relying on `tracked_state` values.
 
 ---
 

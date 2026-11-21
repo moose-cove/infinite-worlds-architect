@@ -20,7 +20,9 @@ turn range (``fromTurn <= turn <= toTurn``).
 ``trackedItems`` / ``hiddenTrackedItems`` dict onto the named items.  A name
 matches exactly first, then case-insensitively with surrounding whitespace
 stripped (``"Exp"`` finds ``"Exp "``); an unknown name raises ``ValueError``
-listing the available names.  ``changes_only`` (``tracked_state`` with
+listing the available names, and so does an empty list.  Projected dicts keep
+the order the names were requested in (a name requested twice appears once); an
+absent section (``None``) stays ``None``.  ``changes_only`` (``tracked_state`` with
 ``items`` only) then merges adjacent snapshots whose projected values are equal,
 so the result has one entry per run of unchanged values.  Order of operations:
 filter by ``turns``, project onto ``items``, merge.
@@ -129,7 +131,8 @@ def query_story_data(
         selecting the turn in ``turn_detail``.
     items:
         Optional tracked-item names (``tracked_state`` / ``turn_index`` only):
-        project both tracked dicts onto these items.
+        project both tracked dicts onto these items, in the order requested.
+        Must be non-empty when given.
     changes_only:
         ``tracked_state`` with ``items`` only: merge adjacent snapshots whose
         projected values are equal (first ``fromTurn``, last ``toTurn``).
@@ -162,6 +165,8 @@ def query_story_data(
     if category not in valid_categories:
         valid = sorted(valid_categories)
         raise ValueError(f"Unknown category {category!r}; expected one of {valid}")
+    if items is not None and not items:
+        raise ValueError("items must name at least one tracked item; omit it to return every item")
     if items is not None and category not in {"tracked_state", "turn_index"}:
         raise ValueError("items is only supported for the tracked_state and turn_index categories")
     if changes_only and category != "tracked_state":

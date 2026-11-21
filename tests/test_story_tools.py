@@ -162,6 +162,11 @@ class TestQueryStoryData:
         assert [(s["fromTurn"], s["toTurn"]) for s in out["snapshots"]] == [(1, 2), (3, 3)]
         assert out["snapshots"][0]["trackedItems"] == {"Level": "1"}
 
+    def test_empty_items_errors(self, extraction_dir):
+        out = json.loads(query_story_data(extraction_dir, "tracked_state", items=[]))
+        assert set(out) == {"error"}
+        assert "at least one" in out["error"]
+
     def test_unknown_item_errors(self, extraction_dir):
         out = json.loads(query_story_data(extraction_dir, "tracked_state", items=["Nope"]))
         assert set(out) == {"error"}

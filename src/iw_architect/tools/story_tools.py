@@ -111,8 +111,9 @@ def query_story_data(
     items: optional tracked-item names, for ``tracked_state`` / ``turn_index`` only —
         return just these items from both ``trackedItems`` and ``hiddenTrackedItems``.
         Exact match first, then case-insensitive with whitespace stripped (``"Exp"``
-        finds ``"Exp "``). An unknown name returns an error listing the available
-        names.
+        finds ``"Exp "``). Items come back in the order requested. An unknown name,
+        or an empty list, returns an error (the unknown-name error lists the
+        available names).
     changes_only: ``tracked_state`` with ``items`` only — merge adjacent snapshots
         whose selected values are equal, so each entry is one run of unchanged values
         (``fromTurn``..``toTurn``): the turns where a selected item changed. Applied

@@ -20,11 +20,25 @@ The `extract_story_data`, `query_story_data`, `search_turns`, and `get_character
 
 ### Tracked items: pass the world's item names
 
-When you have the world that produced the story, pass every one of its `trackedItems[*].name` (hidden items included) as `extract_story_data(tracked_item_names=[...])`, copied verbatim — a trailing space is part of the name (`"Exp "` appears in the export as `Exp :`). The export writes each tracked item as a `Name:` line followed by its value. A YAML-typed item's value often has its own lines ending in `:`, such as map keys (`Shapeshift:`) or `- |-` block content. With the names, only a line naming a real item starts a new item, so those lines stay inside the value.
+When you have the world that produced the story, pass every one of its `trackedItems[*].name` (hidden items included) as `extract_story_data(tracked_item_names=[...])`, copied verbatim — a trailing space is part of the name (`"Exp "` appears in the export as `Exp :`). The same names are used for the header's Starting Tracked Items. The export writes each tracked item as a `Name:` line followed by its value. A YAML-typed item's value often has its own lines ending in `:`, such as map keys (`Shapeshift:`) or `- |-` block content.
 
-Without names, the extractor falls back to a layout rule: a name line starts at column 0 and is the section's first line or follows a blank line. IW separates items with one blank line, and an empty item is a name line followed by two blank lines. This rule held on every turn of a 53-turn YAML-heavy export. It fails when a value itself contains a blank line followed by a column-0 `Something:` line, as a YAML block scalar with blank lines would.
+Every rule requires an item's name line to open the section or follow a blank line. IW separates items with one blank line, and an empty item is a name line followed by two blank lines.
+- **With names**, a name line must also match a listed name exactly. A listed name that appears inside a value (no blank line before it) stays in that value.
+- **Lines above the first listed item are never dropped.** They become their own unlisted items under the no-names rule.
+- **If no listed name opens an item in a section**, that section uses the no-names rule.
+- **Without names**, a name line must start at column 0. This rule held on every turn of a 53-turn YAML-heavy export.
+- **It fails when a value itself contains a blank line followed by a column-0 `Something:` line**, as a YAML block scalar with blank lines would.
+- **Items that are not separated by blank lines are merged in either mode.**
 
-Values are always raw strings. The extractor never parses or validates the YAML, because AI-written YAML is often invalid. `manifest.warnings` flags suspected mis-splits. With names, it flags a name-like line that isn't in `tracked_item_names` (its lines are kept inside the item before it) and a listed name that never appears. Without names, it flags a tracked-item key set that changes from one turn to the next. Items normally appear on every turn, so a change usually means a split.
+Values are always raw strings. The extractor never parses or validates the YAML, because AI-written YAML is often invalid. `manifest.warnings` flags suspected mis-splits.
+- **With names**, each warning names the line and its turns and says what happened to it:
+  - an unlisted name line was kept inside the listed item above it;
+  - an unlisted line above the first listed item was kept as its own item;
+  - no listed name matched in the section, so the blank-line rule was used;
+  - a listed name line that isn't at a boundary was kept inside a value;
+  - a listed name never appeared.
+- **Without names**, it flags a tracked-item key set that changes from one turn to the next. Items normally appear on every turn, so a change usually means a split.
+- **Also without names**, one summary warning counts the column-0 `Key:` lines kept inside values. This fires on any YAML-map world. It is a prompt to pass `tracked_item_names`, not proof of an error.
 
 > **`metadata.objective` is always null.** IW story exports have no Objective section, so the header parser never populates it — this is a property of the export *format*, not of any particular world. An agent that needs a world's objective should read it from the world JSON, not the extract.
 

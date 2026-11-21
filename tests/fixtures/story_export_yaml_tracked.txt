@@ -196,5 +196,5 @@ Hidden Tracked Items
 --------------------
 Secret Plans:
 Phase:
-  current: watch
-  next: strike
+  current: strike
+  next: rest
