@@ -7,6 +7,11 @@ Writes up to 5 files atomically into ``extraction_dir``:
 - ``tracked_state.json``   only if any tracked items found
 - ``character_index.json`` only if ``character_list`` provided
 
+Tracked-item boundaries: pass ``tracked_item_names`` (the source world's
+``trackedItems[*].name``) so multi-line YAML values whose lines end in ``:`` are
+not split into phantom items — see :mod:`iw_architect.story.tracked`.  Suspected
+mis-splits are reported in ``manifest.warnings``.
+
 Atomic write: temp file ``extraction_dir/.tmp-<name>.json`` → ``os.replace``
 (same filesystem, so the replace is atomic on POSIX and on Windows Vista+).
 
@@ -38,7 +43,75 @@ from iw_architect.story.models import (
     TurnRange,
 )
 from iw_architect.story.sections import parse_turn_sections
-from iw_architect.story.tracked import generate_snapshots, parse_tracked_items
+from iw_architect.story.tracked import generate_snapshots, split_tracked_items
+
+#: Cap on per-turn key-set-change warnings in the no-names fallback.
+_MAX_KEYSET_WARNINGS = 10
+#: Cap on turn numbers / names listed inside a single warning.
+_MAX_LISTED = 8
+
+
+def _fmt_list(values: list) -> str:
+    """Render up to ``_MAX_LISTED`` values, noting how many were left out."""
+    shown = ", ".join(repr(v) for v in values[:_MAX_LISTED])
+    extra = len(values) - _MAX_LISTED
+    return f"{shown}, … (+{extra} more)" if extra > 0 else shown
+
+
+def _tracked_item_warnings(
+    parsed_turns: list[Turn],
+    tracked_item_names: list[str] | None,
+    unknown_by_key: dict[tuple[str, str], list[int]],
+) -> list[str]:
+    """Manifest warnings that flag a suspected tracked-item mis-split."""
+    warnings: list[str] = []
+    sections = (
+        ("Tracked Items", "tracked_items"),
+        ("Hidden Tracked Items", "hidden_tracked_items"),
+    )
+
+    if tracked_item_names:
+        for (label, key), turn_numbers in unknown_by_key.items():
+            warnings.append(
+                f"{label}: line {key + ':'!r} looks like a tracked-item name but is not in "
+                f"tracked_item_names (turns {_fmt_list(turn_numbers)}); its lines were kept "
+                "inside the preceding item's value. Add the name if it is a real item."
+            )
+        seen: set[str] = set()
+        for t in parsed_turns:
+            for _, attr in sections:
+                seen.update(getattr(t, attr) or {})
+        missing = [n for n in tracked_item_names if n not in seen]
+        if missing:
+            warnings.append(
+                f"tracked_item_names never matched a name line in any turn: {_fmt_list(missing)}. "
+                "Check the names against the export (matching is exact, trailing spaces included)."
+            )
+        return warnings
+
+    # No names: items normally appear on every turn, so a key set that changes
+    # from one turn to the next is a strong sign a multi-line value was split.
+    changes: list[str] = []
+    for label, attr in sections:
+        ordered = sorted(parsed_turns, key=lambda t: t.number)
+        for prev, cur in zip(ordered, ordered[1:], strict=False):
+            a, b = getattr(prev, attr), getattr(cur, attr)
+            if a is None or b is None or a.keys() == b.keys():
+                continue
+            added = [k for k in b if k not in a]
+            removed = [k for k in a if k not in b]
+            changes.append(
+                f"{label}: keys changed between turns {prev.number} and {cur.number} "
+                f"(added: [{_fmt_list(added)}]; removed: [{_fmt_list(removed)}]) — possibly a "
+                "multi-line value split into phantom items; re-run with tracked_item_names "
+                "to anchor item boundaries."
+            )
+    warnings.extend(changes[:_MAX_KEYSET_WARNINGS])
+    if len(changes) > _MAX_KEYSET_WARNINGS:
+        warnings.append(
+            f"… {len(changes) - _MAX_KEYSET_WARNINGS} more tracked-item key-set changes not listed."
+        )
+    return warnings
 
 
 def _atomic_write(extraction_dir: str, name: str, data: object) -> None:
@@ -54,6 +127,7 @@ def extract_story_data(
     input_paths: list[str],
     extraction_dir: str,
     character_list: list[dict] | None = None,
+    tracked_item_names: list[str] | None = None,
 ) -> ExtractionSummary:
     """Extract a story export set and write structured JSON output files.
 
@@ -67,6 +141,12 @@ def extract_story_data(
     character_list:
         Optional list of ``{"name": str, "aliases": [str]}`` dicts for
         character indexing.
+    tracked_item_names:
+        Optional exact tracked-item names (raw — trailing spaces are significant),
+        normally every ``trackedItems[*].name`` of the world that produced the
+        story, hidden items included.  Applied to both the ``Tracked Items`` and
+        ``Hidden Tracked Items`` sections: only a line naming one of them starts a
+        new item.  Without it, a blank-line boundary heuristic is used.
 
     Returns
     -------
@@ -108,14 +188,18 @@ def extract_story_data(
 
     # Parse each turn — compute line_range relative to its source file.
     parsed_turns: list[Turn] = []
+    unknown_by_key: dict[tuple[str, str], list[int]] = {}
     for t in raw_turns:
         number = t.number
         content = t.content
         src = t.source
 
         sections = parse_turn_sections(content, number)
-        tracked = parse_tracked_items(sections.tracked_items)
-        hidden = parse_tracked_items(sections.hidden_tracked_items)
+        tracked, unknown_t = split_tracked_items(sections.tracked_items, tracked_item_names)
+        hidden, unknown_h = split_tracked_items(sections.hidden_tracked_items, tracked_item_names)
+        for label, unknown in (("Tracked Items", unknown_t), ("Hidden Tracked Items", unknown_h)):
+            for key in unknown:
+                unknown_by_key.setdefault((label, key), []).append(number)
 
         # Compute line_range: find the turn marker in the source file.
         src_lines = source_lines[src]
@@ -159,6 +243,8 @@ def extract_story_data(
                 line_range=line_range,
             )
         )
+
+    warnings.extend(_tracked_item_warnings(parsed_turns, tracked_item_names, unknown_by_key))
 
     # Build TurnIndex directly from the parsed Turn models.
     turn_index = TurnIndex(turns=parsed_turns)

@@ -18,6 +18,14 @@ The `extract_story_data`, `query_story_data`, `search_turns`, and `get_character
 | `tracked_state.json` | `tracked_state` | If tracked items exist | Compressed snapshots: turn ranges over which tracked-item state held constant |
 | `character_index.json` | `character_index` | If a character list was provided | Per-character mention list (turn, line, context) across the export |
 
+### Tracked items: pass the world's item names
+
+When you have the world that produced the story, pass every one of its `trackedItems[*].name` (hidden items included) as `extract_story_data(tracked_item_names=[...])`, copied verbatim — a trailing space is part of the name (`"Exp "` appears in the export as `Exp :`). The export writes each tracked item as a `Name:` line followed by its value. A YAML-typed item's value often has its own lines ending in `:`, such as map keys (`Shapeshift:`) or `- |-` block content. With the names, only a line naming a real item starts a new item, so those lines stay inside the value.
+
+Without names, the extractor falls back to a layout rule: a name line starts at column 0 and is the section's first line or follows a blank line. IW separates items with one blank line, and an empty item is a name line followed by two blank lines. This rule held on every turn of a 53-turn YAML-heavy export. It fails when a value itself contains a blank line followed by a column-0 `Something:` line, as a YAML block scalar with blank lines would.
+
+Values are always raw strings. The extractor never parses or validates the YAML, because AI-written YAML is often invalid. `manifest.warnings` flags suspected mis-splits. With names, it flags a name-like line that isn't in `tracked_item_names` (its lines are kept inside the item before it) and a listed name that never appears. Without names, it flags a tracked-item key set that changes from one turn to the next. Items normally appear on every turn, so a change usually means a split.
+
 > **`metadata.objective` is always null.** IW story exports have no Objective section, so the header parser never populates it — this is a property of the export *format*, not of any particular world. An agent that needs a world's objective should read it from the world JSON, not the extract.
 
 ---
@@ -36,7 +44,7 @@ These three fit in context and answer most questions on their own.
 
 ### Tier 2 — load on demand
 
-- `query_story_data(category="tracked_state")` — when you need final tracked-item values or how they evolved over play.
+- `query_story_data(category="tracked_state")` — when you need final tracked-item values or how they evolved over play. Pass `items=["Level", "Exp"]` to return only those items (exact match first, then case-insensitive with surrounding whitespace ignored, so `"Exp"` finds `"Exp "`; an unknown name errors and lists the available ones). Add `changes_only=True` to merge adjacent snapshots whose selected values are equal, giving one entry per run of unchanged values: the turns where any of those items changed. `items` also works on `turn_index`. If any item changes every turn (a story log, say), every snapshot is one turn wide, so `items` + `changes_only` is the cheap way to follow one or two items across a long story.
 - `query_story_data(category="character_index")` — when mapping a character's mentions/interactions (requires a character list at extraction time).
 - `search_turns(query=...)` — when you need the turns that mention a thing (an object, a place, a phrase, a regex). Returns matching turn numbers with per-section match counts, and optional context snippets. Searches `action` / `outcome` / `secretInfo` only; follow tracked items with `tracked_state`.
 

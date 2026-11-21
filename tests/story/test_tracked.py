@@ -1,7 +1,11 @@
 """Tests for iw_architect.story.tracked."""
 
 from iw_architect.story.models import Snapshot, Turn
-from iw_architect.story.tracked import generate_snapshots, parse_tracked_items
+from iw_architect.story.tracked import (
+    generate_snapshots,
+    parse_tracked_items,
+    split_tracked_items,
+)
 
 
 class TestParseTrackedItems:
@@ -148,3 +152,91 @@ class TestGenerateSnapshots:
         )
         result = generate_snapshots(turns)
         assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# Multi-line YAML values (values whose own lines end in ":")
+# ---------------------------------------------------------------------------
+
+ABILITIES = (
+    "Blink:\n"
+    "  effect: Teleport a short distance.\n"
+    "  cost: 1 mana\n"
+    "  type: active\n"
+    "Stoneskin:\n"
+    "  effect: 'Skin hardens. Currently resists: blunt.'\n"
+    "  cost: none\n"
+    "  type: passive"
+)
+DEAD = "Cave Rat:\n- |-\n  First Fight, Level 1:\n  - Bitten once, then crushed.\n  - Day 1, dawn"
+DEEDS = (
+    "Crossed the old bridge: |-\n"
+    "  - Took the long way round\n"
+    "Found a hidden cache:\n"
+    "- |-\n"
+    "  - Under the third stone\n"
+    "entries:\n"
+    "- |-\n"
+    "  Outwitted the toll keeper:\n"
+    "    - Paid with a wooden coin"
+)
+YAML_SECTION = (
+    "Level:\n1\n\nExp :\n0 / 10\n\nSpells:\n\n\n"
+    f"Abilities:\n{ABILITIES}\n\nDead:\n{DEAD}\n\nDeeds:\n{DEEDS}\n\nNotes:\nStarted."
+)
+NAMES = ["Level", "Exp ", "Spells", "Abilities", "Dead", "Deeds", "Notes"]
+
+
+class TestYamlValues:
+    def test_known_names_anchor_boundaries(self):
+        result = parse_tracked_items(YAML_SECTION, NAMES)
+        assert list(result) == NAMES
+        assert result["Abilities"] == ABILITIES
+        assert result["Dead"] == DEAD
+        assert result["Deeds"] == DEEDS
+        assert result["Spells"] == ""
+        assert result["Exp "] == "0 / 10"
+
+    def test_fallback_without_names_matches(self):
+        assert parse_tracked_items(YAML_SECTION) == parse_tracked_items(YAML_SECTION, NAMES)
+
+    def test_no_key_starts_with_whitespace(self):
+        for names in (None, NAMES):
+            assert not any(k[:1].isspace() for k in parse_tracked_items(YAML_SECTION, names))
+
+    def test_trailing_space_in_name_is_significant(self):
+        # "Exp" (no trailing space) does not match the line "Exp :".
+        result = parse_tracked_items("Level:\n1\n\nExp :\n5", ["Level", "Exp"])
+        assert result == {"Level": "1\n\nExp :\n5"}
+
+    def test_unknown_name_line_reported(self):
+        items, unknown = split_tracked_items("Level:\n1\n\nGold:\n5", ["Level"])
+        assert items == {"Level": "1\n\nGold:\n5"}
+        assert unknown == ["Gold"]
+
+    def test_no_known_name_falls_back_and_reports_all(self):
+        items, unknown = split_tracked_items("Gold:\n5\n\nSilver:\n2", ["Level"])
+        assert items == {"Gold": "5", "Silver": "2"}
+        assert unknown == ["Gold", "Silver"]
+
+    def test_no_unknowns_without_names(self):
+        assert split_tracked_items(YAML_SECTION)[1] == []
+
+    def test_duplicate_known_name_prefers_boundary_line(self):
+        # "Level:" nested inside Abilities' value must not start a new item.
+        text = "Abilities:\nBlink:\nLevel:\n  3\n\nLevel:\n7"
+        result = parse_tracked_items(text, ["Abilities", "Level"])
+        assert result == {"Abilities": "Blink:\nLevel:\n  3", "Level": "7"}
+
+    def test_fallback_requires_blank_line_before_name(self):
+        # Known limitation: without names, adjacent items with no blank line merge.
+        assert parse_tracked_items("A:\n1\nB:\n2") == {"A": "1\nB:\n2"}
+
+    def test_fallback_splits_value_with_blank_line(self):
+        # Documented weakness: a blank line then a column-0 "Key:" inside a value.
+        text = "Notes:\nline\n\nInner:\nmore"
+        assert parse_tracked_items(text) == {"Notes": "line", "Inner": "more"}
+        assert parse_tracked_items(text, ["Notes"]) == {"Notes": "line\n\nInner:\nmore"}
+
+    def test_none_section_with_names(self):
+        assert split_tracked_items(None, NAMES) == (None, [])

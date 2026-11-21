@@ -70,13 +70,16 @@ Call `extract_story_data` with the confirmed inputs:
 extract_story_data(
     input_paths=[<story_export_path_1>, <story_export_path_2>, ...],
     extraction_dir=<extraction_dir_absolute>,
-    character_list=<confirmed_list_or_omit_if_skipped>
+    character_list=<confirmed_list_or_omit_if_skipped>,
+    tracked_item_names=<every trackedItems[*].name from the source world>
 )
 ```
 
 All paths must be absolute. If the call returns an error, present it to the author and stop — do not proceed to field proposals if extraction failed.
 
-Share the extraction summary with the author (total turns, turn range, warnings, files written).
+Read `tracked_item_names` from the source world you confirmed in Step 1: every `trackedItems[*].name`, hidden items included, copied **verbatim** — a trailing space is part of the name (`"Exp "`), so don't trim. The names tell the extractor where each tracked item starts; without them a multi-line YAML value whose lines end in `:` can be split into phantom items. If the story was played on a different version of the world than the one you have, a renamed or added item shows up as a warning.
+
+Share the extraction summary with the author (total turns, turn range, warnings, files written). If `warnings` mentions tracked-item names (a name-like line not in `tracked_item_names`, a name never found, or a key set that changed between turns), tell the author before relying on `tracked_state` values.
 
 ---
 
@@ -213,7 +216,7 @@ Load the story data following `references/mechanics/STORY_EXPORT_EXTRACTION_GUID
 | `possibleCharacters[*].name` | `metadata.character.name`. |
 | `possibleCharacters[*].skills` | `metadata.character.skills` — but it's a raw string; parse it and map onto the world's existing `skills` object, don't copy verbatim. |
 | `possibleCharacters[*].description`, `portraitPromptDetails` | Original world; for portrait details, carry forward if present, else synthesize from any story-narrated PC appearance, else ask. |
-| `trackedItems[*]` (final values) | `tracked_state` last snapshot (`toTurn == manifest.totalTurns`). Labels/structure carry forward from the original. |
+| `trackedItems[*]` (final values) | `tracked_state` last snapshot (`toTurn == manifest.totalTurns`); pass `items=[...]` to fetch only the items you're working on, and `changes_only=True` to see the turns where they changed. Labels/structure carry forward from the original. |
 | `NPCs[*].detail`, `secret_info` | `character_index` + `turn_detail`; update only what the export revealed, carry forward the rest. |
 | `NPCs[*].appearance`, `img_appearance`, `img_clothing` | Carry forward if the source world has them; else **synthesize from story-narrated appearance** (cite the turn — re-expressing a described look is grounding, not fabrication); else ask. `appearance` is narrative prose; `img_*` are portrait prompts it can seed. |
 | `triggerEvents`, `instructionBlocks` (EIBs), `loreBookEntries` (KIBs) | Revisit against the story — disable/rewrite what the story resolved or made stale, add what the sequel needs, carry forward the rest. |

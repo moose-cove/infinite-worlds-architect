@@ -272,3 +272,134 @@ class TestExtractCreatesDir:
         assert not out.exists()
         extract_story_data([fixture("story_export_single_5turn.txt")], str(out))
         assert out.exists()
+
+
+# ---------------------------------------------------------------------------
+# Multi-line YAML tracked items (story_export_yaml_tracked.txt)
+# ---------------------------------------------------------------------------
+
+YAML_NAMES = ["Level", "Exp ", "Spells", "Abilities", "Dead", "Deeds", "Notes", "Secret Plans"]
+VISIBLE = YAML_NAMES[:-1]
+ABILITIES_T1 = (
+    "Blink:\n"
+    "  effect: Teleport a short distance.\n"
+    "  cost: 1 mana\n"
+    "  type: active\n"
+    "Stoneskin:\n"
+    "  effect: 'Skin hardens. Currently resists: blunt.'\n"
+    "  cost: none\n"
+    "  type: passive"
+)
+DEAD_T2 = (
+    "Cave Rat:\n"
+    "- |-\n"
+    "  First Fight, Level 1:\n"
+    "  - Bitten once, then crushed.\n"
+    "  - Day 1, dawn\n"
+    "Bog Goblin (Level 2): Drowned in the marsh."
+)
+DEEDS = (
+    "Crossed the old bridge: |-\n"
+    "  - Took the long way round\n"
+    "Found a hidden cache:\n"
+    "- |-\n"
+    "  - Under the third stone\n"
+    "entries:\n"
+    "- |-\n"
+    "  Outwitted the toll keeper:\n"
+    "    - Paid with a wooden coin"
+)
+
+
+def _turns(extraction_dir) -> list[dict]:
+    with open(os.path.join(extraction_dir, "turn_index.json")) as f:
+        return json.load(f)["turns"]
+
+
+class TestYamlTrackedItems:
+    def test_names_give_exact_key_set_every_turn(self, tmp_path):
+        summary = extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")], str(tmp_path), tracked_item_names=YAML_NAMES
+        )
+        assert summary.warnings == []
+        for turn in _turns(tmp_path):
+            assert list(turn["trackedItems"]) == VISIBLE
+            assert list(turn["hiddenTrackedItems"]) == ["Secret Plans"]
+
+    def test_values_are_raw_source_blocks(self, tmp_path):
+        extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")], str(tmp_path), tracked_item_names=YAML_NAMES
+        )
+        turns = _turns(tmp_path)
+        assert turns[0]["trackedItems"]["Abilities"] == ABILITIES_T1
+        assert turns[1]["trackedItems"]["Dead"] == DEAD_T2
+        assert turns[0]["trackedItems"]["Deeds"] == DEEDS
+        assert turns[0]["trackedItems"]["Spells"] == ""
+        assert turns[0]["hiddenTrackedItems"]["Secret Plans"].startswith("Phase:\n  current:")
+
+    def test_fallback_matches_named_result(self, tmp_path):
+        extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")],
+            str(tmp_path / "a"),
+            tracked_item_names=YAML_NAMES,
+        )
+        summary = extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")], str(tmp_path / "b")
+        )
+        assert summary.warnings == []
+        assert _turns(tmp_path / "a") == _turns(tmp_path / "b")
+
+    def test_no_key_starts_with_whitespace(self, tmp_path):
+        extract_story_data([fixture("story_export_yaml_tracked.txt")], str(tmp_path))
+        for turn in _turns(tmp_path):
+            assert not any(k[:1].isspace() for k in turn["trackedItems"])
+
+    def test_unknown_name_line_warns(self, tmp_path):
+        names = [n for n in YAML_NAMES if n != "Notes"]
+        summary = extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")], str(tmp_path), tracked_item_names=names
+        )
+        assert len(summary.warnings) == 1
+        assert "'Notes:'" in summary.warnings[0]
+        assert "1, 2, 3" in summary.warnings[0]
+        assert "Notes" not in _turns(tmp_path)[0]["trackedItems"]
+
+    def test_never_matched_name_warns(self, tmp_path):
+        summary = extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")],
+            str(tmp_path),
+            tracked_item_names=[*YAML_NAMES, "Exp"],
+        )
+        assert summary.warnings == [
+            "tracked_item_names never matched a name line in any turn: 'Exp'. Check the "
+            "names against the export (matching is exact, trailing spaces included)."
+        ]
+
+    def test_keyset_change_warns_without_names(self, tmp_path):
+        src = tmp_path / "export.txt"
+        src.write_text(
+            "== T ==\n\n-- Turn 1 --\n\nOutcome\n-------\nA.\n\n"
+            "Tracked Items\n-------------\nNotes:\nx\n\n"
+            "-- Turn 2 --\n\nAction\n------\nGo.\n\nOutcome\n-------\nB.\n\n"
+            "Tracked Items\n-------------\nNotes:\nx\n\nStray:\ny\n"
+        )
+        summary = extract_story_data([str(src)], str(tmp_path / "out"))
+        assert len(summary.warnings) == 1
+        assert "between turns 1 and 2" in summary.warnings[0]
+        assert "added: ['Stray']" in summary.warnings[0]
+        assert "tracked_item_names" in summary.warnings[0]
+
+    def test_keyset_change_warnings_capped(self, tmp_path):
+        parts = ["== T ==\n"]
+        for n in range(1, 15):
+            action = "" if n == 1 else "Action\n------\nGo.\n\n"
+            extra = "\nStray:\ny\n" if n % 2 else ""
+            parts.append(
+                f"\n-- Turn {n} --\n\n{action}Outcome\n-------\nA.\n\n"
+                f"Tracked Items\n-------------\nNotes:\nx\n{extra}"
+            )
+        src = tmp_path / "export.txt"
+        src.write_text("".join(parts))
+        summary = extract_story_data([str(src)], str(tmp_path / "out"))
+        assert len(summary.warnings) == 11
+        assert summary.warnings[-1].startswith("… 3 more tracked-item key-set changes")
