@@ -208,13 +208,17 @@ def start_game(pg: Page) -> None:
     d.wait_for(pg, 'button:has-text("Choose character")', 60000).click()
     popups: list[str] = []
     t0 = time.time()
-    while time.time() - t0 < pd.TURN_TIMEOUT_S:
+    while True:
+        if time.time() - t0 > pd.TURN_TIMEOUT_S:
+            raise pd.TurnTimeout(
+                f"opening turn: no play screen within {pd.TURN_TIMEOUT_S}s; popups {popups!r}"
+            )
         pg.wait_for_timeout(1000)
         t = d.dialog_text(pg)
         if t:
             popups.append(t[:120].replace("\n", " / "))
             d.close_all_modals(pg, prefer=("OK",))
-        if d.vis(pg, 'button:has-text("Take action")').count() and not d.dialog_text(pg):
+        if pd.take_action_ready(pg) and not d.dialog_text(pg):
             break
     print("opening popups:", popups, f"({time.time() - t0:.0f}s)")
 

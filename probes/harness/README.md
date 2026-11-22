@@ -50,7 +50,9 @@ same single-URL Anvil app). Older layouts are not supported.
 - **AI model** is a radio group (`value` = `lynx`, `dolphin`, …; Dolphin is the account
   default). **Illustration options** holds two `<select>`s, "Automatically generate images"
   (Every turn / When the illustration subject changes / Never) and "Alternative images per
-  turn"; `set_option` picks the select that offers the requested label. Both are account
+  turn"; `set_option` picks the select that offers the requested label, then re-opens the
+  dialog and raises if the value did not stick (`enable_world_debug` reads its boxes back
+  the same way). Both are account
   settings and can be set from the world list, so `prepare_play_settings` sets Lynx +
   Never **before** Play and the opening turn already uses them.
 - **Credits.** The credits button's `aria-label` reads `"N credits, X of Y free turns left
@@ -62,9 +64,10 @@ same single-URL Anvil app). Older layouts are not supported.
   Play/Edit/Make copy/Share/Delete buttons in the DOM, so scope to the grid and use
   `get_by_role("button", name="Edit", exact=True)`. Two worlds may share a title; `--world`
   takes the first matching row.
-- The top row of the world list can sit under `.iw-top-bar-overlay`, which intercepts real
-  pointer clicks. `iwdrive.open_editor` therefore fires the row's Edit button with
-  `dispatch_event("click")`.
+- Once the world list is scrolled, the fixed top bar (`header.iw-top-bar`) can cover a row
+  and intercept real pointer clicks (checked 2026-11-22: `elementFromPoint` over the top row
+  hit the top-bar logo; there is no `.iw-top-bar-overlay` element). `iwdrive.open_editor`
+  therefore fires the row's Edit button with `dispatch_event("click")`.
 - **Never pick an editor checkbox by position.** "Show optional features" is the editor's
   last checkbox in DOM order. With a trigger card expanded, the first visible checkbox is
   that trigger's "Trigger at start of game". `iwdrive.labelled_checkbox` / `set_checkbox`
@@ -72,13 +75,15 @@ same single-URL Anvil app). Older layouts are not supported.
   click. `raw_json_box` uses them for both "Show optional features" and "Show raw JSON"
   (under "Misc advanced features (optional)").
 - **Import flow:** paste → **Import JSON to world** → "Are you sure you wish to overwrite…" →
-  OK → "World imported from raw JSON." → OK → **Save changes and exit**, which reports
-  "Changes saved!" or "No changes to save." (both seen on 2026-11-21) — OK that too. The
-  imported alert arrived **over 35 s** after the confirm for Probe C's 12-trigger world.
-  Saving before it arrives saves the editor's pre-import state over the import (seen
-  2026-11-21: the old 30 s wait lost an import), so `import_json` waits up to
-  `IMPORT_TIMEOUT_S` (180 s) for it and raises rather than save without it. After an
-  import the editor re-renders with the raw-JSON section hidden again.
+  OK → "World imported from raw JSON." → OK → **Save changes and exit** → "Changes saved!"
+  → OK. The imported alert arrived **over 35 s** after the confirm for Probe C's 12-trigger
+  world on 2026-11-21 (a few seconds on 2026-11-22). Saving before it arrives saves the
+  editor's pre-import state over the import (seen 2026-11-21: the old 30 s wait lost an
+  import, and the save then said "No changes to save."). So `import_json` waits up to
+  `IMPORT_TIMEOUT_S` (180 s) for that exact alert, and raises without saving on any other
+  dialog. It accepts only "Changes saved" from the save (within `SAVE_TIMEOUT_S`, 60 s) and
+  raises on "No changes to save." as a lost import. After an import the editor re-renders
+  with the raw-JSON section hidden again.
 - **Discard changes** asks for confirmation when the editor holds unsaved changes ("Are you
   sure you wish to discard all your changes to this world?"), and may then show a "Changes
   discarded." alert that hides the world list until it is OK'd. That alert has arrived more
@@ -90,7 +95,8 @@ same single-URL Anvil app). Older layouts are not supported.
   `<world title> - <character>, turn N`.
 - **In-game toolbar** (icon class → tooltip): `.fa-user` Show details of your character,
   `.fa-database` Show information on tracked items (inline toggle panel headed "Tracked
-  Items", can render a beat after the click), `.fa-lock` Show hidden tracked items,
+  Items", can render a beat after the click), `.fa-lock` Show hidden tracked items (only on
+  some games — absent on the Probe C game on 2026-11-22),
   `.fa-edit` **Edit tracked items (Storyteller mode only)**, `.fa-bug` World debug tools,
   `.fa-eye` Reveal secret information for this turn (Storyteller mode only), `.fa-pencil`
   Edit text for this turn (Storyteller mode only), `.fa-meh-o` Rate this turn. The
@@ -99,30 +105,47 @@ same single-URL Anvil app). Older layouts are not supported.
   label followed by a `<textarea>`, with Cancel / OK. On 2026-11-21 (Storyteller mode on,
   every debug option ticked) it offered `hidden` items too. After an edit the play screen
   shows a "Show changes" link.
+- **Tracked Items panel** sits directly above the turn's suggested actions — buttons with a
+  leading `.fa-arrow-right` icon (Take action has one too). `play_probe_d.tracked_items` cuts
+  the panel text at the first suggestion's label, falling back to "Or type any action you
+  want below:".
 - **World debug tools modal** (bug icon): a stack of collapsible section buttons, all
   collapsed on open — "Active instructions" (nested "Main instructions" and one entry per
   active extra instruction block), "Triggers (N)" ("Triggers fired this turn" / "All
   triggers"), "Evaluation", "PawScript (N)", and "Inactive instructions", "Model thinking",
   "Long term memory" when those have content. The "(N)" count appears only when the section
   is non-empty. A collapsed header's leading icon is `.fa-angle-right` (`.fa-angle-down` once
-  open); `play_probe_d.open_debug_modal` clicks collapsed headers until none is left. The
-  footer has a **Replay this turn** link — never click it.
+  open); `play_probe_d.open_debug_modal` clicks each collapsed header (by text) once until
+  none is left, and raises if any is still collapsed. The footer has a **Replay this turn**
+  link — never click it.
 - **PawScript Expression Sandbox.** Each condition entry in the debug modal's PawScript
   section ("Trigger:" / name / "PawScript condition" / **Open in Sandbox** / result) opens
   the sandbox as a second stacked modal: the turn's real data (editable, "data changes are
   not saved"), a CodeMirror expression box (`.cm-editor .cm-content`), **Evaluate**,
   **Share**, **Update Game** and **Close**. It costs nothing — use it before spending a turn
-  on a condition. `play_probe_d.sandbox_eval(pg, trigger, expr)` drives it (Evaluate and
-  Close only, never Update Game).
+  on a condition. The output appears between Share and Update Game: a value reads "Result /
+  does this condition fire / …", an error is the bare message ("No tracked item or variable
+  called 'x'.") with no "Result" line. `play_probe_d.sandbox_eval(pg, trigger, expr)`
+  drives it (Evaluate and Close only, never Update Game): it checks the expression box reads
+  back `expr`, polls for the output, and raises if either fails.
 - **Test account.** The harness Chromium profile is logged into a dedicated throwaway IW
   account, not a personal one. Its credentials live in `probes/test-account.env`, which is
   gitignored and must never be committed. A fresh account has no Your Worlds rows, and
   "Create your own adventure" only offers AI generation. To get an importable slot, use
   **Make copy** on an example world, then `import-json` over the copy.
-- **Turn-complete detection is unconfirmed on this UI.** `take_turn` waits for "turn N" in
-  the page text plus a visible **Take action**. On 2026-11-21 the one `wait` turn played
-  completed (debug modal and tracked items captured for turn 2), but the loop ran to its
-  240 s timeout first; it now logs which half of the test failed when that happens.
+- **Turn completion.** The header's "turn N" can lag: on 2026-11-21 it still showed the
+  previous turn long after the new narrative was complete and Take action was back, so
+  `take_turn` does not gate on it. A turn counts as complete when the page text minus its
+  header line differs from before the click, has been unchanged for 3 consecutive 1 s
+  polls, **Take action** is visible and enabled, and no dialog is open (confirmed live
+  2026-11-22: a Probe C `wait` turn completed in 14 s). A header that disagrees is logged.
+  Probe-world popups ("PROBE …") are logged and OK'd; any other dialog raises
+  `UnexpectedDialog`, and no completion in `TURN_TIMEOUT_S` raises `TurnTimeout`, so no
+  capture is written and no further turn is spent. The opening-turn waits raise
+  `TurnTimeout` the same way.
+- **Session expiry.** A tab left idle can get Anvil's "Session Expired — Refresh now" modal
+  (`#session-expired-modal`, seen 2026-11-22), which blocks every click. Reloading the tab
+  clears it and returns to the same screen.
 
 ## Probe D evidence kept here
 

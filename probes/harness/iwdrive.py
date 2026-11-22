@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -63,15 +64,19 @@ def dialog_text(pg: Page) -> str:
 
 
 def dismiss_alert(pg: Page) -> str:
-    """Click OK/Yes on any open Bootstrap modal; return its text ('' if none)."""
+    """Click OK/Yes/Confirm on any open Bootstrap modal; log and return the text of what was
+    open ('' if nothing was), so callers can check what they just dismissed."""
     txt = dialog_text(pg)
     if txt:
         for label in ("OK", "Yes", "Confirm"):
             b = pg.locator(f'.modal button:has-text("{label}")').locator("visible=true")
             if b.count():
+                log(f"dismiss_alert: {label} on {txt[:200].replace(chr(10), ' / ')!r}")
                 b.first.click()
                 pg.wait_for_timeout(1200)
                 break
+        else:
+            log(f"dismiss_alert: no OK/Yes/Confirm button on {txt[:200]!r}")
     return txt
 
 
@@ -224,8 +229,8 @@ def open_editor(pg: Page, title: str):
         raise SystemExit(f"no 'Your Worlds' row matches {title!r}")
     if row.count() > 1:
         log(f"{row.count()} rows match {title!r} — using the first (top of the list)")
-    # dispatch_event, not click(): the top row can sit under .iw-top-bar-overlay, which
-    # intercepts real pointer clicks.
+    # dispatch_event, not click(): once the list is scrolled, the fixed top bar
+    # (header.iw-top-bar) can cover a row and intercept real pointer clicks.
     row.first.get_by_role("button", name="Edit", exact=True).first.dispatch_event("click")
     wait_for(pg, EDITOR_MARKER, 30000)
     pg.wait_for_timeout(800)
@@ -296,9 +301,33 @@ def export_json(pg: Page, title: str, out: Path):
 
 
 IMPORT_TIMEOUT_S = 180
+SAVE_TIMEOUT_S = 60
+OVERWRITE_CONFIRM = "Are you sure you wish to overwrite"
+IMPORTED_ALERT = "World imported from raw JSON"
+SAVED_RE = re.compile(r"changes saved", re.I)
+
+
+def _wait_dialog(pg: Page, timeout_s: float) -> str:
+    """Poll until a dialog with text is open; return its text ('' on timeout)."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        pg.wait_for_timeout(500)
+        t = dialog_text(pg)
+        if t:
+            return t
+    return ""
 
 
 def import_json(pg: Page, title: str, src: Path):
+    """Paste `src` into the world's raw-JSON box, import it, and save.
+
+    Expects exactly: the overwrite confirmation (OK'd), then the "World imported from raw
+    JSON." alert, which arrives well AFTER the confirm (over 35 s for Probe C's 12-trigger
+    world on 2026-11-21) and intercepts every click until closed. Saving before it arrives
+    saves the editor's pre-import state over the import, so any other dialog, or no alert
+    within IMPORT_TIMEOUT_S, raises with the editor (and that dialog) left open and nothing
+    saved. The save must then report "Changes saved!" within SAVE_TIMEOUT_S; "No changes to
+    save." after an import means the import was lost, so it raises too."""
     text = src.read_text()
     json.loads(text)
     open_editor(pg, title)
@@ -306,46 +335,35 @@ def import_json(pg: Page, title: str, src: Path):
     box.fill(text)
     box.press("Tab")
     vis(pg, 'button:has-text("Import JSON to world")').first.click()
-    for _ in range(30):  # the import alert can take a while on a large world
-        pg.wait_for_timeout(500)
-        if dialog_text(pg):
-            break
-    d = dialog_text(pg)
-    if d:
-        log("dialog after import:\n" + d[:1500])
-        dismiss_alert(pg)
-    # That dismissed the overwrite confirmation. The "World imported from raw JSON." alert
-    # arrives well AFTER the confirm (over 35 s for Probe C's 12-trigger world on
-    # 2026-11-21) and intercepts every click until closed. Saving before it arrives saves
-    # the editor's pre-import state over the import, so wait for it, and refuse to save
-    # without it.
-    imported = False
     deadline = time.monotonic() + IMPORT_TIMEOUT_S
-    while not imported and time.monotonic() < deadline:
-        pg.wait_for_timeout(500)
-        d = dialog_text(pg)
-        if d:
-            log("dialog after confirm: " + d[:200].replace("\n", " / "))
+    while True:
+        d = _wait_dialog(pg, max(0.0, deadline - time.monotonic()))
+        if not d:
+            raise RuntimeError(
+                f"import_json: no {IMPORTED_ALERT!r} alert within {IMPORT_TIMEOUT_S}s;"
+                " not saving (the editor is still open)"
+            )
+        log("dialog after import: " + d[:300].replace("\n", " / "))
+        if IMPORTED_ALERT in d:
             dismiss_alert(pg)
-            imported = "imported" in d
-    if not imported:
+            break
+        if OVERWRITE_CONFIRM in d:
+            dismiss_alert(pg)
+            continue
         raise RuntimeError(
-            f"import_json: no 'World imported from raw JSON.' alert within {IMPORT_TIMEOUT_S}s;"
-            " not saving (the editor is still open)"
+            f"import_json: unexpected dialog {d[:300]!r}; not saving (dialog and editor left open)"
         )
     vis(pg, 'button:has-text("Save changes and exit")').first.click()
-    for _ in range(30):
-        pg.wait_for_timeout(500)
-        if dialog_text(pg):
-            break
-    d = dialog_text(pg)
-    if d:
-        # "Changes saved!" or "No changes to save." (seen both after an import); either
-        # blocks the world list until OK'd.
-        log("dialog after save:\n" + d[:1500])
-        close_all_modals(pg, prefer=("OK",))
+    d = _wait_dialog(pg, SAVE_TIMEOUT_S)
+    log("dialog after save: " + (d[:300].replace("\n", " / ") if d else "<none>"))
+    if not d:
+        raise RuntimeError(f"import_json: no save result within {SAVE_TIMEOUT_S}s")
+    close_all_modals(pg, prefer=("OK",))
+    if not SAVED_RE.search(d):
+        hint = " — the import was lost" if "no changes to save" in d.lower() else ""
+        raise RuntimeError(f"import_json: save reported {d[:200]!r}{hint}")
     wait_for(pg, WORLD_LIST_MARKER, 30000)
-    log("import done; back at the world list")
+    log("import saved; back at the world list")
 
 
 # ---------------------------------------------------------------- main
