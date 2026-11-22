@@ -396,6 +396,9 @@ class TestYamlTrackedItems:
             "blank-line rule was used and line 'Secret Plans:' became an item (turns 1, 2, 3)."
         )
         assert "kept inside" not in summary.warnings[0]
+        # A partial name list is as likely as a wrong one: the warning must cover both.
+        assert "missing the names of the items in this section" in summary.warnings[0]
+        assert "do not belong to the world" in summary.warnings[0]
 
     def test_never_matched_name_warns(self, tmp_path):
         summary = extract_story_data(
@@ -541,7 +544,15 @@ class TestTrackedItemDiagnostics:
             "-- Turn 1 --\n\nOutcome\n-------\nA.\n\n"
             "Tracked Items\n-------------\nNotes:\nline\n"
         )
-        extract_story_data([str(src)], str(tmp_path / "out"), tracked_item_names=["Notes"])
+        summary = extract_story_data(
+            [str(src)], str(tmp_path / "out"), tracked_item_names=["Notes"]
+        )
         with open(tmp_path / "out" / "metadata.json") as fh:
             starting = json.load(fh)["character"]["startingTrackedItems"]
         assert starting == {"Notes": "line\n\nInner:\nmore"}
+        # The header's split is not silent: an unlisted name line is reported there too.
+        assert summary.warnings == [
+            "Starting Tracked Items: line 'Inner:' is not in tracked_item_names, so it was kept "
+            "inside the value of the listed item above it (the header). Add the name if it is a "
+            "real item."
+        ]

@@ -16,17 +16,27 @@
       *exactly* (raw match: a name's own trailing space is significant, ``Exp :``
       is the name ``"Exp "``).  The first such line per name wins; a repeat, or
       a known name that is not at a boundary, stays inside the value it sits in.
-      Lines above the first known name are never dropped: the no-names rule is
-      applied to that prefix, so they become their own (unlisted) items.  If no
+      Above the first known name the no-names rule applies: a column-0 ``Key:``
+      line at a boundary becomes its own (unlisted) item.  Any other non-blank
+      line before the first item belongs to no item and is dropped (counted in
+      ``TrackedSplit.unassigned_lines``, reported as a "dropped" warning).  If no
       known name opens an item at all, the whole section uses the no-names rule.
     - **no names** (fallback): the boundary line must also start with a
       non-whitespace character.  A key that repeats within the section stays
       inside the preceding value rather than overwriting the first one.
 
-    Known weaknesses: a value containing a blank line followed by a column-0
-    ``Something:`` line is split there when no names are supplied; and items not
-    separated by blank lines are merged (their name lines stay inside the
-    previous value) in either mode.  Both are reported as diagnostics.
+    Known weaknesses, and what ``extract_story_data`` reports about them:
+
+    - A value containing a blank line followed by a column-0 ``Something:`` line
+      is split there when no names are supplied.  Nothing is reported for the
+      split itself; it only shows up as a key-set change if the key set differs
+      between turns.
+    - Items not separated by blank lines are merged (their name lines stay inside
+      the previous value) in either mode.  Without names, the merged column-0
+      ``Key:`` lines are counted in one aggregate warning, which ordinary YAML map
+      keys also trigger, so it cannot confirm a merge.  With names, a merge is
+      reported only when the merged line is itself a listed name; an unlisted one
+      (``Gold:\n5\nJunk:\n1`` with names ``["Gold"]``) is merged silently.
 
     Value = all lines between this name line and the next, leading blank lines
     stripped, trailing whitespace trimmed; values are kept as raw strings and are

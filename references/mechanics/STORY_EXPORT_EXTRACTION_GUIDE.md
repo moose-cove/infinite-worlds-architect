@@ -24,7 +24,7 @@ When you have the world that produced the story, pass every one of its `trackedI
 
 Every rule requires an item's name line to open the section or follow a blank line. IW separates items with one blank line, and an empty item is a name line followed by two blank lines.
 - **With names**, a name line must also match a listed name exactly. A listed name that appears inside a value (no blank line before it) stays in that value.
-- **Lines above the first listed item are never dropped.** They become their own unlisted items under the no-names rule.
+- **Above the first listed item, the no-names rule applies.** A column-0 `Key:` line at a boundary becomes its own unlisted item. Any other non-blank text there belongs to no item and is dropped, and the manifest says so.
 - **If no listed name opens an item in a section**, that section uses the no-names rule.
 - **Without names**, a name line must start at column 0. This rule held on every turn of a 53-turn YAML-heavy export.
 - **It fails when a value itself contains a blank line followed by a column-0 `Something:` line**, as a YAML block scalar with blank lines would.
@@ -36,9 +36,12 @@ Values are always raw strings. The extractor never parses or validates the YAML,
   - an unlisted line above the first listed item was kept as its own item;
   - no listed name matched in the section, so the blank-line rule was used;
   - a listed name line that isn't at a boundary was kept inside a value;
-  - a listed name never appeared.
+  - a listed name never appeared;
+  - non-blank lines above the first item could not be assigned to any item and were dropped (this one also appears without names).
 - **Without names**, it flags a tracked-item key set that changes from one turn to the next. Items normally appear on every turn, so a change usually means a split.
 - **Also without names**, one summary warning counts the column-0 `Key:` lines kept inside values. This fires on any YAML-map world. It is a prompt to pass `tracked_item_names`, not proof of an error.
+- **Not every mis-split is reported.** Without names, a blank line followed by a column-0 `Key:` that splits a value is visible only if the key set changes between turns. With names, items that are not separated by blank lines are flagged only when the merged line is itself a listed name: `Gold:\n5\nJunk:\n1` with names `["Gold"]` merges silently.
+- **The header's Starting Tracked Items get the same name-based warnings**, worded "(the header)" instead of a turn list. The without-names summary counts and key-set checks cover turns only.
 
 > **`metadata.objective` is always null.** IW story exports have no Objective section, so the header parser never populates it — this is a property of the export *format*, not of any particular world. An agent that needs a world's objective should read it from the world JSON, not the extract.
 

@@ -10,7 +10,8 @@ Writes up to 5 files atomically into ``extraction_dir``:
 Tracked-item boundaries: pass ``tracked_item_names`` (the source world's
 ``trackedItems[*].name``) so multi-line YAML values whose lines end in ``:`` are
 not split into phantom items — see :mod:`iw_architect.story.tracked`.  Suspected
-mis-splits are reported in ``manifest.warnings``.
+mis-splits are reported in ``manifest.warnings``, for the header's Starting Tracked
+Items as well as for each turn.
 
 Atomic write: temp file ``extraction_dir/.tmp-<name>.json`` → ``os.replace``
 (same filesystem, so the replace is atomic on POSIX and on Windows Vista+).
@@ -32,7 +33,7 @@ import os
 
 from iw_architect.story.characters import index_characters
 from iw_architect.story.combine import combine
-from iw_architect.story.header import parse_header
+from iw_architect.story.header import parse_header_split
 from iw_architect.story.models import (
     ExtractionSummary,
     Manifest,
@@ -53,6 +54,10 @@ _MAX_NAME_WARNINGS = 20
 #: Cap on turn numbers / names listed inside a single warning.
 _MAX_LISTED = 8
 
+#: Stand-in turn number for the header's Starting Tracked Items in ``splits``.
+_HEADER = -1
+_HEADER_LABEL = "Starting Tracked Items"
+
 _SECTIONS = (
     ("Tracked Items", "tracked_items"),
     ("Hidden Tracked Items", "hidden_tracked_items"),
@@ -62,22 +67,23 @@ _SECTIONS = (
 _NAME_WARNING_TEMPLATES = {
     "merged_unlisted": (
         "{label}: line {line} is not in tracked_item_names, so it was kept inside the value "
-        "of the listed item above it (turns {turns}). Add the name if it is a real item."
+        "of the listed item above it ({turns}). Add the name if it is a real item."
     ),
     "leading_unlisted": (
         "{label}: line {line} comes before the first listed item and is not in "
-        "tracked_item_names; it was kept as its own item (turns {turns}). Add the name if it "
+        "tracked_item_names; it was kept as its own item ({turns}). Add the name if it "
         "is a real item."
     ),
     "fallback_unlisted": (
         "{label}: no line matched a name in tracked_item_names, so the blank-line rule was "
-        "used and line {line} became an item (turns {turns}). Check that the names belong "
-        "to the world that produced this story."
+        "used and line {line} became an item ({turns}). Either the names do not belong to "
+        "the world that produced this story, or tracked_item_names is missing the names of "
+        "the items in this section (hidden items, for example)."
     ),
     "listed_inside_value": (
         "{label}: line {line} matches a name in tracked_item_names but does not open the "
         "section or follow a blank line, or repeats an earlier name line, so it was kept "
-        "inside the value it sits in (turns {turns})."
+        "inside the value it sits in ({turns})."
     ),
 }
 
@@ -89,6 +95,13 @@ def _fmt_list(values: list) -> str:
     return f"{shown}, … (+{extra} more)" if extra > 0 else shown
 
 
+def _fmt_turns(turns: list[int]) -> str:
+    """Render where a warning applies: the header and/or a capped list of turns."""
+    nums = [n for n in turns if n != _HEADER]
+    where = ["the header"] if len(nums) < len(turns) else []
+    return " and ".join([*where, f"turns {_fmt_list(nums)}"] if nums else where)
+
+
 def _tracked_item_warnings(
     parsed_turns: list[Turn],
     tracked_item_names: list[str] | None,
@@ -97,7 +110,8 @@ def _tracked_item_warnings(
     """Manifest warnings that flag a suspected tracked-item mis-split.
 
     ``splits`` holds ``(turn number, section label, TrackedSplit)`` for every
-    section that was present.
+    section that was present (``_HEADER`` stands in for the header's Starting
+    Tracked Items).
     """
     warnings: list[str] = []
 
@@ -106,7 +120,7 @@ def _tracked_item_warnings(
         total = sum(s.unassigned_lines for _, _, s in splits)
         warnings.append(
             f"{total} non-blank line(s) before the first tracked-item name could not be "
-            f"assigned to any item and were dropped (turns {_fmt_list(unassigned_turns)})."
+            f"assigned to any item and were dropped ({_fmt_turns(unassigned_turns)})."
         )
 
     if tracked_item_names:
@@ -119,7 +133,7 @@ def _tracked_item_warnings(
                         turns.append(number)
         name_warnings = [
             _NAME_WARNING_TEMPLATES[kind].format(
-                label=label, line=repr(key + ":"), turns=_fmt_list(turns)
+                label=label, line=repr(key + ":"), turns=_fmt_turns(turns)
             )
             for (kind, label, key), turns in by_kind.items()
         ]
@@ -165,7 +179,7 @@ def _tracked_item_warnings(
         )
 
     # One aggregated note: column-0 "Key:" lines that stayed inside values.
-    inside = [(n, s.column0_key_lines_in_values) for n, _, s in splits]
+    inside = [(n, s.column0_key_lines_in_values) for n, _, s in splits if n != _HEADER]
     total_inside = sum(c for _, c in inside)
     if total_inside:
         turns_inside = len({n for n, c in inside if c})
@@ -250,11 +264,13 @@ def extract_story_data(
             source_text[src] = raw
 
     # Parse metadata from header — returns a Metadata model.
-    metadata = parse_header(header_text, tracked_item_names)
+    metadata, starting_split = parse_header_split(header_text, tracked_item_names)
 
     # Parse each turn — compute line_range relative to its source file.
     parsed_turns: list[Turn] = []
     splits: list[tuple[int, str, TrackedSplit]] = []
+    if starting_split is not None:
+        splits.append((_HEADER, _HEADER_LABEL, starting_split))
     for t in raw_turns:
         number = t.number
         content = t.content

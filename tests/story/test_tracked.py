@@ -277,6 +277,21 @@ class TestYamlValues:
         # Blink, Stoneskin, Cave Rat, Found a hidden cache, entries.
         assert split_tracked_items(YAML_SECTION).column0_key_lines_in_values == 5
 
+    def test_text_above_first_listed_name_is_dropped(self):
+        # Only column-0 "Key:" lines become leading items; other text above the first
+        # listed name belongs to no item.
+        split = split_tracked_items("junk line\n\nExp :\n5", ["Exp "])
+        assert split.items == {"Exp ": "5"}
+        assert split.unassigned_lines == 1
+        assert split.leading_unlisted == []
+
+    def test_unlisted_merge_is_silent_without_blank_line(self):
+        # Documented gap: with names, an unlisted name line that follows no blank line
+        # merges into the value above it and produces no diagnostic.
+        split = split_tracked_items("Gold:\n5\nJunk:\n1", ["Gold"])
+        assert split.items == {"Gold": "5\nJunk:\n1"}
+        assert split.merged_unlisted == split.listed_inside_value == []
+
     def test_unassigned_leading_text_counted(self):
         split = split_tracked_items("stray text\n\nA:\n1")
         assert split.items == {"A": "1"}
