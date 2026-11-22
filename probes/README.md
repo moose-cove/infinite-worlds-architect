@@ -474,6 +474,9 @@ Not tested:
 - whether a `player_only` switch item is editable in the in-game editor, and whether the
   editor needs Storyteller mode or `allowChangeCharacterItemValues` (which was `true` in
   this world). The harness mapping on 2026-09-30 found `hidden` items were not offered;
+  on 2026-11-21 the editor's toolbar tooltip read "Edit tracked items (Storyteller mode
+  only)", and with Storyteller mode on and every World debug option ticked it did offer
+  them;
 - `if(…)` rather than `choose(…)` inside an EIB, and arithmetic expressions in main
   `instructions` (expected to behave the same way);
 - how an unknown `$name` in an EIB expression renders (empty, or the literal tag).

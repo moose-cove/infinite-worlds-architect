@@ -9,8 +9,9 @@ to the AI", which is the definitive evidence):
   1. opening turn (turn 1) and one `wait` turn (turn 2) — View Mode is "A", so every outcome
      should end in PINEAPPLE;
   2. PAUSE. The operator edits View Mode to "B" by hand in the harness tab, through the
-     tracked-item editor (toolbar pencil-on-square, `.fa-edit`). While they do, the script
-     records what they click (DOM events), every dialog that opens (text + aria snapshot) and
+     tracked-item editor (toolbar pencil-on-square, `.fa-edit`). Or, by default, the script
+     makes the edit itself (`edit_tracked_item`). Either way the script
+     records the clicks (DOM events), every dialog that opens (text + aria snapshot) and
      the Anvil websocket frames the edit sends, so the next harness can do it unattended.
      The pause ends when the Tracked Items panel shows View Mode = B (or `<outdir>/EDIT_DONE`
      exists);
@@ -18,13 +19,11 @@ to the AI", which is the definitive evidence):
      block was rendered before the edit (turn lag, same as a trigger).
 
 Re-running resumes from the Probe F turn number shown on screen: the opening turn and any
-`wait` turns already played are not replayed. Every turn spends credits (Lynx ran 30–50 per
-turn in 2026-09).
+`wait` turns already played are not replayed. Every turn spends credits (Lynx: 30–50 per turn
+once the day's free turns are used).
 
-The 2026-09-30 run was not driven by this script end to end: the harness opened the game, and
-the operator played the rest by hand. Two UI changes seen that day are not handled yet. The
-toolbar's editor icon rendered as `.fa-pencil`, not `.fa-edit`. And "World debug tools" only
-appears in the menu while Storyteller mode is on (see ../harness/README.md).
+Needs Storyteller mode on (Menu → Settings): both World debug tools and the tracked-item editor
+exist only in that mode, and the script does not switch it on.
 """
 
 from __future__ import annotations
@@ -178,32 +177,10 @@ class Recorder:
 
 
 def debug_modal_all(pg: Page) -> str:
-    """Open World debug tools (bug icon), expand every collapsible section, return text + aria."""
-    pg.locator("button:has(.fa.fa-bug)").locator("visible=true").first.click()
-    pg.wait_for_timeout(1500)
-    # Headers are toggles, and expanding one can reveal nested ones: click each header text
-    # exactly once, re-querying after every click so indices never go stale.
-    opened: set[str] = set()
-    for _ in range(50):
-        hdrs = pg.locator(".modal").locator("visible=true").get_by_text(re.compile(r"\(\d+\)\s*$"))
-        todo = None
-        for i in range(hdrs.count()):
-            h = hdrs.nth(i)
-            key = h.inner_text().strip()
-            if key not in opened and h.is_visible():
-                todo = (key, h)
-                break
-        if todo is None:
-            break
-        opened.add(todo[0])
-        try:
-            todo[1].click(timeout=2000)
-            pg.wait_for_timeout(400)
-        except Exception as e:  # noqa: BLE001 — log and move on; the text dump still runs
-            print(f"debug header {todo[0]!r} did not expand: {e}")
+    """Open World debug tools, expand every section, return text + aria snapshot."""
+    top = pd.open_debug_modal(pg)
     text = d.dialog_text(pg)
-    ids = d.open_modal_ids(pg)
-    aria = pg.locator(f"#{ids[-1]}").aria_snapshot() if ids else ""
+    aria = pg.locator(f"#{top}").aria_snapshot()
     d.close_all_modals(pg, prefer=("OK",))
     return text + "\n\n---- aria ----\n" + aria
 
@@ -231,13 +208,17 @@ def start_game(pg: Page) -> None:
     d.wait_for(pg, 'button:has-text("Choose character")', 60000).click()
     popups: list[str] = []
     t0 = time.time()
-    while time.time() - t0 < pd.TURN_TIMEOUT_S:
+    while True:
+        if time.time() - t0 > pd.TURN_TIMEOUT_S:
+            raise pd.TurnTimeout(
+                f"opening turn: no play screen within {pd.TURN_TIMEOUT_S}s; popups {popups!r}"
+            )
         pg.wait_for_timeout(1000)
         t = d.dialog_text(pg)
         if t:
             popups.append(t[:120].replace("\n", " / "))
             d.close_all_modals(pg, prefer=("OK",))
-        if d.vis(pg, 'button:has-text("Take action")').count() and not d.dialog_text(pg):
+        if pd.take_action_ready(pg) and not d.dialog_text(pg):
             break
     print("opening popups:", popups, f"({time.time() - t0:.0f}s)")
 
@@ -247,10 +228,11 @@ def view_mode_is_b(pg: Page) -> bool:
 
 
 def edit_tracked_item(pg: Page, name: str, value: str, rec: Recorder | None = None) -> None:
-    """Player-side edit through the in-game tracked-item editor (toolbar `.fa-edit` icon).
+    """Player-side edit through the in-game tracked-item editor: the toolbar `.fa-edit`
+    icon, titled "Edit tracked items (Storyteller mode only)".
 
-    The dialog lists every player-visible tracked item as a label followed by a textbox, with
-    Cancel / OK. Hidden items are not offered. Mapped 2026-09-30 on the 2026-09 UI.
+    The dialog lists the tracked items as a label followed by a <textarea>, with Cancel /
+    OK. As of 2026-11-21 (Storyteller mode on) it offers `hidden` items too.
     """
     pg.locator("button:has(.fa.fa-edit)").locator("visible=true").first.click()
     pg.wait_for_timeout(1500)
@@ -364,8 +346,7 @@ def main() -> None:
         print("current Probe F turn on screen:", turn)
         if turn is None:
             wait_for_credits(pg, need)
-            pd.set_option(pg, "AI model", "lynx", select_label=": Lynx")
-            pd.set_option(pg, "Illustration options", "never", select_label="Never")
+            pd.prepare_play_settings(pg)
             start_game(pg)
             turn = 1
         if turn == 1:
