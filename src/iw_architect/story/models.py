@@ -246,6 +246,34 @@ class CombineResult(_Base):
     warnings: list[str]
 
 
+class TrackedSplit(_Base):
+    """Result of splitting one tracked-items section (``split_tracked_items``).
+
+    ``items`` is the parsed ``{name: raw value}`` map (``None`` when the section
+    is absent or has no name lines).  The other fields are diagnostics that
+    ``extract_story_data`` turns into manifest warnings; each list holds raw keys
+    (the line minus its trailing ``:``) in section order.
+    """
+
+    items: dict[str, str] | None
+    #: Known-names mode: name-shaped lines not in the names, kept inside the
+    #: value of the listed item above them.
+    merged_unlisted: list[str] = []
+    #: Known-names mode: name lines above the first listed item, not in the
+    #: names, kept as their own items (blank-line rule applied to that prefix).
+    leading_unlisted: list[str] = []
+    #: Known-names mode: no listed name opened an item in this section, so the
+    #: blank-line rule was used and these unlisted keys became items.
+    fallback_unlisted: list[str] = []
+    #: Known-names mode: lines naming a listed item that did not open an item
+    #: (not at a blank-line boundary, or a repeat) and stayed inside a value.
+    listed_inside_value: list[str] = []
+    #: Column-0 ``Key:`` lines that ended up inside a value (any mode).
+    column0_key_lines_in_values: int = 0
+    #: Non-blank lines before the first name line, which no item could hold.
+    unassigned_lines: int = 0
+
+
 class TurnSections(_Base):
     """Raw section bodies parsed from one turn, before tracked-item parsing.
 

@@ -1,0 +1,200 @@
+== The Hollow Path ==
+
+
+-- Story Background --
+
+A wanderer walks a road that remembers every step.
+
+
+-- Character --
+
+Name
+----
+Wren Ashdown
+
+Background
+----------
+A quiet scout.
+
+Skills
+------
+Stealth: 3 (Competent)
+
+-- Turn 1 --
+
+Outcome
+-------
+You set out at dawn.
+
+Tracked Items
+-------------
+Level:
+1
+
+Exp :
+0 / 10
+
+Spells:
+
+
+Abilities:
+Blink:
+  effect: Teleport a short distance.
+  cost: 1 mana
+  type: active
+Stoneskin:
+  effect: 'Skin hardens. Currently resists: blunt.'
+  cost: none
+  type: passive
+
+Dead:
+Cave Rat:
+- |-
+  First Fight, Level 1:
+  - Bitten once, then crushed.
+  - Day 1, dawn
+
+Deeds:
+Crossed the old bridge: |-
+  - Took the long way round
+Found a hidden cache:
+- |-
+  - Under the third stone
+entries:
+- |-
+  Outwitted the toll keeper:
+    - Paid with a wooden coin
+
+Notes:
+Started the journey.
+
+Hidden Tracked Items
+--------------------
+Secret Plans:
+Phase:
+  current: watch
+  next: strike
+
+-- Turn 2 --
+
+Action
+------
+Head into the marsh.
+
+Outcome
+-------
+The marsh is cold and loud.
+
+Tracked Items
+-------------
+Level:
+1
+
+Exp :
+6 / 10
+
+Spells:
+
+
+Abilities:
+Blink:
+  effect: Teleport a short distance.
+  cost: 1 mana
+  type: active
+Stoneskin:
+  effect: 'Skin hardens. Currently resists: blunt.'
+  cost: none
+  type: passive
+
+Dead:
+Cave Rat:
+- |-
+  First Fight, Level 1:
+  - Bitten once, then crushed.
+  - Day 1, dawn
+Bog Goblin (Level 2): Drowned in the marsh.
+
+Deeds:
+Crossed the old bridge: |-
+  - Took the long way round
+Found a hidden cache:
+- |-
+  - Under the third stone
+entries:
+- |-
+  Outwitted the toll keeper:
+    - Paid with a wooden coin
+
+Notes:
+Started the journey.
+
+Hidden Tracked Items
+--------------------
+Secret Plans:
+Phase:
+  current: watch
+  next: strike
+
+-- Turn 3 --
+
+Action
+------
+Rest by the fire.
+
+Outcome
+-------
+You wake rested and brighter.
+
+Tracked Items
+-------------
+Level:
+2
+
+Exp :
+0 / 20
+
+Spells:
+
+
+Abilities:
+Blink:
+  effect: Teleport a short distance.
+  cost: 1 mana
+  type: active
+Stoneskin:
+  effect: 'Skin hardens. Currently resists: blunt.'
+  cost: none
+  type: passive
+Glow:
+  effect: Emit a soft light.
+  cost: none
+  type: passive
+
+Dead:
+Cave Rat:
+- |-
+  First Fight, Level 1:
+  - Bitten once, then crushed.
+  - Day 1, dawn
+Bog Goblin (Level 2): Drowned in the marsh.
+
+Deeds:
+Crossed the old bridge: |-
+  - Took the long way round
+Found a hidden cache:
+- |-
+  - Under the third stone
+entries:
+- |-
+  Outwitted the toll keeper:
+    - Paid with a wooden coin
+
+Notes:
+Started the journey.
+
+Hidden Tracked Items
+--------------------
+Secret Plans:
+Phase:
+  current: strike
+  next: rest

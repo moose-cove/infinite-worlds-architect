@@ -61,3 +61,17 @@ def test_missing_character_subfields_are_none():
     assert meta.character.background is None
     assert meta.character.skills is None
     assert meta.character.starting_tracked_items is None
+
+
+def test_starting_tracked_items_use_names():
+    header = (
+        "== T ==\n\n-- Character --\n\nName\n----\nX\n\n"
+        "Starting Tracked Items\n----------------------\nNotes:\nline\n\nInner:\nmore\n"
+    )
+    assert parse_header(header).character.starting_tracked_items == {
+        "Notes": "line",
+        "Inner": "more",
+    }
+    assert parse_header(header, ["Notes"]).character.starting_tracked_items == {
+        "Notes": "line\n\nInner:\nmore"
+    }

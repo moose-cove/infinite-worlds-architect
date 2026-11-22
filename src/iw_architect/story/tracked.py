@@ -1,16 +1,52 @@
 """tracked.py — parse tracked-item blocks and generate snapshots.
 
-``parse_tracked_items(section_text)``
+``parse_tracked_items(section_text, known_names=None)``
     Parses a ``Tracked Items`` or ``Hidden Tracked Items`` section body into
-    ``{key: value}`` dicts.  Rules (spec §2):
+    ``{key: value}`` dicts.  The hard part is finding where one item ends and
+    the next begins: a YAML-typed item's value can itself contain lines that end
+    in ``:`` (map keys, ``- |-`` block content), so "any line ending in a colon"
+    is not an item boundary.  Every rule below requires an item's name line to
+    be the section's first line or to follow a blank line — IW separates items
+    with one blank line (an empty item is its name line followed by two blank
+    lines), and YAML values observed so far never contain blank lines.
 
-    - Key line regex: ``^(?P<key>[^\\n:][^\\n]*?):[ \\t]*$`` (re.MULTILINE).
-    - Value = all lines between this key and the next key, leading blank lines
-      stripped, trailing whitespace trimmed, but the value itself may be
-      multi-line.
-    - Empty-string values are kept (not dropped) — they represent meaningful
-      empty state.
-    - An entirely empty section (no key lines) → ``None`` (not ``{}``).
+    - **known names supplied** (``known_names``, usually the source world's
+      ``trackedItems[*].name``): a boundary line's key — the line minus its
+      trailing ``:`` and any spaces/tabs after it — must equal a known name
+      *exactly* (raw match: a name's own trailing space is significant, ``Exp :``
+      is the name ``"Exp "``).  The first such line per name wins; a repeat, or
+      a known name that is not at a boundary, stays inside the value it sits in.
+      Above the first known name the no-names rule applies: a column-0 ``Key:``
+      line at a boundary becomes its own (unlisted) item.  Any other non-blank
+      line before the first item belongs to no item and is dropped (counted in
+      ``TrackedSplit.unassigned_lines``, reported as a "dropped" warning).  If no
+      known name opens an item at all, the whole section uses the no-names rule.
+    - **no names** (fallback): the boundary line must also start with a
+      non-whitespace character.  A key that repeats within the section stays
+      inside the preceding value rather than overwriting the first one.
+
+    Known weaknesses, and what ``extract_story_data`` reports about them:
+
+    - A value containing a blank line followed by a column-0 ``Something:`` line
+      is split there when no names are supplied.  Nothing is reported for the
+      split itself; it only shows up as a key-set change if the key set differs
+      between turns.
+    - Items not separated by blank lines are merged (their name lines stay inside
+      the previous value) in either mode.  Without names, the merged column-0
+      ``Key:`` lines are counted in one aggregate warning, which ordinary YAML map
+      keys also trigger, so it cannot confirm a merge.  With names, a merge is
+      reported only when the merged line is itself a listed name; an unlisted one
+      (``Gold:\n5\nJunk:\n1`` with names ``["Gold"]``) is merged silently.
+
+    Value = all lines between this name line and the next, leading blank lines
+    stripped, trailing whitespace trimmed; values are kept as raw strings and are
+    never YAML-parsed (AI-written YAML is often invalid).  Empty-string values are
+    kept — they represent meaningful empty state.  An entirely empty section (no
+    name lines) → ``None`` (not ``{}``).
+
+``split_tracked_items(section_text, known_names=None)``
+    Same parse, returned as a :class:`~iw_architect.story.models.TrackedSplit`
+    with the diagnostics ``extract_story_data`` turns into manifest warnings.
 
 ``generate_snapshots(parsed_turns)``
     Snapshot-on-change over ``(tracked_items, hidden_tracked_items)`` per turn.
@@ -22,43 +58,139 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Collection
 
-from iw_architect.story.models import Snapshot, Turn
+from iw_architect.story.models import Snapshot, TrackedSplit, Turn
 
-_KEY_RE = re.compile(r"^(?P<key>[^\n:][^\n]*?):[ \t]*$", re.MULTILINE)
+#: A line ending in ``:`` (optionally followed by spaces/tabs); ``key`` is the rest,
+#: raw — leading whitespace and the name's own trailing spaces kept.
+_COLON_LINE_RE = re.compile(r"^(?P<key>.*?):[ \t]*$")
 
 
-def parse_tracked_items(section_text: str | None) -> dict | None:
+def _line_key(line: str) -> str | None:
+    """Return the raw key of a ``Name:`` line, or ``None`` if it is not one."""
+    m = _COLON_LINE_RE.match(line)
+    return m.group("key") if m else None
+
+
+def _column0_key(line: str) -> str | None:
+    """The key of a ``Name:`` line that starts at column 0, else ``None``."""
+    key = _line_key(line)
+    return key if key and not key[0].isspace() else None
+
+
+def _at_boundary(lines: list[str], i: int) -> bool:
+    """True when line *i* opens the section or follows a blank line."""
+    return i == 0 or not lines[i - 1].strip()
+
+
+def _fallback_boundaries(lines: list[str], start: int = 0, stop: int | None = None) -> list[int]:
+    """No-names rule over ``lines[start:stop]``: column-0 key, at a boundary, key not repeated."""
+    out: list[int] = []
+    seen: set[str] = set()
+    for i in range(start, len(lines) if stop is None else stop):
+        key = _column0_key(lines[i])
+        if key is not None and key not in seen and _at_boundary(lines, i):
+            seen.add(key)
+            out.append(i)
+    return out
+
+
+def split_tracked_items(
+    section_text: str | None,
+    known_names: Collection[str] | None = None,
+) -> TrackedSplit:
+    """Parse a tracked-items section into items plus mis-split diagnostics.
+
+    See the module docstring for the boundary rules and
+    :class:`~iw_architect.story.models.TrackedSplit` for the diagnostics.
+    """
+    if section_text is None:
+        return TrackedSplit(items=None)
+
+    lines = section_text.split("\n")
+    names = set(known_names) if known_names else None
+    diag: dict[str, list[str]] = {
+        "merged_unlisted": [],
+        "leading_unlisted": [],
+        "fallback_unlisted": [],
+        "listed_inside_value": [],
+    }
+
+    if names is None:
+        boundaries = _fallback_boundaries(lines)
+    else:
+        chosen: dict[str, int] = {}
+        for i, line in enumerate(lines):
+            key = _line_key(line)
+            if key is not None and key in names and key not in chosen and _at_boundary(lines, i):
+                chosen[key] = i
+        listed = set(chosen.values())
+        diag["listed_inside_value"] = [
+            k for i, line in enumerate(lines) if (k := _line_key(line)) in names and i not in listed
+        ]
+        if chosen:
+            first = min(listed)
+            leading = _fallback_boundaries(lines, 0, first)
+            diag["leading_unlisted"] = [_line_key(lines[i]) or "" for i in leading]
+            diag["merged_unlisted"] = [
+                k
+                for i in _fallback_boundaries(lines, first)
+                if (k := _line_key(lines[i]) or "") not in names
+            ]
+            boundaries = sorted([*leading, *listed])
+        else:
+            boundaries = _fallback_boundaries(lines)
+            diag["fallback_unlisted"] = [_line_key(lines[i]) or "" for i in boundaries]
+
+    first_boundary = boundaries[0] if boundaries else len(lines)
+    unassigned = sum(1 for line in lines[:first_boundary] if line.strip())
+    if not boundaries:
+        return TrackedSplit(items=None, unassigned_lines=unassigned, **diag)
+
+    bset = set(boundaries)
+    column0_inside = sum(
+        1
+        for i in range(first_boundary, len(lines))
+        if i not in bset and _column0_key(lines[i]) is not None
+    )
+
+    result: dict[str, str] = {}
+    for n, start in enumerate(boundaries):
+        end = boundaries[n + 1] if n + 1 < len(boundaries) else len(lines)
+        key = _line_key(lines[start]) or ""  # every boundary is a colon line
+        raw_value = "\n".join(lines[start + 1 : end])
+        # Strip leading blank lines, then strip trailing whitespace.
+        result[key] = raw_value.lstrip("\n").rstrip()
+
+    return TrackedSplit(
+        items=result,
+        column0_key_lines_in_values=column0_inside,
+        unassigned_lines=unassigned,
+        **diag,
+    )
+
+
+def parse_tracked_items(
+    section_text: str | None,
+    known_names: Collection[str] | None = None,
+) -> dict | None:
     """Parse a tracked-items section body into ``{key: value}`` or ``None``.
 
     Parameters
     ----------
     section_text:
         The raw text of the section (after the ``----`` line), or ``None``.
+    known_names:
+        Optional exact tracked-item names (raw, trailing spaces significant).
+        When given, only lines naming one of them start a listed item.
 
     Returns
     -------
-    ``dict`` mapping item names to their string values, or ``None`` if the
-    section is absent or contains no key lines.
+    ``dict`` mapping item names to their raw string values, or ``None`` if the
+    section is absent or contains no name lines.
     """
-    if section_text is None:
-        return None
-
-    matches = list(_KEY_RE.finditer(section_text))
-    if not matches:
-        return None
-
-    result: dict[str, str] = {}
-    for i, m in enumerate(matches):
-        key = m.group("key")
-        value_start = m.end() + 1  # skip the newline after the key line
-        value_end = matches[i + 1].start() if i + 1 < len(matches) else len(section_text)
-        raw_value = section_text[value_start:value_end]
-        # Strip leading blank lines, then strip trailing whitespace.
-        value = raw_value.lstrip("\n").rstrip()
-        result[key] = value
-
-    return result
+    return split_tracked_items(section_text, known_names).items
 
 
 def generate_snapshots(parsed_turns: list[Turn]) -> list[Snapshot]:

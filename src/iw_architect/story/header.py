@@ -8,7 +8,8 @@ Header format (spec §2):
     - ``Background\\n----``                    → ``character.background``
     - ``Skills\\n----``                        → ``character.skills``
     - ``Starting Tracked Items\\n----``        → ``character.starting_tracked_items``
-      (optional; parse with ``parse_tracked_items``; absent → ``None``)
+      (optional; parse with ``split_tracked_items``, anchored to
+      ``tracked_item_names`` when given; absent → ``None``)
 
 Returns a :class:`~iw_architect.story.models.Metadata` model (``objective``
 defaults to ``None``).  Serialise with ``model_dump(by_alias=True)`` to get
@@ -19,8 +20,8 @@ from __future__ import annotations
 
 import re
 
-from iw_architect.story.models import Character, Metadata
-from iw_architect.story.tracked import parse_tracked_items
+from iw_architect.story.models import Character, Metadata, TrackedSplit
+from iw_architect.story.tracked import split_tracked_items
 
 _TITLE_RE = re.compile(r"^== (.+?) ==$", re.MULTILINE)
 _BLOCK_RE = re.compile(r"^-- ([^\n]+?) --$", re.MULTILINE)
@@ -49,20 +50,36 @@ def _extract_subsection(text: str, label: str) -> str | None:
     return None
 
 
-def parse_header(header_text: str) -> Metadata:
+def parse_header(header_text: str, tracked_item_names: list[str] | None = None) -> Metadata:
     """Parse the header block into a :class:`~iw_architect.story.models.Metadata` model.
+
+    See :func:`parse_header_split` for the variant that also returns the
+    Starting Tracked Items split diagnostics.
+    """
+    return parse_header_split(header_text, tracked_item_names)[0]
+
+
+def parse_header_split(
+    header_text: str, tracked_item_names: list[str] | None = None
+) -> tuple[Metadata, TrackedSplit | None]:
+    """Parse the header block; also return the Starting Tracked Items split.
 
     Parameters
     ----------
     header_text:
         The raw text before the first ``-- Turn 1 --`` marker, CRLF-normalised.
+    tracked_item_names:
+        Optional exact tracked-item names used to find item boundaries in
+        ``Starting Tracked Items`` (see :mod:`iw_architect.story.tracked`).
 
     Returns
     -------
-    :class:`~iw_architect.story.models.Metadata` with snake_case attributes.
-    ``objective`` is always ``None``.  Serialise with
-    ``model_dump(by_alias=True)`` to produce the camelCase ``metadata.json``
-    shape.
+    ``(metadata, split)``: a :class:`~iw_architect.story.models.Metadata` with
+    snake_case attributes (``objective`` is always ``None``; serialise with
+    ``model_dump(by_alias=True)`` for the camelCase ``metadata.json`` shape) and the
+    :class:`~iw_architect.story.models.TrackedSplit` for Starting Tracked Items
+    (``None`` when that sub-section is absent), whose diagnostics the caller can
+    surface.
     """
     # Extract title (absent → None per §3 "string|null").
     title_match = _TITLE_RE.search(header_text)
@@ -81,16 +98,19 @@ def parse_header(header_text: str) -> Metadata:
 
     # Starting Tracked Items is optional.
     starting_raw = _extract_subsection(char_block, "Starting Tracked Items")
-    starting_tracked = parse_tracked_items(starting_raw) if starting_raw is not None else None
+    starting_split = (
+        split_tracked_items(starting_raw, tracked_item_names) if starting_raw is not None else None
+    )
 
     character = Character(
         name=char_name,
         background=char_background,
         skills=char_skills,
-        starting_tracked_items=starting_tracked,
+        starting_tracked_items=starting_split.items if starting_split else None,
     )
-    return Metadata(
+    metadata = Metadata(
         title=title,
         story_background=story_background,
         character=character,
     )
+    return metadata, starting_split

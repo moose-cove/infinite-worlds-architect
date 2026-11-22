@@ -20,7 +20,7 @@ and file I/O. The MCP wrappers that surface these functions as tools are added i
 | `combine` | Reads and merges one or more export `.txt` files into a single `CombineResult`, resolving duplicate turns by file mtime (newest wins) and flagging gaps in the turn sequence. |
 | `header` | Parses the preamble of an export (world title, story background, starting character, starting tracked items) into a `Metadata` model. |
 | `sections` | Splits a single turn body into its named sections (Action, Outcome, Secret Information, Tracked Items, Hidden Tracked Items) and returns a `TurnSections` model with raw section text. |
-| `tracked` | Parses a tracked-items section body into `{key: value}` dicts (`parse_tracked_items`) and computes a snapshot-on-change list over all turns (`generate_snapshots`), returning `Snapshot` models. |
+| `tracked` | Parses a tracked-items section body into `{key: value}` dicts (`parse_tracked_items`; item boundaries anchored to known item names when given, else a blank-line layout rule; values stay raw strings) and computes a snapshot-on-change list over all turns (`generate_snapshots`), returning `Snapshot` models. |
 | `extract` | Orchestrates the full pipeline: combine → parse header → parse turns → build snapshots → index characters → write JSON files. Returns an `ExtractionSummary` model. |
 | `characters` | Scans each turn's source lines for word-boundary matches of character names and aliases, returning a `CharacterIndex` model. |
 | `query` | Reads the JSON files written by `extract` and returns typed models for each category: `manifest`, `metadata`, `turn_index`, `tracked_state`, `character_index`, `turn_detail`. |

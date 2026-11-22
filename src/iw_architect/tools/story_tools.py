@@ -31,6 +31,7 @@ def extract_story_data(
     input_paths: list[str],
     extraction_dir: str,
     character_list: list[dict] | None = None,
+    tracked_item_names: list[str] | None = None,
 ) -> str:
     """Parse story-export files into structured JSON; return a camelCase summary.
 
@@ -46,6 +47,16 @@ def extract_story_data(
         absent).
     character_list: optional ``[{"name": str, "aliases": [str]}]`` for the
         character index (omit to skip ``character_index.json``).
+    tracked_item_names: optional exact tracked-item names — pass every
+        ``trackedItems[*].name`` of the world that produced the story (hidden items
+        too), verbatim: a trailing space is part of the name (``"Exp "``). Only a
+        line naming one of them starts a new item, so a multi-line YAML value whose
+        lines end in ``:`` is kept whole instead of split into phantom items. Without
+        it, a name line must start at column 0 and open the section or follow a
+        blank line. Values are always raw strings (never YAML-parsed). Suspected
+        mis-splits are reported in ``warnings``: a name-like line not in the list,
+        a listed name never found, or (without names) an item key set that changes
+        between turns.
 
     Returns the extraction summary serialised to camelCase JSON
     (``{totalTurns, turnRange, inputFilesProcessed, hasTrackedItems,
@@ -65,7 +76,12 @@ def extract_story_data(
         return json.dumps({"error": str(exc)})
 
     try:
-        summary = _extract(abs_inputs, abs_dir, character_list=character_list)
+        summary = _extract(
+            abs_inputs,
+            abs_dir,
+            character_list=character_list,
+            tracked_item_names=tracked_item_names,
+        )
     except (FileNotFoundError, ValueError) as exc:
         return json.dumps({"error": str(exc)})
 
@@ -76,6 +92,8 @@ def query_story_data(
     extraction_dir: str,
     category: str,
     turns: list[str | int] | None = None,
+    items: list[str] | None = None,
+    changes_only: bool = False,
 ) -> str:
     """Query an extraction directory; return the category's model as camelCase JSON.
 
@@ -90,10 +108,22 @@ def query_story_data(
         ``tracked_state`` and selects the turn(s) for ``turn_detail`` (which re-reads
         the raw source lines). To find which turns mention something, call
         ``search_turns`` first and pass its ``turn`` numbers here.
+    items: optional tracked-item names, for ``tracked_state`` / ``turn_index`` only —
+        return just these items from both ``trackedItems`` and ``hiddenTrackedItems``.
+        Exact match first, then case-insensitive with whitespace stripped (``"Exp"``
+        finds ``"Exp "``). Items come back in the order requested. An unknown name,
+        or an empty list, returns an error (the unknown-name error lists the
+        available names).
+    changes_only: ``tracked_state`` with ``items`` only — merge adjacent snapshots
+        whose selected values are equal, so each entry is one run of unchanged values
+        (``fromTurn``..``toTurn``): the turns where a selected item changed. Applied
+        after the ``turns`` filter and the ``items`` projection.
 
     Returns the queried model serialised to camelCase JSON. On failure returns a
     bare ``{"error": "..."}``: a relative path, an unknown category, ``turn_detail``
-    without ``turns``, or a missing extraction file.
+    without ``turns``, ``items`` / ``changes_only`` on an unsupported category,
+    ``changes_only`` without ``items``, an unknown or ambiguous item name, or a
+    missing extraction file.
     """
     try:
         abs_dir = str(require_absolute(extraction_dir))
@@ -101,7 +131,7 @@ def query_story_data(
         return json.dumps({"error": str(exc)})
 
     try:
-        result = _query(abs_dir, category, turns=turns)
+        result = _query(abs_dir, category, turns=turns, items=items, changes_only=changes_only)
     except (FileNotFoundError, ValueError) as exc:
         return json.dumps({"error": str(exc)})
 

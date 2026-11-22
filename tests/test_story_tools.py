@@ -55,6 +55,19 @@ class TestExtractStoryData:
         )
         assert "success" not in out
 
+    def test_tracked_item_names_passed_through(self, tmp_path):
+        out = json.loads(
+            extract_story_data(
+                [fixture("story_export_yaml_tracked.txt")],
+                str(tmp_path),
+                tracked_item_names=["Level"],
+            )
+        )
+        # Every other name line is reported as not in tracked_item_names.
+        assert any("'Abilities:'" in w for w in out["warnings"])
+        with open(tmp_path / "turn_index.json") as fh:
+            assert list(json.load(fh)["turns"][0]["trackedItems"]) == ["Level"]
+
     def test_writes_files_to_extraction_dir(self, tmp_path):
         extract_story_data([fixture("story_export_single_5turn.txt")], str(tmp_path))
         assert (tmp_path / "manifest.json").exists()
@@ -136,6 +149,28 @@ class TestQueryStoryData:
     def test_character_index(self, extraction_dir):
         out = json.loads(query_story_data(extraction_dir, "character_index"))
         assert "Petra Voss" in out["characters"]
+
+    def test_items_changes_only_camelcase(self, tmp_path):
+        extract_story_data(
+            [fixture("story_export_yaml_tracked.txt")],
+            str(tmp_path),
+            tracked_item_names=["Level", "Exp ", "Spells", "Abilities", "Dead", "Deeds", "Notes"],
+        )
+        out = json.loads(
+            query_story_data(str(tmp_path), "tracked_state", items=["Level"], changes_only=True)
+        )
+        assert [(s["fromTurn"], s["toTurn"]) for s in out["snapshots"]] == [(1, 2), (3, 3)]
+        assert out["snapshots"][0]["trackedItems"] == {"Level": "1"}
+
+    def test_empty_items_errors(self, extraction_dir):
+        out = json.loads(query_story_data(extraction_dir, "tracked_state", items=[]))
+        assert set(out) == {"error"}
+        assert "at least one" in out["error"]
+
+    def test_unknown_item_errors(self, extraction_dir):
+        out = json.loads(query_story_data(extraction_dir, "tracked_state", items=["Nope"]))
+        assert set(out) == {"error"}
+        assert "Gold Coins" in out["error"]
 
     def test_relative_dir_errors(self):
         out = json.loads(query_story_data("rel_dir", "manifest"))
